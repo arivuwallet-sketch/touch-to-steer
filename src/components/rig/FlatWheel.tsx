@@ -57,7 +57,7 @@ function Pedal({
       onPointerMove={(e) => active.current === e.pointerId && update(e.clientY)}
       onPointerUp={release}
       onPointerCancel={release}
-      className="group relative h-[62cqh] min-h-0 w-[clamp(3.8rem,8cqw,5.4rem)] md:h-[42cqh] md:min-h-44 md:w-[clamp(4.2rem,7cqw,6.2rem)] touch-none select-none overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#090d12]/95 p-2 shadow-[0_12px_28px_rgba(0,0,0,.55),inset_0_1px_0_rgba(255,255,255,.04)]"
+      className="group relative h-[62svh] min-h-0 w-[clamp(3.8rem,8vw,5.4rem)] md:h-[42vh] md:min-h-44 md:w-[clamp(4.2rem,7vw,6.2rem)] touch-none select-none overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#090d12]/95 p-2 shadow-[0_12px_28px_rgba(0,0,0,.55),inset_0_1px_0_rgba(255,255,255,.04)]"
     >
       <span className="absolute inset-2 rounded-[1.05rem] border border-white/5 bg-[linear-gradient(180deg,#151b22,#0a0e13)]" />
       <span
@@ -115,7 +115,7 @@ function Handbrake({ settings, set }: { settings: Settings; set: Props["set"] })
       onPointerMove={(e) => active.current && move(e.clientY)}
       onPointerUp={release}
       onPointerCancel={release}
-      className="relative h-[38cqh] w-[clamp(4rem,9cqw,5.5rem)] md:h-40 md:w-24 touch-none select-none rounded-[1.25rem] border border-white/10 bg-[#0b0f14] shadow-[0_10px_24px_rgba(0,0,0,.5)] active:brightness-125"
+      className="relative h-[38svh] w-[clamp(4rem,9vw,5.5rem)] md:h-40 md:w-24 touch-none select-none rounded-[1.25rem] border border-white/10 bg-[#0b0f14] shadow-[0_10px_24px_rgba(0,0,0,.5)] active:brightness-125"
     >
       <span className="absolute inset-2 rounded-[1rem] bg-gradient-to-b from-[#171d24] to-[#080b10]" />
       <span
@@ -151,7 +151,7 @@ function Nitro({ settings, set }: { settings: Settings; set: Props["set"] }) {
         setDown(false);
         set({ nitro: 0 });
       }}
-      className={`grid h-12 w-[clamp(4rem,9cqw,5.5rem)] md:h-14 md:w-24 touch-none select-none place-items-center rounded-xl border border-cyan-300/25 bg-[linear-gradient(180deg,#27313b,#10151b)] text-[9px] font-black uppercase tracking-[0.22em] text-cyan-200 shadow-[0_7px_16px_rgba(0,0,0,.46),inset_0_1px_0_rgba(255,255,255,.08)] active:translate-y-0.5 ${down ? "brightness-150 ring-2 ring-fuchsia-400/40" : ""}`}
+      className={`grid h-12 w-[clamp(4rem,9vw,5.5rem)] md:h-14 md:w-24 touch-none select-none place-items-center rounded-xl border border-cyan-300/25 bg-[linear-gradient(180deg,#27313b,#10151b)] text-[9px] font-black uppercase tracking-[0.22em] text-cyan-200 shadow-[0_7px_16px_rgba(0,0,0,.46),inset_0_1px_0_rgba(255,255,255,.08)] active:translate-y-0.5 ${down ? "brightness-150 ring-2 ring-fuchsia-400/40" : ""}`}
     >
       NITRO
     </button>
@@ -168,8 +168,8 @@ function G29Wheel({
   return (
     <div className="absolute inset-0 pointer-events-none">
       <div className="absolute inset-0 rounded-full bg-[#0b0d10] shadow-[0_30px_50px_rgba(0,0,0,.7),inset_0_0_0_1px_rgba(255,255,255,.08)]" />
-      <div className="absolute inset-[3.3%] rounded-full border-[clamp(.85rem,1.65cqh,1.35rem)] border-[#090b0d] shadow-[inset_0_0_0_1px_rgba(255,255,255,.08),inset_0_-8px_16px_rgba(0,0,0,.55)]" />
-      <div className="absolute inset-[6.2%] rounded-full border-[clamp(.35rem,.8cqh,.7rem)] border-[#25282c]" />
+      <div className="absolute inset-[3.3%] rounded-full border-[clamp(.85rem,1.65vh,1.35rem)] border-[#090b0d] shadow-[inset_0_0_0_1px_rgba(255,255,255,.08),inset_0_-8px_16px_rgba(0,0,0,.55)]" />
+      <div className="absolute inset-[6.2%] rounded-full border-[clamp(.35rem,.8vh,.7rem)] border-[#25282c]" />
       <div className="absolute inset-[7.1%] rounded-full border border-[#454a50]/70" />
       <div className="absolute inset-[8.5%] rounded-full border-2 border-dashed border-[#6b7076]/25" />
       
@@ -180,11 +180,11 @@ function G29Wheel({
         <div className="absolute left-1/2 top-1/2 h-[18%] w-[76%] -translate-x-1/2 -translate-y-1/2 -rotate-[8deg] rounded-full bg-[linear-gradient(180deg,#9fa5ab,#4e555d)] shadow-[0_10px_15px_rgba(0,0,0,.55),inset_0_1px_0_rgba(255,255,255,.5)]" />
         <div className="absolute left-1/2 top-[57%] h-[54%] w-[18%] -translate-x-1/2 rounded-full bg-[linear-gradient(90deg,#5b626b,#a8adb3,#5b626b)] shadow-[0_10px_15px_rgba(0,0,0,.55),inset_0_1px_0_rgba(255,255,255,.5)]" />
 
-        <div className="absolute left-1/2 top-1/2 size-[30%] -translate-x-1/2 -translate-y-1/2 rounded-full border-[clamp(.4rem,1cqh,.75rem)] border-[#20252b] bg-[radial-gradient(circle_at_38%_30%,#424850_0%,#1b1f24_58%,#0d1014_100%)] shadow-[inset_0_0_20px_rgba(0,0,0,.75),0_12px_18px_rgba(0,0,0,.45)]">
+        <div className="absolute left-1/2 top-1/2 size-[30%] -translate-x-1/2 -translate-y-1/2 rounded-full border-[clamp(.4rem,1vh,.75rem)] border-[#20252b] bg-[radial-gradient(circle_at_38%_30%,#424850_0%,#1b1f24_58%,#0d1014_100%)] shadow-[inset_0_0_20px_rgba(0,0,0,.75),0_12px_18px_rgba(0,0,0,.45)]">
           <div className="absolute inset-0 grid place-items-center">
             <div className="text-center">
-              <div className="text-[clamp(1.05rem,2.3cqw,1.8rem)] font-black tracking-[-0.05em] text-white">G</div>
-              <div className="mt-[-0.2rem] text-[clamp(.42rem,.8cqw,.62rem)] font-black uppercase tracking-[0.2em] text-slate-300">G29</div>
+              <div className="text-[clamp(1.05rem,2.3vw,1.8rem)] font-black tracking-[-0.05em] text-white">G</div>
+              <div className="mt-[-0.2rem] text-[clamp(.42rem,.8vw,.62rem)] font-black uppercase tracking-[0.2em] text-slate-300">G29</div>
               <div className="mt-0.5 text-[6px] font-bold uppercase tracking-[0.2em] text-slate-500">DRIVING FORCE</div>
             </div>
           </div>
@@ -404,7 +404,7 @@ export function FlatWheel({ settings, set }: Props) {
         <div className="relative h-full w-full">
           <div
             ref={wheelHitRef}
-            className="flat-wheel-hit absolute bottom-[4%] left-[2%] aspect-square w-[min(72cqh,56cqw)] touch-none select-none md:bottom-[7%] md:left-[4%] md:w-[min(63cqh,53cqw)] md:min-h-60 md:min-w-60"
+            className="flat-wheel-hit absolute bottom-[4%] left-[2%] aspect-square w-[min(72svh,56svw)] touch-none select-none md:bottom-[7%] md:left-[4%] md:w-[min(63vh,53vw)] md:min-h-60 md:min-w-60"
             onPointerDown={grabWheel}
             onPointerMove={dragWheel}
             onPointerUp={releaseWheel}
@@ -413,7 +413,7 @@ export function FlatWheel({ settings, set }: Props) {
             <G29Wheel wheelVisualRef={wheelVisualRef} settings={settings} />
           </div>
 
-          <div className="flat-wheel-pedals absolute bottom-[4%] right-[18%] flex items-end gap-[clamp(.45rem,1.2cqw,.9rem)] md:bottom-[7%] md:right-[18%] md:gap-[clamp(.75rem,1.5cqw,1.3rem)]">
+          <div className="flat-wheel-pedals absolute bottom-[4%] right-[18%] flex items-end gap-[clamp(.45rem,1.2vw,.9rem)] md:bottom-[7%] md:right-[18%] md:gap-[clamp(.75rem,1.5vw,1.3rem)]">
             <Pedal id="clutch" label="CLUTCH" settings={settings} set={set} accent="#9ca3af" />
             <Pedal id="brake" label="BRAKE" settings={settings} set={set} accent="#ef4444" />
             <Pedal id="throttle" label="GAS" settings={settings} set={set} accent="#22c55e" />

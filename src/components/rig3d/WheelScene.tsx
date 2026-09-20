@@ -119,6 +119,8 @@ export function WheelScene({ settings, set, press }: Props) {
   const wheel = useRef<Group>(null);
   const steer = useRef(0);
   const tiltRef = useRef(0);
+  const returning = useRef(false);
+  const maxWheelRadians = (settings.wheelRotationDeg * Math.PI) / 360;
 
   const emit = useCallback(
     (raw: number) => {
@@ -147,7 +149,7 @@ export function WheelScene({ settings, set, press }: Props) {
     return () => window.removeEventListener("deviceorientation", onOrient);
   }, [settings.steerMode, settings.invertTilt, settings.maxTiltDeg, emit]);
 
-  /* touch steering: grab the rim and actually turn it with your thumb */
+  /* Continuous multi-turn steering: every orbit of the thumb adds a full turn. */
   const { camera, size, gl } = useThree();
   const onGrab = useCallback(
     (e: ThreeEvent<PointerEvent>) => {
@@ -162,7 +164,8 @@ export function WheelScene({ settings, set, press }: Props) {
 
       const angleOf = (x: number, y: number) => Math.atan2(y - cy, x - cx);
       let last = angleOf(e.nativeEvent.clientX, e.nativeEvent.clientY);
-      let acc = steer.current * 1.9; // current wheel rotation in radians
+      let acc = steer.current * maxWheelRadians;
+      returning.current = false;
 
       const move = (ev: PointerEvent) => {
         const a = angleOf(ev.clientX, ev.clientY);
@@ -170,11 +173,11 @@ export function WheelScene({ settings, set, press }: Props) {
         while (d > Math.PI) d -= Math.PI * 2;
         while (d < -Math.PI) d += Math.PI * 2;
         last = a;
-        acc = Math.max(-1.9, Math.min(1.9, acc + d));
-        emit(acc / 1.9);
+        acc = Math.max(-maxWheelRadians, Math.min(maxWheelRadians, acc + d));
+        emit(acc / maxWheelRadians);
       };
       const up = () => {
-        if (settings.autoCentre) emit(0);
+        returning.current = settings.autoCentre;
         window.removeEventListener("pointermove", move);
         window.removeEventListener("pointerup", up);
         window.removeEventListener("pointercancel", up);
@@ -183,19 +186,25 @@ export function WheelScene({ settings, set, press }: Props) {
       window.addEventListener("pointerup", up);
       window.addEventListener("pointercancel", up);
     },
-    [emit, settings.autoCentre, camera, size.width, size.height, gl],
+    [emit, settings.autoCentre, camera, size.width, size.height, gl, maxWheelRadians],
   );
 
   useFrame((_, dt) => {
     if (!wheel.current) return;
-    const goal = -steer.current * 1.9;
-    wheel.current.rotation.z += (goal - wheel.current.rotation.z) * Math.min(1, dt * 14);
+    if (returning.current && Math.abs(steer.current) > 0.002) {
+      emit(steer.current * Math.exp(-4.5 * Math.min(dt, 0.05)));
+    } else if (returning.current) {
+      returning.current = false;
+      emit(0);
+    }
+    const goal = -steer.current * maxWheelRadians;
+    wheel.current.rotation.z += (goal - wheel.current.rotation.z) * Math.min(1, dt * 22);
   });
 
   return (
     <group position={[0, -0.4, 0]}>
       {/* ---------------- wheel ---------------- */}
-      <group position={[-3.0, 1.0, 1.2]} rotation={[-0.95, 0, 0]} scale={0.9}>
+      <group position={[-3.1, 0.25, 0.5]} rotation={[-Math.PI / 2, 0, 0]} scale={0.86}>
         {/* column */}
         <mesh position={[0, 0, -0.6]} castShadow>
           <cylinderGeometry args={[0.28, 0.4, 1.1, 24]} />
@@ -239,6 +248,17 @@ export function WheelScene({ settings, set, press }: Props) {
             <boxGeometry args={[0.16, 0.3, 0.1]} />
             <meshStandardMaterial color="#f43f5e" emissive="#f43f5e" emissiveIntensity={1.6} />
           </mesh>
+          {/* G29-style RPM strip */}
+          {[-0.5, -0.25, 0, 0.25, 0.5].map((x, i) => (
+            <mesh key={x} position={[x, 0.78, 0.31]}>
+              <sphereGeometry args={[0.055, 12, 8]} />
+              <meshStandardMaterial
+                color={i < 3 ? "#22c55e" : i === 3 ? "#facc15" : "#ef4444"}
+                emissive={i < 3 ? "#22c55e" : i === 3 ? "#facc15" : "#ef4444"}
+                emissiveIntensity={1.8}
+              />
+            </mesh>
+          ))}
           {/* horn pad on the hub */}
           <group position={[0, 0, 0.3]} rotation={[Math.PI / 2, 0, 0]}>
             <Button3D
@@ -251,6 +271,23 @@ export function WheelScene({ settings, set, press }: Props) {
               vibration={settings.vibration}
               onPress={(d) => press("horn", d)}
             />
+          </group>
+          {/* face controls and D-pad rotate with the wheel, like the G29 */}
+          <group position={[-0.9, 0.12, 0.34]} scale={0.62}>
+            {([
+              ["dpad_up", [0, 0, -0.38]],
+              ["dpad_down", [0, 0, 0.38]],
+              ["dpad_left", [-0.38, 0, 0]],
+              ["dpad_right", [0.38, 0, 0]],
+            ] as const).map(([id, p]) => (
+              <Pad3D key={id} position={p as [number, number, number]} size={[0.38, 0.12, 0.38]} glow="#38bdf8" vibration={settings.vibration} onPress={(d) => press(id, d)} />
+            ))}
+          </group>
+          <group position={[0.95, 0.12, 0.34]} scale={0.62}>
+            <Button3D position={[0, 0, -0.42]} radius={0.2} label="△" glow="#4ade80" vibration={settings.vibration} onPress={(d) => press("y", d)} />
+            <Button3D position={[-0.42, 0, 0]} radius={0.2} label="□" glow="#f472b6" vibration={settings.vibration} onPress={(d) => press("x", d)} />
+            <Button3D position={[0.42, 0, 0]} radius={0.2} label="○" glow="#f87171" vibration={settings.vibration} onPress={(d) => press("b", d)} />
+            <Button3D position={[0, 0, 0.42]} radius={0.2} label="×" glow="#60a5fa" vibration={settings.vibration} onPress={(d) => press("a", d)} />
           </group>
           {/* paddle shifters */}
           {[-1, 1].map((s) => (
@@ -270,26 +307,27 @@ export function WheelScene({ settings, set, press }: Props) {
       </group>
 
       {/* ---------------- pedal box ---------------- */}
-      <group position={[2.9, -0.1, -0.1]} rotation={[0.25, -0.18, 0]} scale={1.1}>
+      <group position={[3.15, 0.1, 0.45]} rotation={[0, 0, 0]} scale={1.05}>
         <Pedal3D position={[-1.1, 0, 0]} label="CLUTCH" accent="#60a5fa" onChange={(v) => set({ clutch: v })} />
         <Pedal3D position={[0, 0, 0]} label="BRAKE" accent="#ef4444" onChange={(v) => set({ brake: v })} />
         <Pedal3D position={[1.1, 0, 0]} label="GAS" accent="#22c55e" onChange={(v) => set({ throttle: v })} />
       </group>
 
       {/* ---------------- handbrake + extras ---------------- */}
-      <group position={[0.55, 0.2, 0.3]} rotation={[0.18, 0, 0]} scale={1.2}>
+      <group position={[1.1, 0.15, 0.25]} rotation={[0, 0, 0]} scale={1.05}>
         <Handbrake3D onChange={(v) => set({ handbrake: v })} />
       </group>
 
-      <group position={[-0.7, -0.9, 2.2]} rotation={[-0.35, 0, 0]}>
+      <group position={[0, 0.15, -2.05]}>
         <Pad3D position={[-2.1, 0, 0]} size={[1.2, 0.16, 0.55]} glow="#a855f7" label="NITRO" vibration={settings.vibration} onPress={(d) => set({ nitro: d ? 1 : 0 })} />
         <Pad3D position={[-0.7, 0, 0]} size={[1.2, 0.16, 0.55]} glow="#fde047" label="LIGHTS" vibration={settings.vibration} onPress={(d) => press("lights", d)} />
-        <Pad3D position={[0.7, 0, 0]} size={[1.2, 0.16, 0.55]} glow="#22d3ee" label="LOOK" vibration={settings.vibration} onPress={(d) => press("look", d)} />
+        <Pad3D position={[0.7, 0, 0]} size={[1.2, 0.16, 0.55]} glow="#22d3ee" label="CAMERA" vibration={settings.vibration} onPress={(d) => press("look", d)} />
         <Pad3D position={[2.1, 0, 0]} size={[1.2, 0.16, 0.55]} glow="#94a3b8" label="RESET" vibration={settings.vibration} onPress={(d) => press("reset", d)} />
       </group>
-      <group position={[3.3, -0.9, 2.2]} rotation={[-0.35, 0, 0]}>
-        <Pad3D position={[0, 0, 0]} size={[0.9, 0.16, 0.5]} glow="#94a3b8" label="BACK" vibration={settings.vibration} onPress={(d) => press("back", d)} />
-        <Pad3D position={[1.05, 0, 0]} size={[0.9, 0.16, 0.5]} glow="#94a3b8" label="START" vibration={settings.vibration} onPress={(d) => press("start", d)} />
+      <group position={[2.8, 0.15, -2.05]}>
+        <Pad3D position={[0, 0, 0]} size={[0.8, 0.16, 0.5]} glow="#94a3b8" label="−" vibration={settings.vibration} onPress={(d) => press("back", d)} />
+        <Pad3D position={[0.95, 0, 0]} size={[0.8, 0.16, 0.5]} glow="#94a3b8" label="+" vibration={settings.vibration} onPress={(d) => press("start", d)} />
+        <Button3D position={[1.85, 0, 0]} radius={0.24} label="↵" glow="#38bdf8" vibration={settings.vibration} onPress={(d) => press("home", d)} />
       </group>
     </group>
   );

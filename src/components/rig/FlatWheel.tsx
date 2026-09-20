@@ -57,7 +57,7 @@ function Pedal({
       onPointerMove={(e) => active.current === e.pointerId && update(e.clientY)}
       onPointerUp={release}
       onPointerCancel={release}
-      className="group relative h-[42vh] min-h-44 w-[clamp(4.2rem,7vw,6.2rem)] touch-none select-none overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#090d12]/95 p-2 shadow-[0_12px_28px_rgba(0,0,0,.55),inset_0_1px_0_rgba(255,255,255,.04)]"
+      className="group relative h-[62svh] min-h-0 w-[clamp(3.8rem,8vw,5.4rem)] md:h-[42vh] md:min-h-44 md:w-[clamp(4.2rem,7vw,6.2rem)] touch-none select-none overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#090d12]/95 p-2 shadow-[0_12px_28px_rgba(0,0,0,.55),inset_0_1px_0_rgba(255,255,255,.04)]"
     >
       <span className="absolute inset-2 rounded-[1.05rem] border border-white/5 bg-[linear-gradient(180deg,#151b22,#0a0e13)]" />
       <span
@@ -115,7 +115,7 @@ function Handbrake({ settings, set }: { settings: Settings; set: Props["set"] })
       onPointerMove={(e) => active.current && move(e.clientY)}
       onPointerUp={release}
       onPointerCancel={release}
-      className="relative h-40 w-24 touch-none select-none rounded-[1.25rem] border border-white/10 bg-[#0b0f14] shadow-[0_10px_24px_rgba(0,0,0,.5)] active:brightness-125"
+      className="relative h-[38svh] w-[clamp(4rem,9vw,5.5rem)] md:h-40 md:w-24 touch-none select-none rounded-[1.25rem] border border-white/10 bg-[#0b0f14] shadow-[0_10px_24px_rgba(0,0,0,.5)] active:brightness-125"
     >
       <span className="absolute inset-2 rounded-[1rem] bg-gradient-to-b from-[#171d24] to-[#080b10]" />
       <span
@@ -151,7 +151,7 @@ function Nitro({ settings, set }: { settings: Settings; set: Props["set"] }) {
         setDown(false);
         set({ nitro: 0 });
       }}
-      className={`grid h-14 w-24 touch-none select-none place-items-center rounded-xl border border-cyan-300/25 bg-[linear-gradient(180deg,#27313b,#10151b)] text-[9px] font-black uppercase tracking-[0.22em] text-cyan-200 shadow-[0_7px_16px_rgba(0,0,0,.46),inset_0_1px_0_rgba(255,255,255,.08)] active:translate-y-0.5 ${down ? "brightness-150 ring-2 ring-fuchsia-400/40" : ""}`}
+      className={`grid h-12 w-[clamp(4rem,9vw,5.5rem)] md:h-14 md:w-24 touch-none select-none place-items-center rounded-xl border border-cyan-300/25 bg-[linear-gradient(180deg,#27313b,#10151b)] text-[9px] font-black uppercase tracking-[0.22em] text-cyan-200 shadow-[0_7px_16px_rgba(0,0,0,.46),inset_0_1px_0_rgba(255,255,255,.08)] active:translate-y-0.5 ${down ? "brightness-150 ring-2 ring-fuchsia-400/40" : ""}`}
     >
       NITRO
     </button>
@@ -380,31 +380,31 @@ export function FlatWheel({ settings, set }: Props) {
       <div className="pointer-events-none absolute inset-2 rounded-[1.7rem] border border-white/15" />
       <div className="pointer-events-none absolute inset-4 rounded-[1.4rem] border border-[#e11d2e]/15" />
 
-      <div className="absolute left-5 top-5 z-20 rounded-xl border border-white/10 bg-black/45 px-3 py-2 backdrop-blur-md">
-        <div className="text-[8px] font-black uppercase tracking-[0.25em] text-slate-500">STEERING MODE</div>
-        <div className="mt-1 text-sm font-black tracking-tight text-white">LOGITECH G29 STYLE</div>
-        <div className="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+      <div className="absolute left-2 top-2 z-20 rounded-xl border border-white/10 bg-black/45 px-2.5 py-1.5 backdrop-blur-md md:left-5 md:top-5 md:px-3 md:py-2">
+        <div className="text-[6px] font-black uppercase tracking-[0.22em] text-slate-500 md:text-[8px] md:tracking-[0.25em]">STEERING MODE</div>
+        <div className="mt-0.5 text-[11px] font-black tracking-tight text-white md:mt-1 md:text-sm">LOGITECH G29 STYLE</div>
+        <div className="mt-0.5 text-[6px] font-semibold uppercase tracking-[0.15em] text-slate-500 md:text-[8px] md:tracking-[0.2em]">
           {settings.steerMode === "touch" ? "Touch rotation" : gyroReady ? "Gyro active" : "Gyro permission required"}
         </div>
       </div>
 
       {settings.steerMode === "tilt" && !gyroReady && (
-        <div className="absolute left-1/2 top-5 z-30 -translate-x-1/2">
+        <div className="absolute left-1/2 top-[3.5rem] z-30 -translate-x-1/2 md:top-5">
           <button
             type="button"
             onClick={requestGyro}
-            className="rounded-xl border border-[#e11d2e]/40 bg-[#11151a]/90 px-5 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-white shadow-[0_10px_24px_rgba(0,0,0,.5)] backdrop-blur-md active:scale-[.98]"
+            className="rounded-xl border border-[#e11d2e]/40 bg-[#11151a]/90 px-3 py-2.5 text-[8px] font-black uppercase tracking-[0.15em] text-white shadow-[0_10px_24px_rgba(0,0,0,.5)] backdrop-blur-md active:scale-[.98] md:px-5 md:py-3 md:text-[9px] md:tracking-[0.2em]"
           >
             {gyroDenied ? "ENABLE GYRO AGAIN" : "ENABLE GYRO"}
           </button>
         </div>
       )}
 
-      <div className="absolute inset-0 px-5 pb-5 pt-20">
+      <div className="absolute inset-0 px-2 pb-2 pt-16 md:px-5 md:pb-5 md:pt-20">
         <div className="relative h-full w-full">
           <div
             ref={wheelHitRef}
-            className="absolute bottom-[7%] left-[4%] aspect-square w-[min(63vh,53vw)] min-h-60 min-w-60 touch-none select-none"
+            className="absolute bottom-[4%] left-[2%] aspect-square w-[min(72svh,56svw)] touch-none select-none md:bottom-[7%] md:left-[4%] md:w-[min(63vh,53vw)] md:min-h-60 md:min-w-60"
             onPointerDown={grabWheel}
             onPointerMove={dragWheel}
             onPointerUp={releaseWheel}
@@ -413,18 +413,18 @@ export function FlatWheel({ settings, set }: Props) {
             <G29Wheel wheelVisualRef={wheelVisualRef} settings={settings} />
           </div>
 
-          <div className="absolute bottom-[7%] right-[18%] flex items-end gap-[clamp(.75rem,1.5vw,1.3rem)]">
+          <div className="absolute bottom-[4%] right-[18%] flex items-end gap-[clamp(.45rem,1.2vw,.9rem)] md:bottom-[7%] md:right-[18%] md:gap-[clamp(.75rem,1.5vw,1.3rem)]">
             <Pedal id="clutch" label="CLUTCH" settings={settings} set={set} accent="#9ca3af" />
             <Pedal id="brake" label="BRAKE" settings={settings} set={set} accent="#ef4444" />
             <Pedal id="throttle" label="GAS" settings={settings} set={set} accent="#22c55e" />
           </div>
 
-          <div className="absolute bottom-[12%] right-[4%] flex flex-col items-center gap-3">
+          <div className="absolute bottom-[5%] right-[1.5%] flex flex-col items-center gap-2 md:bottom-[12%] md:right-[4%] md:gap-3">
             <Handbrake settings={settings} set={set} />
             <Nitro settings={settings} set={set} />
           </div>
 
-          <div className="pointer-events-none absolute bottom-3 left-[5%] text-[8px] font-bold uppercase tracking-[0.2em] text-slate-500">
+          <div className="pointer-events-none absolute bottom-1 left-[2%] hidden text-[7px] font-bold uppercase tracking-[0.16em] text-slate-500 md:bottom-3 md:left-[5%] md:block md:text-[8px] md:tracking-[0.2em]">
             Touch the rim and rotate • {settings.wheelRotationDeg}° lock-to-lock
           </div>
         </div>

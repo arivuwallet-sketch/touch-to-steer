@@ -1,8 +1,20 @@
-import { Canvas } from "@react-three/fiber";
+import { useEffect } from "react";
+import { Canvas, useThree } from "@react-three/fiber";
 import { ContactShadows } from "@react-three/drei";
 import { PadScene } from "./PadScene";
 import { WheelScene } from "./WheelScene";
 import type { ControllerState, Settings } from "@/lib/controller-types";
+
+function CameraRig({ mode }: { mode: "pad" | "wheel" }) {
+  const camera = useThree((s) => s.camera);
+  useEffect(() => {
+    if (mode === "pad") camera.position.set(0, 6.8, 4.8);
+    else camera.position.set(0, 6.6, 8.2);
+    camera.lookAt(0, 0, 0);
+    camera.updateProjectionMatrix();
+  }, [mode, camera]);
+  return null;
+}
 
 export default function Rig3D({
   mode,
@@ -26,6 +38,7 @@ export default function Rig3D({
       <color attach="background" args={["#080b11"]} />
       <fog attach="fog" args={["#080b11", 12, 26]} />
 
+      <CameraRig mode={mode} />
       <ambientLight intensity={0.5} />
       <hemisphereLight args={["#9ecbff", "#0a0e15", 0.7]} />
       <directionalLight

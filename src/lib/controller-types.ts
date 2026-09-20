@@ -79,7 +79,7 @@ export const defaultSettings: Settings = {
   deadzone: 0.05,
   maxTiltDeg: 35,
   linearity: 1.4,
-  autoCentre: false,
+  autoCentre: true,
   vibration: true,
   ffbHaptics: true,
   sendRateHz: 240,

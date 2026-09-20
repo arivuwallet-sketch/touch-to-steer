@@ -251,11 +251,19 @@ export function FlatWheel({ settings, set }: Props) {
 
   const requestGyro = useCallback(async () => {
     try {
-      const DeviceOrientation = window.DeviceOrientationEvent as typeof DeviceOrientationEvent & {
-        requestPermission?: () => Promise<"granted" | "denied">;
-      };
+      const DeviceOrientation = window.DeviceOrientationEvent as
+        | (typeof window.DeviceOrientationEvent & {
+            requestPermission?: () => Promise<"granted" | "denied">;
+          })
+        | undefined;
 
-      if (typeof DeviceOrientation.requestPermission === "function") {
+      if (!DeviceOrientation) {
+        setGyroDenied(true);
+        setGyroReady(false);
+        return;
+      }
+
+      if (typeof DeviceOrientation.requestPermission === "function")
         const permission = await DeviceOrientation.requestPermission();
         if (permission !== "granted") {
           setGyroDenied(true);
@@ -280,11 +288,13 @@ export function FlatWheel({ settings, set }: Props) {
       return;
     }
 
-    const DeviceOrientation = window.DeviceOrientationEvent as typeof DeviceOrientationEvent & {
-      requestPermission?: () => Promise<"granted" | "denied">;
-    };
+    const DeviceOrientation = window.DeviceOrientationEvent as
+      | (typeof window.DeviceOrientationEvent & {
+          requestPermission?: () => Promise<"granted" | "denied">;
+        })
+      | undefined;
 
-    if (typeof DeviceOrientation.requestPermission !== "function") {
+    if (DeviceOrientation && typeof DeviceOrientation.requestPermission !== "function") {
       setGyroReady(true);
     }
   }, [settings.steerMode, setWheelRaw]);

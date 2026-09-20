@@ -146,7 +146,7 @@ function Stick({
           onClick3(true);
           window.setTimeout(() => onClick3(false), 90);
         }}
-        className="flat-pad-stick relative size-[clamp(7.5rem,23vh,10.5rem)] touch-none rounded-full border border-white/10 bg-[#0c1117] shadow-[inset_0_0_22px_rgba(0,0,0,.95),0_8px_20px_rgba(0,0,0,.45)]"
+        className="flat-pad-stick relative size-[clamp(5.25rem,23svh,10.5rem)] touch-none rounded-full border border-white/10 bg-[#0c1117] shadow-[inset_0_0_22px_rgba(0,0,0,.95),0_8px_20px_rgba(0,0,0,.45)]"
       >
         <div className="absolute inset-[8%] rounded-full border border-[#2e3945] bg-[radial-gradient(circle_at_38%_28%,#202a35,#080c11_72%)]" />
         <div
@@ -175,12 +175,12 @@ function ApexDPad({ settings, press, turbo }: { settings: Settings; press: Props
       settings={settings}
       press={press}
       turbo={turbo}
-      className={`absolute ${position} size-12 rounded-xl text-xl`}
+      className={`absolute ${position} size-[clamp(2.75rem,8svh,3rem)] rounded-xl text-[clamp(1.2rem,4svh,1.5rem)]`}
     />
   );
 
   return (
-    <div className="flat-pad-dpad relative size-40">
+    <div className="flat-pad-dpad relative size-[clamp(6.75rem,22svh,10rem)]">
       <div className="absolute left-1/2 top-1/2 size-12 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#11171e] shadow-inner" />
       {cell("up", "↑", "left-1/2 top-0 -translate-x-1/2")}
       {cell("left", "←", "left-0 top-1/2 -translate-y-1/2")}
@@ -196,11 +196,11 @@ function ApexDPad({ settings, press, turbo }: { settings: Settings; press: Props
 
 function ApexFaceButtons({ settings, press, turbo }: { settings: Settings; press: Props["press"]; turbo: boolean }) {
   return (
-    <div className="flat-pad-face relative size-44">
-      <SurfaceButton label="Y" id="y" settings={settings} press={press} turbo={turbo} className="absolute left-1/2 top-0 size-14 -translate-x-1/2 text-2xl text-[#ffd43b]" />
-      <SurfaceButton label="X" id="x" settings={settings} press={press} turbo={turbo} className="absolute left-0 top-1/2 size-14 -translate-y-1/2 text-2xl text-[#58b9ff]" />
-      <SurfaceButton label="B" id="b" settings={settings} press={press} turbo={turbo} className="absolute right-0 top-1/2 size-14 -translate-y-1/2 text-2xl text-[#ff5b57]" />
-      <SurfaceButton label="A" id="a" settings={settings} press={press} turbo={turbo} className="absolute bottom-0 left-1/2 size-14 -translate-x-1/2 text-2xl text-[#62df87]" />
+    <div className="flat-pad-face relative size-[clamp(7.5rem,24svh,11rem)]">
+      <SurfaceButton label="Y" id="y" settings={settings} press={press} turbo={turbo} className="absolute left-1/2 top-0 size-[clamp(2.75rem,8svh,3.5rem)] -translate-x-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#ffd43b]" />
+      <SurfaceButton label="X" id="x" settings={settings} press={press} turbo={turbo} className="absolute left-0 top-1/2 size-[clamp(2.75rem,8svh,3.5rem)] -translate-y-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#58b9ff]" />
+      <SurfaceButton label="B" id="b" settings={settings} press={press} turbo={turbo} className="absolute right-0 top-1/2 size-[clamp(2.75rem,8svh,3.5rem)] -translate-y-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#ff5b57]" />
+      <SurfaceButton label="A" id="a" settings={settings} press={press} turbo={turbo} className="absolute bottom-0 left-1/2 size-[clamp(2.75rem,8svh,3.5rem)] -translate-x-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#62df87]" />
     </div>
   );
 }
@@ -257,7 +257,7 @@ function Trigger({
       onPointerMove={(e) => pointer.current === e.pointerId && move(e)}
       onPointerUp={release}
       onPointerCancel={release}
-      className="flat-pad-trigger grid h-14 w-24 touch-none place-items-center rounded-xl border border-white/10 bg-[linear-gradient(180deg,#303b47,#10151b)] text-[10px] font-black tracking-[0.25em] text-cyan-300 shadow-[inset_0_2px_2px_rgba(255,255,255,.08),0_6px_14px_rgba(0,0,0,.5)]"
+      className="flat-pad-trigger grid h-[clamp(2.75rem,7.8svh,3.5rem)] w-[clamp(4.5rem,8vw,6rem)] touch-none place-items-center rounded-xl border border-white/10 bg-[linear-gradient(180deg,#303b47,#10151b)] text-[10px] font-black tracking-[0.25em] text-cyan-300 shadow-[inset_0_2px_2px_rgba(255,255,255,.08),0_6px_14px_rgba(0,0,0,.5)]"
       style={{ boxShadow: value ? "0 0 20px rgba(34,211,238,.25), inset 0 0 12px rgba(0,0,0,.65)" : undefined }}
     >
       <span>{label}</span>
@@ -312,7 +312,7 @@ function ExtraButton({
       id={id}
       settings={settings}
       press={press}
-      className={`h-11 min-w-[4.5rem] rounded-xl px-3 text-[9px] text-slate-300 ${className}`}
+      className={`h-[clamp(2.25rem,6.5svh,2.75rem)] min-w-[clamp(4rem,7vw,4.5rem)] rounded-xl px-3 text-[9px] text-slate-300 ${className}`}
     />
   );
 }

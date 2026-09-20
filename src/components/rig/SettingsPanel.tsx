@@ -1,9 +1,16 @@
 import type { Settings } from "@/lib/controller-types";
+import { Button } from "@/components/ui/button";
+import { Link } from "@tanstack/react-router";
+import { CircleStop, Link2, X } from "lucide-react";
 
 type Props = {
   settings: Settings;
   onChange: (patch: Partial<Settings>) => void;
   onClose: () => void;
+  status: "disconnected" | "connecting" | "connected" | "error";
+  latency: number | null;
+  onConnect: () => void;
+  onDisconnect: () => void;
 };
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -15,30 +22,60 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-export function SettingsPanel({ settings, onChange, onClose }: Props) {
+export function SettingsPanel({
+  settings,
+  onChange,
+  onClose,
+  status,
+  latency,
+  onConnect,
+  onDisconnect,
+}: Props) {
+  const connected = status === "connected";
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-background/70 backdrop-blur-sm">
-      <div className="panel h-full w-full max-w-sm overflow-y-auto rounded-none p-5">
+      <div className="panel h-full w-full max-w-sm overflow-y-auto rounded-none p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
           <h2 className="min-w-0 truncate text-lg font-bold">Rig setup</h2>
-          <button
+          <Button
             onClick={onClose}
-            className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold uppercase tracking-widest"
+            variant="ghost"
+            size="icon"
+            aria-label="Close settings"
           >
-            Done
-          </button>
+            <X />
+          </Button>
+        </div>
+
+        <div className="mt-5 rounded-lg border border-border bg-secondary/60 p-3">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase">PC connection</p>
+              <p className={`text-xs ${connected ? "text-success" : status === "error" ? "text-destructive" : "text-muted-foreground"}`}>
+                {status}{latency !== null ? ` · ${latency} ms` : ""}
+              </p>
+            </div>
+            <Button
+              onClick={connected ? onDisconnect : onConnect}
+              variant={connected ? "outline" : "default"}
+              size="sm"
+            >
+              {connected ? <CircleStop /> : <Link2 />}
+              {connected ? "Disconnect" : status === "connecting" ? "Connecting" : "Connect"}
+            </Button>
+          </div>
+          <input
+            aria-label="PC bridge address"
+            value={settings.bridgeUrl}
+            onChange={(e) => onChange({ bridgeUrl: e.target.value })}
+            maxLength={120}
+            spellCheck={false}
+            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+          />
         </div>
 
         <div className="mt-4 divide-y divide-border">
-          <Row label="Bridge address">
-            <input
-              value={settings.bridgeUrl}
-              onChange={(e) => onChange({ bridgeUrl: e.target.value })}
-              maxLength={120}
-              spellCheck={false}
-              className="w-44 rounded-lg border border-input bg-background px-2 py-1.5 text-right text-xs"
-            />
-          </Row>
           <Row label="Steering input">
             <select
               value={settings.steerMode}
@@ -173,9 +210,9 @@ export function SettingsPanel({ settings, onChange, onClose }: Props) {
 
         <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
           Settings are saved on this phone. Need the PC side? Open{" "}
-          <a href="/setup" className="font-semibold text-primary underline">
+          <Link to="/setup" className="font-semibold text-primary underline">
             the setup guide
-          </a>
+          </Link>
           .
         </p>
       </div>

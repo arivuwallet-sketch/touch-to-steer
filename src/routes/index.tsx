@@ -1,8 +1,10 @@
-import { createFileRoute, ClientOnly, Link } from "@tanstack/react-router";
+import { createFileRoute, ClientOnly } from "@tanstack/react-router";
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
+import { Gamepad2, Settings as SettingsIcon, Gauge } from "lucide-react";
 import { SettingsPanel } from "@/components/rig/SettingsPanel";
 import { RotateGate } from "@/components/rig/RotateGate";
 import { FlatPad } from "@/components/rig/FlatPad";
+import { Button } from "@/components/ui/button";
 import { useBridge } from "@/hooks/useBridge";
 import {
   PRESETS,
@@ -42,8 +44,6 @@ function Rig() {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [showSettings, setShowSettings] = useState(false);
   const [mode, setMode] = useState<"pad" | "wheel">("pad");
-  const [preset, setPreset] = useState<string>("gtav");
-  const [hud, setHud] = useState({ a: 0, b: 0, c: 0 });
   const stateRef = useRef<ControllerState>(emptyState());
   const { status, latency, connect, disconnect } = useBridge(stateRef, settings.sendRateHz);
 
@@ -66,12 +66,6 @@ function Rig() {
     });
   }, []);
 
-  const applyPreset = (key: string) => {
-    setPreset(key);
-    const p = PRESETS[key];
-    if (p) patch(p.patch);
-  };
-
   const set = useCallback((p: Partial<ControllerState>) => {
     stateRef.current = { ...stateRef.current, ...p };
   }, []);
@@ -82,38 +76,6 @@ function Rig() {
       buttons: { ...stateRef.current.buttons, [id]: down },
     };
   }, []);
-
-  useEffect(() => {
-    const t = setInterval(() => {
-      const s = stateRef.current;
-      setHud(
-        mode === "wheel"
-          ? { a: s.steer, b: s.throttle, c: s.brake }
-          : { a: s.lx, b: s.rx, c: Math.max(s.lt, s.rt) },
-      );
-    }, 120);
-    return () => clearInterval(t);
-  }, [mode]);
-
-  const tone =
-    status === "connected"
-      ? "text-[var(--success)]"
-      : status === "error"
-        ? "text-destructive"
-        : "text-muted-foreground";
-
-  const readouts =
-    mode === "wheel"
-      ? [
-          { k: "Steer", v: hud.a },
-          { k: "Gas", v: hud.b },
-          { k: "Brake", v: hud.c },
-        ]
-      : [
-          { k: "L-X", v: hud.a },
-          { k: "R-X", v: hud.b },
-          { k: "Trig", v: hud.c },
-        ];
 
   return (
     <main className="relative h-[100dvh] overflow-hidden bg-background">
@@ -138,91 +100,50 @@ function Rig() {
         )}
       </div>
 
-      {/* ---------- floating HUD ---------- */}
-      <header className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-2">
-        <div className="panel pointer-events-auto flex items-center gap-2.5 px-3 py-1.5 backdrop-blur">
-          <div
-            className="grid size-7 shrink-0 place-items-center rounded-lg text-[10px] font-black text-primary-foreground"
-            style={{ background: "var(--gradient-primary)" }}
+      <div className="absolute right-[max(0.75rem,env(safe-area-inset-right))] top-[max(0.75rem,env(safe-area-inset-top))] z-20 flex items-center gap-2">
+        <div className="flex rounded-lg border border-border bg-card/85 p-1 shadow-lg backdrop-blur">
+          <Button
+            onClick={() => setMode("pad")}
+            variant={mode === "pad" ? "default" : "ghost"}
+            size="icon"
+            aria-label="Gamepad controls"
+            title="Gamepad"
           >
-            MR
-          </div>
-          <div className="min-w-0">
-            <h1 className="truncate text-xs font-bold leading-tight">Mobile Rig</h1>
-            <p className={`truncate text-[9px] font-semibold uppercase tracking-widest ${tone}`}>
-              {status}
-              {latency !== null && ` · ${latency} ms`}
-            </p>
-          </div>
-        </div>
-
-        <div className="pointer-events-auto flex items-center gap-1.5">
-          <div className="panel hidden gap-2 px-2 py-1 backdrop-blur sm:flex">
-            {readouts.map((x) => (
-              <div key={x.k} className="min-w-11 text-center">
-                <p className="text-[8px] uppercase tracking-[0.18em] text-muted-foreground">{x.k}</p>
-                <p className="text-xs font-bold tabular-nums">{(x.v * 100).toFixed(0)}</p>
-              </div>
-            ))}
-          </div>
-          <button
-            onClick={() => (status === "connected" ? disconnect() : connect(settings.bridgeUrl))}
-            className="rounded-lg px-3 py-2 text-[10px] font-bold uppercase tracking-widest"
-            style={
-              status === "connected"
-                ? { border: "1px solid var(--border)" }
-                : { background: "var(--gradient-primary)", color: "var(--primary-foreground)" }
-            }
+            <Gamepad2 />
+          </Button>
+          <Button
+            onClick={() => setMode("wheel")}
+            variant={mode === "wheel" ? "default" : "ghost"}
+            size="icon"
+            aria-label="Steering controls"
+            title="Steering wheel"
           >
-            {status === "connected" ? "Stop" : "Connect"}
-          </button>
-          <button
-            onClick={() => setShowSettings(true)}
-            className="rounded-lg border border-border bg-card/70 px-3 py-2 text-[10px] font-bold uppercase tracking-widest backdrop-blur"
-          >
-            Tune
-          </button>
+            <Gauge />
+          </Button>
         </div>
-      </header>
-
-      <footer className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 p-2">
-        <div className="pointer-events-auto flex rounded-xl border border-border bg-card/70 p-0.5 backdrop-blur">
-          {(["pad", "wheel"] as const).map((m) => (
-            <button
-              key={m}
-              onClick={() => setMode(m)}
-              className={`rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest ${
-                mode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-              }`}
-            >
-              {m === "pad" ? "Gamepad" : "Steering rig"}
-            </button>
-          ))}
-        </div>
-
-        <div className="pointer-events-auto flex items-center gap-1.5">
-          {Object.entries(PRESETS).map(([k, p]) => (
-            <button
-              key={k}
-              onClick={() => applyPreset(k)}
-              className={`rounded-lg border bg-card/70 px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-widest backdrop-blur ${
-                preset === k ? "border-accent text-accent" : "border-border text-muted-foreground"
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-          <Link
-            to="/setup"
-            className="rounded-lg border border-border bg-card/70 px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-widest text-primary backdrop-blur"
-          >
-            PC setup
-          </Link>
-        </div>
-      </footer>
+        <Button
+          onClick={() => setShowSettings(true)}
+          variant="secondary"
+          size="icon"
+          className="relative shadow-lg"
+          aria-label="Open settings and connection"
+          title="Settings and connection"
+        >
+          <SettingsIcon />
+          <span className={`absolute right-0.5 top-0.5 size-2 rounded-full ${status === "connected" ? "bg-success" : status === "error" ? "bg-destructive" : "bg-muted-foreground"}`} />
+        </Button>
+      </div>
 
       {showSettings && (
-        <SettingsPanel settings={settings} onChange={patch} onClose={() => setShowSettings(false)} />
+        <SettingsPanel
+          settings={settings}
+          onChange={patch}
+          onClose={() => setShowSettings(false)}
+          status={status}
+          latency={latency}
+          onConnect={() => connect(settings.bridgeUrl)}
+          onDisconnect={disconnect}
+        />
       )}
     </main>
   );

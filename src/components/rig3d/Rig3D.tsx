@@ -30,7 +30,7 @@ export default function Rig3D({
   return (
     <Canvas
       shadows
-      dpr={[1, 2]}
+      dpr={1}
       gl={{ antialias: true, alpha: true }}
       camera={{ position: [0, 12, 0.01], fov: 42 }}
       style={{ touchAction: "none" }}
@@ -51,7 +51,7 @@ export default function Rig3D({
       <pointLight position={[-6, 3, 4]} intensity={70} color="#38bdf8" distance={22} />
       <pointLight position={[6, 3, 4]} intensity={55} color="#f97316" distance={20} />
       <spotLight position={[0, 10, 0]} angle={0.8} penumbra={1} intensity={110} color="#c7d9ff" />
-      <Environment>
+      <Environment resolution={64}>
         <Lightformer intensity={2} position={[0, 8, 0]} scale={[12, 12, 1]} />
         <Lightformer intensity={1.2} color="#77bfff" position={[-7, 2, 0]} rotation-y={Math.PI / 2} scale={[12, 2, 1]} />
       </Environment>
@@ -64,7 +64,7 @@ export default function Rig3D({
         )}
       </group>
 
-      <ContactShadows position={[0, -1.6, 0]} opacity={0.6} scale={26} blur={2.6} far={8} />
+      <ContactShadows resolution={256} frames={1} position={[0, -1.6, 0]} opacity={0.6} scale={26} blur={2.6} far={8} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.62, 0]} receiveShadow>
         <planeGeometry args={[40, 40]} />
         <meshStandardMaterial color="#0a0e15" metalness={0.4} roughness={0.85} />

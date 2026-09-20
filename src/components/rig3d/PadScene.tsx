@@ -102,6 +102,7 @@ export function PadScene({ settings, set, press }: Props) {
       <Stick3D
         position={[-2.6, 0.52, -0.35]}
         label="MOVE"
+        tension={settings.stickTension}
         vibration={settings.vibration}
         onMove={(x, y) => set({ lx: x, ly: y })}
         onClick3={(d) => press("l3", d)}
@@ -169,6 +170,7 @@ export function PadScene({ settings, set, press }: Props) {
       <Stick3D
         position={[1.0, 0.52, 0.95]}
         label="AIM"
+        tension={settings.stickTension}
         vibration={settings.vibration}
         onMove={(x, y) => set({ rx: x, ry: settings.invertLookY ? -y : y })}
         onClick3={(d) => press("r3", d)}

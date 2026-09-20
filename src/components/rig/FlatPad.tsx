@@ -73,7 +73,7 @@ function Stick({
         setTimeout(() => onClick3(false), 90);
       }}
       aria-label={label}
-      className="relative size-[30vh] max-size-40 touch-none rounded-full"
+      className="relative size-[30vh] max-h-40 max-w-40 touch-none rounded-full"
       style={{
         background:
           "radial-gradient(circle at 50% 35%, oklch(0.3 0.02 260), oklch(0.12 0.01 260) 70%)",

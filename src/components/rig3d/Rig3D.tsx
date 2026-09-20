@@ -20,7 +20,7 @@ export default function Rig3D({
       shadows
       dpr={[1, 2]}
       gl={{ antialias: true, alpha: true }}
-      camera={{ position: mode === "pad" ? [0, 5.4, 6.2] : [0, 5.2, 7.4], fov: 42 }}
+      camera={{ position: mode === "pad" ? [0, 6.8, 4.8] : [0, 6.6, 8.2], fov: 42 }}
       style={{ touchAction: "none" }}
     >
       <color attach="background" args={["#080b11"]} />
@@ -38,7 +38,7 @@ export default function Rig3D({
       <pointLight position={[6, 3, 4]} intensity={35} color="#f97316" distance={20} />
       <spotLight position={[0, 10, 0]} angle={0.8} penumbra={1} intensity={60} color="#c7d9ff" />
 
-      <group rotation={[0, 0, 0]}>
+      <group scale={mode === "pad" ? 0.92 : 0.8} position={[0, mode === "pad" ? 0 : 0.5, 0]}>
         {mode === "pad" ? (
           <PadScene settings={settings} set={set} press={press} />
         ) : (

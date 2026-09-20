@@ -177,7 +177,7 @@ export function WheelScene({ settings, set, press }: Props) {
   return (
     <group position={[0, -0.4, 0]}>
       {/* ---------------- wheel ---------------- */}
-      <group position={[-3.1, 0.6, 0]} rotation={[-0.95, 0, 0]}>
+      <group position={[-3.2, 0.9, 0.9]} rotation={[-0.95, 0, 0]} scale={0.88}>
         {/* column */}
         <mesh position={[0, 0, -0.6]} castShadow>
           <cylinderGeometry args={[0.28, 0.4, 1.1, 24]} />
@@ -252,24 +252,24 @@ export function WheelScene({ settings, set, press }: Props) {
       </group>
 
       {/* ---------------- pedal box ---------------- */}
-      <group position={[2.3, -0.2, 0.2]} rotation={[0.25, -0.18, 0]}>
+      <group position={[2.6, -0.1, 0.0]} rotation={[0.25, -0.18, 0]}>
         <Pedal3D position={[-1.1, 0, 0]} label="CLUTCH" accent="#60a5fa" onChange={(v) => set({ clutch: v })} />
         <Pedal3D position={[0, 0, 0]} label="BRAKE" accent="#ef4444" onChange={(v) => set({ brake: v })} />
         <Pedal3D position={[1.1, 0, 0]} label="GAS" accent="#22c55e" onChange={(v) => set({ throttle: v })} />
       </group>
 
       {/* ---------------- handbrake + extras ---------------- */}
-      <group position={[0.0, 0.1, 0.4]} rotation={[0.18, 0, 0]}>
+      <group position={[0.1, 0.25, 0.1]} rotation={[0.18, 0, 0]} scale={1.15}>
         <Handbrake3D onChange={(v) => set({ handbrake: v })} />
       </group>
 
-      <group position={[0, -0.75, 2.0]} rotation={[-0.35, 0, 0]}>
+      <group position={[-0.2, -0.55, 1.55]} rotation={[-0.35, 0, 0]}>
         <Pad3D position={[-1.5, 0, 0]} size={[1.0, 0.16, 0.5]} glow="#a855f7" label="NITRO" vibration={settings.vibration} onPress={(d) => set({ nitro: d ? 1 : 0 })} />
         <Pad3D position={[-0.35, 0, 0]} size={[1.0, 0.16, 0.5]} glow="#fde047" label="LIGHTS" vibration={settings.vibration} onPress={(d) => press("lights", d)} />
         <Pad3D position={[0.8, 0, 0]} size={[1.0, 0.16, 0.5]} glow="#22d3ee" label="LOOK" vibration={settings.vibration} onPress={(d) => press("look", d)} />
         <Pad3D position={[1.95, 0, 0]} size={[1.0, 0.16, 0.5]} glow="#94a3b8" label="RESET" vibration={settings.vibration} onPress={(d) => press("reset", d)} />
       </group>
-      <group position={[3.6, -0.75, 2.0]} rotation={[-0.35, 0, 0]}>
+      <group position={[3.4, -0.55, 1.55]} rotation={[-0.35, 0, 0]}>
         <Pad3D position={[0, 0, 0]} size={[0.9, 0.16, 0.5]} glow="#94a3b8" label="BACK" vibration={settings.vibration} onPress={(d) => press("back", d)} />
         <Pad3D position={[1.05, 0, 0]} size={[0.9, 0.16, 0.5]} glow="#94a3b8" label="START" vibration={settings.vibration} onPress={(d) => press("start", d)} />
       </group>

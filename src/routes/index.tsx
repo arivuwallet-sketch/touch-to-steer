@@ -7,7 +7,6 @@ import { FlatPad } from "@/components/rig/FlatPad";
 import { Button } from "@/components/ui/button";
 import { useBridge } from "@/hooks/useBridge";
 import {
-  PRESETS,
   defaultSettings,
   emptyState,
   type Settings,

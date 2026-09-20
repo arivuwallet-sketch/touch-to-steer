@@ -7,7 +7,7 @@ type Props = {
   settings: Settings;
   onChange: (patch: Partial<Settings>) => void;
   onClose: () => void;
-  status: "disconnected" | "connecting" | "connected" | "error";
+  status: "idle" | "connecting" | "connected" | "error";
   latency: number | null;
   onConnect: () => void;
   onDisconnect: () => void;
@@ -53,7 +53,7 @@ export function SettingsPanel({
             <div>
               <p className="text-xs font-bold uppercase">PC connection</p>
               <p className={`text-xs ${connected ? "text-success" : status === "error" ? "text-destructive" : "text-muted-foreground"}`}>
-                {status}{latency !== null ? ` · ${latency} ms` : ""}
+                {status === "idle" ? "disconnected" : status}{latency !== null ? ` · ${latency} ms` : ""}
               </p>
             </div>
             <Button

@@ -198,11 +198,19 @@ export function SettingsPanel({
               className="size-5 accent-[var(--primary)]"
             />
           </Row>
-          <Row label="Haptics">
+          <Row label="General phone haptics">
             <input
               type="checkbox"
               checked={settings.vibration}
               onChange={(e) => onChange({ vibration: e.target.checked })}
+              className="size-5 accent-[var(--primary)]"
+            />
+          </Row>
+          <Row label="G29 FFB haptic assist">
+            <input
+              type="checkbox"
+              checked={settings.ffbHaptics}
+              onChange={(e) => onChange({ ffbHaptics: e.target.checked })}
               className="size-5 accent-[var(--primary)]"
             />
           </Row>

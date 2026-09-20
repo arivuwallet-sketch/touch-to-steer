@@ -1,4 +1,4 @@
-import { useRef, useState, type PointerEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import { applyCurve, type ControllerState, type Settings } from "@/lib/controller-types";
 
 type Props = {
@@ -24,7 +24,7 @@ function SurfaceButton({
   settings: Settings;
   press: Props["press"];
   className?: string;
-  style?: React.CSSProperties;
+  style?: CSSProperties;
 }) {
   return (
     <button
@@ -210,10 +210,10 @@ function Trigger({
 
 function MiniScreen() {
   const [tick, setTick] = useState(0);
-  useState(() => {
+  useEffect(() => {
     const id = window.setInterval(() => setTick((v) => (v + 1) % 4), 1200);
     return () => window.clearInterval(id);
-  });
+  }, []);
   return (
     <div className="flex h-14 w-28 flex-col items-center justify-center rounded-lg border border-cyan-300/25 bg-[#071018] shadow-[inset_0_0_14px_rgba(34,211,238,.12),0_0_12px_rgba(34,211,238,.1)]">
       <span className="text-[7px] font-black tracking-[0.25em] text-cyan-400/70">APEX</span>

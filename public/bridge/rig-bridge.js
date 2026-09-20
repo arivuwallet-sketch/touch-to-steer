@@ -46,6 +46,14 @@ const BTN = {
   dpad_down: "DPAD_DOWN",
   dpad_left: "DPAD_LEFT",
   dpad_right: "DPAD_RIGHT",
+  m1: "LEFT_SHOULDER",
+  m2: "RIGHT_SHOULDER",
+  m3: "LEFT_THUMB",
+  m4: "RIGHT_THUMB",
+  m5: "BACK",
+  m6: "START",
+  home: "GUIDE",
+  select: "BACK",
 };
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, Number(v) || 0));

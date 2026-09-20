@@ -71,6 +71,28 @@ export function SettingsPanel({ settings, onChange, onClose }: Props) {
               className="w-40 accent-[var(--primary)]"
             />
           </Row>
+          <Row label={`Wheel rotation ${settings.wheelRotationDeg}°`}>
+            <input
+              type="range"
+              min={180}
+              max={900}
+              step={90}
+              value={settings.wheelRotationDeg}
+              onChange={(e) => onChange({ wheelRotationDeg: Number(e.target.value) })}
+              className="w-40 accent-[var(--primary)]"
+            />
+          </Row>
+          <Row label={`Stick tension ${(settings.stickTension * 100).toFixed(0)}%`}>
+            <input
+              type="range"
+              min={0.3}
+              max={1}
+              step={0.05}
+              value={settings.stickTension}
+              onChange={(e) => onChange({ stickTension: Number(e.target.value) })}
+              className="w-40 accent-[var(--primary)]"
+            />
+          </Row>
           <Row label="Invert aim Y">
             <input
               type="checkbox"

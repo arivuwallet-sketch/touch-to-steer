@@ -201,6 +201,7 @@ export function Stick3D({
   position,
   label,
   radius = 0.62,
+  tension = 0.7,
   vibration = true,
   onMove,
   onClick3,
@@ -208,6 +209,7 @@ export function Stick3D({
   position: [number, number, number];
   label?: string | undefined;
   radius?: number | undefined;
+  tension?: number | undefined;
   vibration?: boolean | undefined;
   onMove: (x: number, y: number) => void;
   onClick3?: ((down: boolean) => void) | undefined;
@@ -221,7 +223,7 @@ export function Stick3D({
       e.stopPropagation();
       const sx = e.nativeEvent.clientX;
       const sy = e.nativeEvent.clientY;
-      const R = 70;
+      const R = 52 + tension * 52;
       buzz(true, vibration);
       const move = (ev: PointerEvent) => {
         let dx = (ev.clientX - sx) / R;
@@ -245,7 +247,7 @@ export function Stick3D({
       window.addEventListener("pointerup", up);
       window.addEventListener("pointercancel", up);
     },
-    [onMove, vibration],
+    [onMove, vibration, tension],
   );
 
   useFrame((_, dt) => {

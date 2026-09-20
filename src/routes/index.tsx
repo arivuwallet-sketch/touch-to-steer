@@ -128,7 +128,7 @@ function Rig() {
               </div>
             }
           >
-            <Rig3D mode={mode} settings={settings} set={set} press={press} />
+            <Rig3D key={mode} mode={mode} settings={settings} set={set} press={press} />
           </Suspense>
         </ClientOnly>
       </div>
@@ -152,7 +152,7 @@ function Rig() {
         </div>
 
         <div className="pointer-events-auto flex items-center gap-1.5">
-          <div className="panel flex gap-2 px-2 py-1 backdrop-blur">
+          <div className="panel hidden gap-2 px-2 py-1 backdrop-blur sm:flex">
             {readouts.map((x) => (
               <div key={x.k} className="min-w-11 text-center">
                 <p className="text-[8px] uppercase tracking-[0.18em] text-muted-foreground">{x.k}</p>

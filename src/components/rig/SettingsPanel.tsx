@@ -49,7 +49,7 @@ export function SettingsPanel({ settings, onChange, onClose }: Props) {
               <option value="touch">Touch wheel</option>
             </select>
           </Row>
-          <Row label={`Sensitivity ${settings.sensitivity.toFixed(2)}`}>
+          <Row label={`Stick / aim sensitivity ${settings.sensitivity.toFixed(2)}`}>
             <input
               type="range"
               min={0.5}
@@ -58,6 +58,25 @@ export function SettingsPanel({ settings, onChange, onClose }: Props) {
               value={settings.sensitivity}
               onChange={(e) => onChange({ sensitivity: Number(e.target.value) })}
               className="w-40 accent-[var(--primary)]"
+            />
+          </Row>
+          <Row label={`Steering sensitivity ${settings.steerSensitivity.toFixed(2)}`}>
+            <input
+              type="range"
+              min={0.5}
+              max={2}
+              step={0.05}
+              value={settings.steerSensitivity}
+              onChange={(e) => onChange({ steerSensitivity: Number(e.target.value) })}
+              className="w-40 accent-[var(--primary)]"
+            />
+          </Row>
+          <Row label="Invert aim Y">
+            <input
+              type="checkbox"
+              checked={settings.invertLookY}
+              onChange={(e) => onChange({ invertLookY: e.target.checked })}
+              className="size-5 accent-[var(--primary)]"
             />
           </Row>
           <Row label={`Dead zone ${(settings.deadzone * 100).toFixed(0)}%`}>

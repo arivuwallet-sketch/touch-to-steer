@@ -40,31 +40,52 @@ const BTN = {
   rb: "RIGHT_SHOULDER",
   start: "START",
   back: "BACK",
-  horn: "LEFT_THUMB",
-  lights: "RIGHT_THUMB",
-  look: "DPAD_UP",
-  reset: "DPAD_DOWN",
+  l3: "LEFT_THUMB",
+  r3: "RIGHT_THUMB",
+  dpad_up: "DPAD_UP",
+  dpad_down: "DPAD_DOWN",
+  dpad_left: "DPAD_LEFT",
+  dpad_right: "DPAD_RIGHT",
 };
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, Number(v) || 0));
 
 function apply(s) {
   if (!pad) return;
-  // Steering drives the left stick X; pedals drive the triggers.
-  pad.axis.leftX.setValue(clamp(s.steer, -1, 1) || clamp(s.lx, -1, 1));
+  const held = {};
+  const mark = (name) => {
+    held[name] = true;
+  };
+
+  const steer = clamp(s.steer, -1, 1);
+  // Steering takes the left stick when the wheel is in use, otherwise the stick does.
+  pad.axis.leftX.setValue(steer !== 0 ? steer : clamp(s.lx, -1, 1));
   pad.axis.leftY.setValue(-clamp(s.ly, -1, 1));
   pad.axis.rightX.setValue(clamp(s.rx, -1, 1));
   pad.axis.rightY.setValue(-clamp(s.ry, -1, 1));
-  pad.axis.leftTrigger.setValue(Math.max(clamp(s.brake, 0, 1), clamp(s.clutch, 0, 1)));
-  pad.axis.rightTrigger.setValue(clamp(s.throttle, 0, 1));
+
+  // Brake and clutch share the left trigger; gas and the pad's own RT share the right.
+  pad.axis.leftTrigger.setValue(
+    Math.max(clamp(s.brake, 0, 1), clamp(s.clutch, 0, 1) * 0.6, clamp(s.lt, 0, 1)),
+  );
+  pad.axis.rightTrigger.setValue(Math.max(clamp(s.throttle, 0, 1), clamp(s.rt, 0, 1)));
 
   const buttons = s.buttons || {};
-  for (const [id, name] of Object.entries(BTN)) {
-    pad.button[name].setValue(!!buttons[id]);
+  for (const [id, name] of Object.entries(BTN)) if (buttons[id]) mark(name);
+
+  // Driving extras -> the bindings these games expect on a pad.
+  if (buttons.horn) mark("LEFT_THUMB"); // GTA V horn
+  if (buttons.lights) mark("DPAD_LEFT");
+  if (buttons.look) mark("RIGHT_THUMB");
+  if (buttons.reset) mark("Y");
+  if (clamp(s.handbrake, 0, 1) > 0.5) mark("A"); // GTA V / Forza handbrake
+  if (clamp(s.nitro, 0, 1) > 0.5) mark("LEFT_SHOULDER"); // boost
+  if (s.gear === 1) mark("RIGHT_SHOULDER");
+  if (s.gear === -1) mark("LEFT_SHOULDER");
+
+  for (const name of Object.keys(pad.button)) {
+    pad.button[name].setValue(!!held[name]);
   }
-  if (s.gear === 1) pad.button.RIGHT_SHOULDER.setValue(true);
-  if (s.gear === -1) pad.button.LEFT_SHOULDER.setValue(true);
-  if (clamp(s.handbrake, 0, 1) > 0.5) pad.button.B.setValue(true);
   pad.update();
 }
 

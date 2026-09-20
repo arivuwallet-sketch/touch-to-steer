@@ -20,7 +20,7 @@ export function SteeringWheel({ settings, onSteer }: Props) {
   const rafRef = useRef(0);
 
   const emit = (raw: number) => {
-    const v = applyCurve(raw, settings.deadzone, settings.linearity, settings.sensitivity);
+    const v = applyCurve(raw, settings.deadzone, settings.linearity, settings.steerSensitivity);
     onSteer(v);
     setAngle(v * 140);
   };

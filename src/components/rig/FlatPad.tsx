@@ -110,7 +110,7 @@ function DPadFlat({ settings, press }: { settings: Settings; press: Props["press
   });
 
   return (
-    <div className="relative size-[26vh] max-w-36">
+    <div className="relative size-[30vh] max-w-44">
       <div
         className="absolute inset-0 rounded-full"
         style={{ background: "radial-gradient(circle, oklch(0.18 0.01 260), transparent 72%)" }}
@@ -118,22 +118,22 @@ function DPadFlat({ settings, press }: { settings: Settings; press: Props["press
       <button
         {...hit("up")}
         aria-label="up"
-        className={`${arm} left-[36%] top-[6%] h-[32%] w-[28%] [clip-path:polygon(50%_0,100%_78%,100%_100%,0_100%,0_78%)]`}
+        className={`${arm} left-[35%] top-[2%] h-[36%] w-[30%] rounded-xl [clip-path:polygon(50%_0,100%_78%,100%_100%,0_100%,0_78%)]`}
       />
       <button
         {...hit("down")}
         aria-label="down"
-        className={`${arm} bottom-[6%] left-[36%] h-[32%] w-[28%] [clip-path:polygon(0_0,100%_0,100%_22%,50%_100%,0_22%)]`}
+        className={`${arm} bottom-[2%] left-[35%] h-[36%] w-[30%] rounded-xl [clip-path:polygon(0_0,100%_0,100%_22%,50%_100%,0_22%)]`}
       />
       <button
         {...hit("left")}
         aria-label="left"
-        className={`${arm} left-[6%] top-[36%] h-[28%] w-[32%] [clip-path:polygon(0_50%,78%_0,100%_0,100%_100%,78%_100%)]`}
+        className={`${arm} left-[2%] top-[35%] h-[30%] w-[36%] rounded-xl [clip-path:polygon(0_50%,78%_0,100%_0,100%_100%,78%_100%)]`}
       />
       <button
         {...hit("right")}
         aria-label="right"
-        className={`${arm} right-[6%] top-[36%] h-[28%] w-[32%] [clip-path:polygon(0_0,22%_0,100%_50%,22%_100%,0_100%)]`}
+        className={`${arm} right-[2%] top-[35%] h-[30%] w-[36%] rounded-xl [clip-path:polygon(0_0,22%_0,100%_50%,22%_100%,0_100%)]`}
       />
       <div className="pointer-events-none absolute left-[34%] top-[34%] size-[32%] rotate-45 bg-[linear-gradient(180deg,oklch(0.78_0.005_260),oklch(0.5_0.005_260))] shadow-[inset_0_0_6px_oklch(0_0_0/50%)]" />
     </div>
@@ -165,7 +165,7 @@ function Face({
       }}
       onPointerUp={() => press(id, false)}
       onPointerCancel={() => press(id, false)}
-      className={`absolute grid size-[9vh] max-h-14 max-w-14 touch-none place-items-center rounded-full text-xl font-black italic active:scale-95 ${className}`}
+      className={`absolute grid size-[11vh] max-h-20 max-w-20 touch-none place-items-center rounded-full text-xl font-black italic active:scale-95 ${className}`}
       style={{
         color,
         background: "radial-gradient(circle at 40% 30%, oklch(0.22 0.01 260), oklch(0.07 0 0) 75%)",

@@ -52,7 +52,7 @@ function Pedal3D({
         <meshStandardMaterial color="#7f8994" metalness={0.92} roughness={0.25} />
       </mesh>
 
-      <group ref={face}>
+      <group ref={face} rotation={[0.12, 0, 0]}>
         <RoundedBox
           args={[width, 1.25, 0.18]}
           radius={0.08}
@@ -250,7 +250,7 @@ export function WheelScene({ settings, set, press }: Props) {
   return (
     <group position={[0, -0.6, 0]}>
       {/* Upright wheel, viewed from the driver's seat. */}
-      <group ref={wheel} position={[-2.0, 0.55, 1.15]} rotation={[0, 0, 0]} scale={1.12}>
+      <group ref={wheel} position={[-2.0, 0.72, 1.55]} rotation={[0, 0, 0]} scale={1.28}>
         <mesh castShadow onPointerDown={onGrab}>
           <torusGeometry args={[2.15, 0.29, 32, 96]} />
           <meshStandardMaterial color="#14181d" metalness={0.2} roughness={0.9} />
@@ -301,7 +301,7 @@ export function WheelScene({ settings, set, press }: Props) {
       </group>
 
       {/* Pedals are on the floor, below and in front of the driver. */}
-      <group position={[2.25, -1.1, -0.35]}>
+      <group position={[2.35, -1.12, -0.25]}>
         <RoundedBox
           args={[4.65, 0.22, 3.1]}
           radius={0.15}

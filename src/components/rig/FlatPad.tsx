@@ -104,7 +104,7 @@ function Stick({
           onClick3(true);
           setTimeout(() => onClick3(false), 90);
         }}
-        className="relative size-[clamp(7rem,23vh,10rem)] touch-none rounded-full border border-white/10 bg-[#0c1117] shadow-[inset_0_0_22px_rgba(0,0,0,.95),0_8px_20px_rgba(0,0,0,.45)]"
+        className="flat-pad-stick relative size-[clamp(7rem,23vh,10rem)] touch-none rounded-full border border-white/10 bg-[#0c1117] shadow-[inset_0_0_22px_rgba(0,0,0,.95),0_8px_20px_rgba(0,0,0,.45)]"
       >
         <div className="absolute inset-[8%] rounded-full border border-[#2e3945] bg-[radial-gradient(circle_at_38%_28%,#202a35,#080c11_72%)]" />
         <div
@@ -134,7 +134,7 @@ function ApexDPad({ settings, press }: { settings: Settings; press: Props["press
   );
 
   return (
-    <div className="relative size-36">
+    <div className="flat-pad-dpad relative size-36">
       <div className="absolute left-1/2 top-1/2 size-11 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#11171e] shadow-inner" />
       {cell("up", "↑", "left-1/2 top-0 -translate-x-1/2")}
       {cell("left", "←", "left-0 top-1/2 -translate-y-1/2")}
@@ -150,7 +150,7 @@ function ApexDPad({ settings, press }: { settings: Settings; press: Props["press
 
 function ApexFaceButtons({ settings, press }: { settings: Settings; press: Props["press"] }) {
   return (
-    <div className="relative size-40">
+    <div className="flat-pad-face relative size-40">
       <SurfaceButton label="Y" id="y" settings={settings} press={press} className="absolute left-1/2 top-0 size-12 -translate-x-1/2 text-xl text-[#ffd43b]" />
       <SurfaceButton label="X" id="x" settings={settings} press={press} className="absolute left-0 top-1/2 size-12 -translate-y-1/2 text-xl text-[#58b9ff]" />
       <SurfaceButton label="B" id="b" settings={settings} press={press} className="absolute right-0 top-1/2 size-12 -translate-y-1/2 text-xl text-[#ff5b57]" />
@@ -200,7 +200,7 @@ function Trigger({
       onPointerMove={(e) => pointer.current === e.pointerId && move(e.clientY)}
       onPointerUp={release}
       onPointerCancel={release}
-      className="grid h-14 w-24 touch-none place-items-center rounded-xl border border-white/10 bg-[linear-gradient(180deg,#303b47,#10151b)] text-[10px] font-black tracking-[0.25em] text-cyan-300 shadow-[inset_0_2px_2px_rgba(255,255,255,.08),0_6px_14px_rgba(0,0,0,.5)]"
+      className="flat-pad-trigger grid h-14 w-24 touch-none place-items-center rounded-xl border border-white/10 bg-[linear-gradient(180deg,#303b47,#10151b)] text-[10px] font-black tracking-[0.25em] text-cyan-300 shadow-[inset_0_2px_2px_rgba(255,255,255,.08),0_6px_14px_rgba(0,0,0,.5)]"
       style={{ boxShadow: value ? "0 0 20px rgba(34,211,238,.25), inset 0 0 12px rgba(0,0,0,.65)" : undefined }}
     >
       {label}
@@ -215,7 +215,7 @@ function MiniScreen() {
     return () => window.clearInterval(id);
   }, []);
   return (
-    <div className="flex h-14 w-28 flex-col items-center justify-center rounded-lg border border-cyan-300/25 bg-[#071018] shadow-[inset_0_0_14px_rgba(34,211,238,.12),0_0_12px_rgba(34,211,238,.1)]">
+    <div className="flat-pad-screen flex h-14 w-28 flex-col items-center justify-center rounded-lg border border-cyan-300/25 bg-[#071018] shadow-[inset_0_0_14px_rgba(34,211,238,.12),0_0_12px_rgba(34,211,238,.1)]">
       <span className="text-[7px] font-black tracking-[0.25em] text-cyan-400/70">APEX</span>
       <span className="mt-1 text-[11px] font-mono font-bold text-cyan-200">
         {tick === 0 ? "PC · 900°" : tick === 1 ? "60 HZ · OK" : tick === 2 ? "PROFILE 1" : "TOUCH"}
@@ -230,12 +230,12 @@ function ExtraButton({ label, id, settings, press }: { label: string; id: string
 
 export function FlatPad({ settings, set, press }: Props) {
   return (
-    <div className="absolute inset-0 overflow-hidden bg-[#05080d] text-slate-100">
+    <div className="flat-pad-root absolute inset-0 overflow-hidden bg-[#05080d] text-slate-100">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(100%_75%_at_50%_8%,#172333_0%,#04070b_68%)]" />
-      <div className="pointer-events-none absolute inset-2 rounded-[1.8rem] border border-white/15" />
+      <div className="flat-pad-frame pointer-events-none absolute inset-2 rounded-[1.8rem] border border-white/15" />
 
       {/* Apex 5 style top shoulder controls */}
-      <div className="absolute inset-x-0 top-3 flex items-start justify-between px-[max(1rem,env(safe-area-inset-left))]">
+      <div className="flat-pad-top absolute inset-x-0 top-3 flex items-start justify-between px-[max(1rem,env(safe-area-inset-left))]">
         <div className="flex items-center gap-3">
           <Trigger label="LT" id="lt" settings={settings} set={set} />
           <ExtraButton label="LM" id="lm" settings={settings} press={press} />
@@ -250,7 +250,7 @@ export function FlatPad({ settings, set, press }: Props) {
       <div className="pointer-events-none absolute inset-x-[7%] top-[12%] bottom-[8%] rounded-[34%_34%_42%_42%/18%_18%_44%_44%] border border-white/5 bg-[#0b1118]/70 shadow-[inset_0_0_50px_rgba(0,0,0,.7)]" />
 
       {/* Left stick + D-pad */}
-      <div className="absolute bottom-[17%] left-[7%] flex items-center gap-[clamp(1rem,3vw,2.5rem)]">
+      <div className="flat-pad-left absolute bottom-[17%] left-[7%] flex items-center gap-[clamp(1rem,3vw,2.5rem)]">
         <Stick
           side="left"
           settings={settings}
@@ -261,8 +261,8 @@ export function FlatPad({ settings, set, press }: Props) {
       </div>
 
       {/* Central display and navigation controls */}
-      <div className="absolute left-1/2 top-[29%] flex -translate-x-1/2 flex-col items-center gap-3">
-        <div className="relative w-[clamp(13rem,25vw,19rem)] rounded-[2rem] bg-[linear-gradient(145deg,#39434f,#171d24)] px-6 py-5 shadow-[inset_0_2px_2px_rgba(255,255,255,.09),0_12px_24px_rgba(0,0,0,.48)]">
+      <div className="flat-pad-center absolute left-1/2 top-[29%] flex -translate-x-1/2 flex-col items-center gap-3">
+        <div className="flat-pad-center-box relative w-[clamp(13rem,25vw,19rem)] rounded-[2rem] bg-[linear-gradient(145deg,#39434f,#171d24)] px-6 py-5 shadow-[inset_0_2px_2px_rgba(255,255,255,.09),0_12px_24px_rgba(0,0,0,.48)]">
           <div className="flex items-center justify-center gap-3">
             <SurfaceButton label="VIEW" id="back" settings={settings} press={press} className="h-9 min-w-14 rounded-lg text-[7px] text-slate-300" />
             <MiniScreen />
@@ -277,7 +277,7 @@ export function FlatPad({ settings, set, press }: Props) {
       </div>
 
       {/* Right stick + ABXY */}
-      <div className="absolute bottom-[17%] right-[7%] flex items-center gap-[clamp(1rem,3vw,2.5rem)]">
+      <div className="flat-pad-right absolute bottom-[17%] right-[7%] flex items-center gap-[clamp(1rem,3vw,2.5rem)]">
         <ApexFaceButtons settings={settings} press={press} />
         <Stick
           side="right"
@@ -288,7 +288,7 @@ export function FlatPad({ settings, set, press }: Props) {
       </div>
 
       {/* APEX 5 rear remappable controls surfaced as touch paddles along the lower edge */}
-      <div className="absolute bottom-[4%] left-1/2 flex -translate-x-1/2 gap-2">
+      <div className="flat-pad-bottom absolute bottom-[4%] left-1/2 flex -translate-x-1/2 gap-2">
         <ExtraButton label="M1" id="m1" settings={settings} press={press} />
         <ExtraButton label="M2" id="m2" settings={settings} press={press} />
         <ExtraButton label="M3" id="m3" settings={settings} press={press} />

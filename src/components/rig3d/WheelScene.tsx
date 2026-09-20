@@ -248,77 +248,114 @@ export function WheelScene({ settings, set, press }: Props) {
   });
 
   return (
-    <group position={[0, -0.6, 0]}>
-      {/* Upright wheel, viewed from the driver's seat. */}
-      <group ref={wheel} position={[-2.0, 0.72, 1.55]} rotation={[0, 0, 0]} scale={1.28}>
+    <group position={[0, -0.65, 0]}>
+      {/* Wheel is a real front-facing steering wheel. No gamepad controls live here. */}
+      <group ref={wheel} position={[-2.25, 0.75, 1.05]} scale={1.12}>
         <mesh castShadow onPointerDown={onGrab}>
-          <torusGeometry args={[2.15, 0.29, 32, 96]} />
-          <meshStandardMaterial color="#14181d" metalness={0.2} roughness={0.9} />
+          <torusGeometry args={[2.15, 0.3, 32, 96]} />
+          <meshStandardMaterial color="#11151a" metalness={0.18} roughness={0.9} />
         </mesh>
 
-        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.02]} castShadow>
-          <torusGeometry args={[1.9, 0.1, 20, 96]} />
-          <meshStandardMaterial color="#2d3339" metalness={0.3} roughness={0.66} />
+        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.05]} castShadow>
+          <torusGeometry args={[1.88, 0.11, 20, 96]} />
+          <meshStandardMaterial color="#2b3138" metalness={0.22} roughness={0.68} />
         </mesh>
 
-        {/* Three-spoke wheel face. */}
+        {/* Proper Y-shaped G29-style spoke geometry in the visible X/Y plane. */}
         <RoundedBox
-          args={[1.75, 0.22, 0.48]}
-          radius={0.09}
+          args={[1.95, 0.22, 0.44]}
+          radius={0.08}
           smoothness={5}
-          position={[-0.95, 0, 0]}
-          rotation={[0, 0, -0.18]}
+          position={[-0.82, -0.48, 0.08]}
+          rotation={[0, 0, -0.43]}
           castShadow
         >
-          <meshStandardMaterial color="#262c33" metalness={0.76} roughness={0.32} />
-        </RoundedBox>
-        <RoundedBox
-          args={[1.75, 0.22, 0.48]}
-          radius={0.09}
-          smoothness={5}
-          position={[0.95, 0, 0]}
-          rotation={[0, 0, 0.18]}
-          castShadow
-        >
-          <meshStandardMaterial color="#262c33" metalness={0.76} roughness={0.32} />
-        </RoundedBox>
-        <RoundedBox
-          args={[0.5, 0.22, 1.55]}
-          radius={0.09}
-          smoothness={5}
-          position={[0, 0, -0.78]}
-          castShadow
-        >
-          <meshStandardMaterial color="#262c33" metalness={0.76} roughness={0.32} />
+          <meshStandardMaterial color="#252b32" metalness={0.78} roughness={0.32} />
         </RoundedBox>
 
-        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0.14, 0]}>
-          <cylinderGeometry args={[0.8, 0.9, 0.24, 48]} />
-          <meshStandardMaterial color="#11161c" metalness={0.76} roughness={0.34} />
+        <RoundedBox
+          args={[1.95, 0.22, 0.44]}
+          radius={0.08}
+          smoothness={5}
+          position={[0.82, -0.48, 0.08]}
+          rotation={[0, 0, 0.43]}
+          castShadow
+        >
+          <meshStandardMaterial color="#252b32" metalness={0.78} roughness={0.32} />
+        </RoundedBox>
+
+        <RoundedBox
+          args={[0.48, 0.22, 1.65]}
+          radius={0.08}
+          smoothness={5}
+          position={[0, -0.82, 0.08]}
+          castShadow
+        >
+          <meshStandardMaterial color="#252b32" metalness={0.78} roughness={0.32} />
+        </RoundedBox>
+
+        {/* Center hub and horn. */}
+        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.18]} castShadow>
+          <cylinderGeometry args={[0.82, 0.92, 0.26, 48]} />
+          <meshStandardMaterial color="#14191f" metalness={0.76} roughness={0.34} />
         </mesh>
 
         <Horn3D settings={settings} press={press} />
+
+        {/* Center marker */}
+        <mesh position={[0, 2.03, 0.2]}>
+          <boxGeometry args={[0.18, 0.28, 0.14]} />
+          <meshStandardMaterial color="#1db8ea" emissive="#1db8ea" emissiveIntensity={2.0} />
+        </mesh>
+
+        {/* Paddle silhouettes behind the rim. */}
+        <RoundedBox args={[0.34, 1.0, 0.14]} radius={0.08} smoothness={5} position={[-1.45, 0.8, -0.28]} castShadow>
+          <meshStandardMaterial color="#a6adb4" metalness={0.9} roughness={0.28} />
+        </RoundedBox>
+        <RoundedBox args={[0.34, 1.0, 0.14]} radius={0.08} smoothness={5} position={[1.45, 0.8, -0.28]} castShadow>
+          <meshStandardMaterial color="#a6adb4" metalness={0.9} roughness={0.28} />
+        </RoundedBox>
       </group>
 
-      {/* Pedals are on the floor, below and in front of the driver. */}
-      <group position={[2.35, -1.12, -0.25]}>
+      {/* Separate floor-mounted pedal assembly. */}
+      <group position={[2.15, -1.25, -1.25]}>
         <RoundedBox
-          args={[4.65, 0.22, 3.1]}
-          radius={0.15}
+          args={[4.7, 0.22, 3.15]}
+          radius={0.14}
           smoothness={6}
-          position={[0, -0.45, 0.15]}
+          position={[0, -0.35, 0.15]}
           receiveShadow
         >
-          <meshStandardMaterial color="#090d12" metalness={0.84} roughness={0.46} />
+          <meshStandardMaterial color="#090d12" metalness={0.84} roughness={0.48} />
         </RoundedBox>
 
-        <Pedal3D position={[-1.35, 0, 0]} label="CLUTCH" accent="#60a5fa" onChange={(v) => set({ clutch: v })} />
-        <Pedal3D position={[0, 0, 0]} label="BRAKE" accent="#ef4444" onChange={(v) => set({ brake: v })} width={0.9} />
-        <Pedal3D position={[1.35, 0, 0]} label="GAS" accent="#22c55e" onChange={(v) => set({ throttle: v })} />
+        <Pedal3D
+          position={[-1.35, 0, 0]}
+          label="CLUTCH"
+          accent="#60a5fa"
+          onChange={(v) => set({ clutch: v })}
+        />
+        <Pedal3D
+          position={[0, 0, 0]}
+          label="BRAKE"
+          accent="#ef4444"
+          width={0.92}
+          onChange={(v) => set({ brake: v })}
+        />
+        <Pedal3D
+          position={[1.35, 0, 0]}
+          label="GAS"
+          accent="#22c55e"
+          onChange={(v) => set({ throttle: v })}
+        />
       </group>
 
-      <Handbrake3D settings={settings} set={set} />
-      <Nitro3D settings={settings} set={set} />
+      {/* Separate handbrake and nitro controls. */}
+      <group position={[4.1, -1.15, -0.25]}>
+        <Handbrake3D settings={settings} set={set} />
+      </group>
+      <group position={[4.1, -1.3, 1.25]}>
+        <Nitro3D settings={settings} set={set} />
+      </group>
     </group>
-  );
-}
+  );}

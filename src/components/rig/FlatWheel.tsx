@@ -379,6 +379,8 @@ function G29Wheel({
   onDialStep,
   rpmRatio,
   rpmLive,
+  wheelPlatform,
+  onPlatformChange,
 }: {
   wheelVisualRef: RefObject<HTMLDivElement | null>;
   settings: Settings;
@@ -388,6 +390,8 @@ function G29Wheel({
   onDialStep: (direction: -1 | 1) => void;
   rpmRatio: number;
   rpmLive: boolean;
+  wheelPlatform: "ps3" | "ps4";
+  onPlatformChange: (platform: "ps3" | "ps4") => void;
 }) {
   return (
     <div className="absolute inset-0 pointer-events-none">
@@ -467,7 +471,6 @@ function G29Wheel({
       <div className="absolute left-1/2 top-[15%] -translate-x-1/2 rounded-full border border-white/10 bg-black/40 px-3 py-1 text-[7px] font-black uppercase tracking-[0.25em] text-slate-400 backdrop-blur-sm">
         {settings.wheelRotationDeg}° LOCK
       </div>
-      </div>
       <div className="pointer-events-auto absolute left-1/2 top-[5.5%] z-50 -translate-x-1/2 rounded-lg border border-white/10 bg-[#11161b]/95 p-1 shadow-lg" onPointerDown={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-1">
           <span className="px-1 text-[clamp(.28rem,.55vw,.48rem)] font-black uppercase tracking-[.13em] text-slate-500">MODE</span>
@@ -475,9 +478,9 @@ function G29Wheel({
             type="button"
             onPointerDown={(e) => {
               e.stopPropagation();
-              set({ wheelPlatform: "ps3" });
+              onPlatformChange("ps3");
             }}
-            className={`rounded px-2 py-1 text-[clamp(.3rem,.6vw,.5rem)] font-black ${settings.wheelPlatform === "ps3" ? "bg-[#e11d2e] text-white" : "bg-[#303840] text-slate-200"}`}
+            className={`rounded px-2 py-1 text-[clamp(.3rem,.6vw,.5rem)] font-black ${wheelPlatform === "ps3" ? "bg-[#e11d2e] text-white" : "bg-[#303840] text-slate-200"}`}
           >
             PS3
           </button>
@@ -485,9 +488,9 @@ function G29Wheel({
             type="button"
             onPointerDown={(e) => {
               e.stopPropagation();
-              set({ wheelPlatform: "ps4" });
+              onPlatformChange("ps4");
             }}
-            className={`rounded px-2 py-1 text-[clamp(.3rem,.6vw,.5rem)] font-black ${settings.wheelPlatform === "ps4" ? "bg-[#e11d2e] text-white" : "bg-[#303840] text-slate-200"}`}
+            className={`rounded px-2 py-1 text-[clamp(.3rem,.6vw,.5rem)] font-black ${wheelPlatform === "ps4" ? "bg-[#e11d2e] text-white" : "bg-[#303840] text-slate-200"}`}
           >
             PS4 / PC
           </button>
@@ -500,7 +503,7 @@ function G29Wheel({
   );
 }
 
-export function FlatWheel({ settings, set }: Props) {
+export function FlatWheel({ settings, set, press, telemetry = {} }: Props) {
   const wheelHitRef = useRef<HTMLDivElement>(null);
   const wheelVisualRef = useRef<HTMLDivElement>(null);
   const touchPointer = useRef<number | null>(null);
@@ -510,7 +513,8 @@ export function FlatWheel({ settings, set }: Props) {
   const [gyroDenied, setGyroDenied] = useState(false);
   const [dialPosition, setDialPosition] = useState(0);
   const [localRev, setLocalRev] = useState(0);
-  const [lastFfbBuzzAt] = useState(() => ({ value: 0 }));
+  const [wheelPlatform, setWheelPlatform] = useState<"ps3" | "ps4">("ps4");
+  const lastFfbBuzzAt = useRef(0);
 
   const maxLockDeg = Math.max(90, settings.wheelRotationDeg / 2);
   const rpmLive = typeof telemetry?.rpm === "number" && typeof telemetry?.rpmMax === "number" && telemetry.rpmMax > 0;
@@ -623,7 +627,7 @@ export function FlatWheel({ settings, set }: Props) {
   const stepDial = useCallback(
     (direction: -1 | 1) => {
       setDialPosition((current) => (current + direction + 24) % 24);
-      set({ dial: direction });
+        set({ dial: direction });
       window.setTimeout(() => set({ dial: 0 }), 70);
       buzz(settings.vibration, 6);
     },
@@ -740,6 +744,11 @@ export function FlatWheel({ settings, set }: Props) {
               onDialStep={stepDial}
               rpmRatio={rpmRatio}
               rpmLive={rpmLive}
+              wheelPlatform={wheelPlatform}
+              onPlatformChange={(platform) => {
+                setWheelPlatform(platform);
+                set({ wheelPlatform: platform });
+              }}
             />
           </div>
 

@@ -284,7 +284,7 @@ function MiniScreen({
   }, []);
 
   return (
-    <div className="flat-pad-screen flex h-14 w-28 flex-col items-center justify-center rounded-lg border border-cyan-300/25 bg-[#071018] shadow-[inset_0_0_14px_rgba(34,211,238,.12),0_0_12px_rgba(34,211,238,.1)]">
+    <div className="flat-pad-screen flex h-[clamp(2.75rem,7.8svh,3.5rem)] w-[clamp(5rem,7vw,7rem)] flex-col items-center justify-center rounded-lg border border-cyan-300/25 bg-[#071018] shadow-[inset_0_0_14px_rgba(34,211,238,.12),0_0_12px_rgba(34,211,238,.1)]">
       <span className="text-[7px] font-black tracking-[0.25em] text-cyan-400/70">APEX 5</span>
       <span className="mt-1 text-[10px] font-mono font-bold text-cyan-200">
         {tick === 0 ? `P${profile}` : tick === 1 ? triggerMode.toUpperCase() : tick === 2 ? (motion ? "GYRO ON" : "GYRO OFF") : (turbo ? "TURBO ON" : "READY")}
@@ -434,22 +434,22 @@ export function FlatPad({ settings, set, press }: Props) {
       <div className="flat-pad-center absolute left-1/2 top-[27%] flex -translate-x-1/2 flex-col items-center gap-2">
         <div className="flat-pad-center-box relative w-[clamp(14rem,27vw,20rem)] rounded-[2rem] bg-[linear-gradient(145deg,#39434f,#171d24)] px-5 py-4 shadow-[inset_0_2px_2px_rgba(255,255,255,.09),0_12px_24px_rgba(0,0,0,.48)]">
           <div className="flex items-center justify-center gap-3">
-            <SurfaceButton label="VIEW" id="back" settings={settings} press={press} className="h-10 min-w-16 rounded-lg text-[8px] text-slate-300" />
+            <SurfaceButton label="VIEW" id="back" settings={settings} press={press} className="h-[clamp(2rem,5.6svh,2.5rem)] min-w-[clamp(3.5rem,5vw,4rem)] rounded-lg text-[8px] text-slate-300" />
             <MiniScreen profile={profile} triggerMode={triggerMode} motion={gyroEnabled} turbo={turbo} />
             <SurfaceButton label="MENU" id="start" settings={settings} press={press} className="h-10 min-w-16 rounded-lg text-[8px] text-slate-300" />
           </div>
           <div className="mt-2 flex items-center justify-center gap-2">
-            <SurfaceButton label="PROFILE −" id="minus" settings={settings} press={press} onClick={() => cycleProfile(-1)} className="h-9 min-w-20 rounded-md text-[7px]" />
+            <SurfaceButton label="PROFILE −" id="minus" settings={settings} press={press} onClick={() => cycleProfile(-1)} className="h-[clamp(2rem,5.4svh,2.25rem)] min-w-[clamp(4rem,5vw,5rem)] rounded-md text-[7px]" />
             <SurfaceButton label="HOME" id="home" settings={settings} press={press} className="h-9 min-w-20 rounded-md text-[7px]" />
             <SurfaceButton label="PROFILE +" id="plus" settings={settings} press={press} onClick={() => cycleProfile(1)} className="h-9 min-w-20 rounded-md text-[7px]" />
           </div>
           <div className="mt-2 grid grid-cols-3 gap-2">
-            <SurfaceButton label="FN" id="fn" settings={settings} press={press} className="h-8 min-w-0 w-full rounded-lg text-[7px] text-slate-300" />
+            <SurfaceButton label="FN" id="fn" settings={settings} press={press} className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg text-[7px] text-slate-300" />
             <SurfaceButton label="LOGO" id="logo" settings={settings} press={press} className="h-8 min-w-0 w-full rounded-lg text-[7px] text-slate-300" />
-            <button type="button" onClick={() => setTurbo((v) => !v)} className={`h-8 min-w-0 w-full rounded-lg border px-2 text-[7px] font-black uppercase tracking-[0.14em] ${turbo ? "border-orange-300/50 bg-orange-300/10 text-orange-200" : "border-white/10 bg-black/20 text-slate-400"}`}>TURBO</button>
+            <button type="button" onClick={() => setTurbo((v) => !v)} className={`h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border px-2 text-[7px] font-black uppercase tracking-[0.14em] ${turbo ? "border-orange-300/50 bg-orange-300/10 text-orange-200" : "border-white/10 bg-black/20 text-slate-400"}`}>TURBO</button>
             <GyroControl enabled={gyroEnabled} denied={gyroDenied} onToggle={requestGyro} />
-            <button type="button" onClick={nextTriggerMode} className="h-8 min-w-0 w-full rounded-lg border border-white/10 bg-black/20 px-2 text-[7px] font-black uppercase tracking-[0.14em] text-slate-400">TRIGGER</button>
-            <button type="button" onClick={() => setRgb((v) => !v)} className={`h-8 min-w-0 w-full rounded-lg border px-2 text-[7px] font-black uppercase tracking-[0.14em] ${rgb ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-200" : "border-white/10 bg-black/20 text-slate-400"}`}>RGB</button>
+            <button type="button" onClick={nextTriggerMode} className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border border-white/10 bg-black/20 px-2 text-[7px] font-black uppercase tracking-[0.14em] text-slate-400">TRIGGER</button>
+            <button type="button" onClick={() => setRgb((v) => !v)} className={`h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border px-2 text-[7px] font-black uppercase tracking-[0.14em] ${rgb ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-200" : "border-white/10 bg-black/20 text-slate-400"}`}>RGB</button>
           </div>
         </div>
       </div>

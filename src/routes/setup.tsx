@@ -12,7 +12,7 @@ export const Route = createFileRoute("/setup")({
       { property: "og:title", content: "PC Setup — Mobile Rig" },
       {
         property: "og:description",
-        content: "Install the bridge, start it, and your phone appears as a real gamepad in Windows.",
+        content: "Install the bridge, start it, and your phone appears as a low-latency virtual game controller in Windows.",
       },
       { property: "og:type", content: "article" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -77,6 +77,15 @@ function Setup() {
       >
         Download rig-bridge.js
       </a>
+
+
+
+      <div className="panel mt-6 p-4">
+        <h2 className="text-base font-bold">Compatibility</h2>
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+          XInput is the default PC output and a DualShock 4 virtual output is available for games that expect PlayStation-style input. Custom keyboard bindings are still controlled by the game or a separate input mapper. No browser controller can guarantee a fixed 3 ms end-to-end latency or support every anti-cheat/protected input path; network, device refresh, browser scheduling, driver, and game polling all affect the final result.
+        </p>
+      </div>
 
       <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
         Games that only read keyboard input can still work: pair the virtual pad with a key-mapping

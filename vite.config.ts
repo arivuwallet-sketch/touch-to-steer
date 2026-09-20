@@ -23,7 +23,7 @@ const stripR3FSourceMarkers = () => ({
     }
 
     const stripped = code.replace(
-      /\\sdata-tsd-source=(["'])[^"']*\\1/g,
+      /\sdata-tsd-source=(["'])[^"']*\1/g,
       "",
     );
 

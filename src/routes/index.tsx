@@ -43,7 +43,7 @@ function Rig() {
   const [showSettings, setShowSettings] = useState(false);
   const [mode, setMode] = useState<"pad" | "wheel">("pad");
   const stateRef = useRef<ControllerState>(emptyState());
-  const { status, latency, connect, disconnect } = useBridge(stateRef, settings.sendRateHz);
+  const { status, latency, telemetry, connect, disconnect } = useBridge(stateRef, settings.sendRateHz);
 
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -84,7 +84,7 @@ function Rig() {
         {mode === "pad" ? (
           <FlatPad settings={settings} set={set} press={press} />
         ) : (
-          <FlatWheel settings={settings} set={set} press={press} />
+          <FlatWheel settings={settings} set={set} press={press} telemetry={telemetry} />
         )}
       </div>
 

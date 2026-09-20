@@ -123,24 +123,24 @@ function Pedal({
 }
 
 function DPad({ settings, press }: { settings: Settings; press: Props["press"] }) {
-  const button = (id: string, label: string, className: string) => (
+  const hit = (id: string, label: string, className: string) => (
     <WheelButton
       key={id}
       label={label}
-      id={`dpad_${id}`}
+      id={"dpad_" + id}
       settings={settings}
       press={press}
-      className={`absolute ${className} size-11 text-xl`}
+      className={"absolute " + className + " size-10 rounded-md bg-[#252b32] text-lg text-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,.05),0_3px_6px_rgba(0,0,0,.4)]"}
     />
   );
 
   return (
-    <div className="relative size-24">
-      <div className="absolute left-1/2 top-1/2 size-7 -translate-x-1/2 -translate-y-1/2 rounded-md bg-[#171b21] shadow-inner" />
-      {button("up", "↑", "left-1/2 top-0 -translate-x-1/2")}
-      {button("left", "←", "left-0 top-1/2 -translate-y-1/2")}
-      {button("right", "→", "right-0 top-1/2 -translate-y-1/2")}
-      {button("down", "↓", "bottom-0 left-1/2 -translate-x-1/2")}
+    <div className="relative size-[4.5rem]">
+      <div className="absolute left-1/2 top-1/2 size-7 -translate-x-1/2 -translate-y-1/2 rounded-sm bg-[#151a1f]" />
+      {hit("up", "↑", "left-1/2 top-0 -translate-x-1/2")}
+      {hit("left", "←", "left-0 top-1/2 -translate-y-1/2")}
+      {hit("right", "→", "right-0 top-1/2 -translate-y-1/2")}
+      {hit("down", "↓", "bottom-0 left-1/2 -translate-x-1/2")}
     </div>
   );
 }
@@ -241,9 +241,7 @@ export function FlatWheel({ settings, set, press, onModeChange, onSettings }: Pr
             <Settings2 size={18} />
           </button>
         </div>
-        <div className="rounded-full border border-white/10 bg-[#151a21] px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
-          G29 STYLE
-        </div>
+        <div className="h-1.5 w-20 rounded-full bg-[#242a31] shadow-inner" />
       </header>
 
       <div className="absolute left-[max(1rem,env(safe-area-inset-left))] top-1/2 -translate-y-1/2">
@@ -267,17 +265,23 @@ export function FlatWheel({ settings, set, press, onModeChange, onSettings }: Pr
 
             <div className="absolute left-1/2 top-1/2 z-10 size-[30%] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#303741] bg-[#171b22] shadow-[0_5px_10px_rgba(0,0,0,.5),inset_0_0_18px_rgba(0,0,0,.65)]">
               <div className="absolute inset-[14%] grid place-items-center rounded-full border border-white/10 bg-[#20262e]">
-                <span className="text-[clamp(1rem,2.3vw,1.55rem)] font-black tracking-tight text-slate-200">G</span>
+                <span className="text-[clamp(1rem,2.3vw,1.55rem)] font-black tracking-tight text-slate-100">PS</span>
               </div>
               <div className="absolute -bottom-[19%] left-1/2 grid h-[35%] w-[22%] -translate-x-1/2 place-items-center rounded-md border border-white/10 bg-[#252b33] text-[7px] font-black tracking-[0.12em] text-slate-300">
                 PS
               </div>
             </div>
 
-            <div className="absolute left-[8%] top-[26%]">
+            <div className="absolute left-[3%] top-[25%]">
+              <WheelButton label="L2" id="lt" settings={settings} press={press} className="h-8 w-10 text-[8px] text-cyan-300" />
+            </div>
+            <div className="absolute left-[8%] top-[30%]">
               <DPad settings={settings} press={press} />
             </div>
-            <div className="absolute right-[8%] top-[26%]">
+            <div className="absolute right-[3%] top-[25%]">
+              <WheelButton label="R2" id="rt" settings={settings} press={press} className="h-8 w-10 text-[8px] text-cyan-300" />
+            </div>
+            <div className="absolute right-[8%] top-[30%]">
               <FaceButtons settings={settings} press={press} />
             </div>
 
@@ -306,9 +310,10 @@ export function FlatWheel({ settings, set, press, onModeChange, onSettings }: Pr
               <WheelButton label="R3" id="r3" settings={settings} press={press} className="size-10 text-[9px]" />
             </div>
 
-            <div className="absolute left-1/2 bottom-[7%] flex -translate-x-1/2 flex-col gap-1.5">
-              <WheelButton label="SHARE" id="share" settings={settings} press={press} className="h-7 min-w-16 text-[7px]" />
-              <WheelButton label="OPTIONS" id="start" settings={settings} press={press} className="h-7 min-w-16 text-[7px]" />
+            <div className="absolute left-1/2 bottom-[4%] flex -translate-x-1/2 flex-col gap-1">
+              <WheelButton label="SHARE" id="share" settings={settings} press={press} className="h-6 min-w-14 rounded-md px-2 text-[6px]" />
+              <WheelButton label="OPTIONS" id="start" settings={settings} press={press} className="h-6 min-w-14 rounded-md px-2 text-[6px]" />
+              <WheelButton label="PS" id="home" settings={settings} press={press} className="h-6 min-w-14 rounded-md px-2 text-[7px]" />
             </div>
 
             <div className="absolute left-[17%] top-[4%] h-[16%] w-[8%] rounded-[0.7rem] bg-gradient-to-b from-[#cbd0d6] to-[#6d737a] shadow-[0_5px_10px_rgba(0,0,0,.55)]" />
@@ -329,9 +334,6 @@ export function FlatWheel({ settings, set, press, onModeChange, onSettings }: Pr
         </div>
       </div>
 
-      <div className="pointer-events-none absolute bottom-[max(.75rem,env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] text-[8px] font-black uppercase tracking-[0.18em] text-slate-600">
-        TOUCH STEERING
-      </div>
     </div>
   );
 }

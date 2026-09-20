@@ -93,41 +93,39 @@ function Rig() {
         )}
       </div>
 
-      {mode === "pad" && (
-        <div className="absolute right-[max(0.75rem,env(safe-area-inset-right))] top-[max(0.75rem,env(safe-area-inset-top))] z-20 flex items-center gap-2">
-          <div className="flex rounded-lg border border-border bg-card/85 p-1 shadow-lg backdrop-blur">
-            <Button
-              onClick={() => setMode("pad")}
-              variant={mode === "pad" ? "default" : "ghost"}
-              size="icon"
-              aria-label="Gamepad controls"
-              title="Gamepad"
-            >
-              <Gamepad2 />
-            </Button>
-            <Button
-              onClick={() => setMode("wheel")}
-              variant={mode === "wheel" ? "default" : "ghost"}
-              size="icon"
-              aria-label="Steering controls"
-              title="Steering wheel"
-            >
-              <Gauge />
-            </Button>
-          </div>
+      <div className="absolute right-[max(0.75rem,env(safe-area-inset-right))] top-[max(0.75rem,env(safe-area-inset-top))] z-30 flex items-center gap-2">
+        <div className="flex rounded-xl border border-white/10 bg-black/45 p-1 shadow-xl backdrop-blur-md">
           <Button
-            onClick={() => setShowSettings(true)}
-            variant="secondary"
+            onClick={() => setMode("pad")}
+            variant={mode === "pad" ? "default" : "ghost"}
             size="icon"
-            className="relative shadow-lg"
-            aria-label="Open settings and connection"
-            title="Settings and connection"
+            aria-label="Joystick controller"
+            title="Joystick controller"
           >
-            <SettingsIcon />
-            <span className={`absolute right-0.5 top-0.5 size-2 rounded-full ${status === "connected" ? "bg-success" : status === "error" ? "bg-destructive" : "bg-muted-foreground"}`} />
+            <Gamepad2 />
+          </Button>
+          <Button
+            onClick={() => setMode("wheel")}
+            variant={mode === "wheel" ? "default" : "ghost"}
+            size="icon"
+            aria-label="Steering wheel controller"
+            title="Steering wheel controller"
+          >
+            <Gauge />
           </Button>
         </div>
-      )}
+        <Button
+          onClick={() => setShowSettings(true)}
+          variant="secondary"
+          size="icon"
+          className="relative shadow-xl"
+          aria-label="Settings and steering sensitivity"
+          title="Settings and steering tuning"
+        >
+          <SettingsIcon />
+          <span className={`absolute right-0.5 top-0.5 size-2 rounded-full ${status === "connected" ? "bg-success" : status === "error" ? "bg-destructive" : "bg-muted-foreground"}`} />
+        </Button>
+      </div>
 
       {showSettings && (
         <SettingsPanel

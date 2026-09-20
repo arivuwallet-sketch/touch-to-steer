@@ -249,6 +249,7 @@ function Trigger({
   const pointer = useRef<number | null>(null);
   const lastFeel = useRef(0);
   const lastBand = useRef(-1);
+  const lastRecoil = useRef(0);
 
   const mapValue = (v: number) => {
     const p = Math.max(0, Math.min(1, v));
@@ -270,6 +271,13 @@ function Trigger({
       lastFeel.current = now;
       feelBuzz(settings.vibration, 0.25 + band * 0.14);
     }
+    if (mode === "recoil" && next > 0.62) {
+      const nowRecoil = typeof performance !== "undefined" ? performance.now() : Date.now();
+      if (nowRecoil - lastRecoil.current > 115) {
+        lastRecoil.current = nowRecoil;
+        buzz(settings.vibration, [3, 10, 3]);
+      }
+    }
     setValue(next);
     set({ [id]: next } as Partial<ControllerState>);
   };
@@ -277,6 +285,7 @@ function Trigger({
   const release = () => {
     pointer.current = null;
     lastBand.current = -1;
+    lastRecoil.current = 0;
     setValue(0);
     set({ [id]: 0 } as Partial<ControllerState>);
   };

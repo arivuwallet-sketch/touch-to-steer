@@ -6,6 +6,8 @@ type Props = {
   settings: Settings;
   set: (p: Partial<ControllerState>) => void;
   press: (id: string, down: boolean) => void;
+  onModeChange?: () => void;
+  onSettings?: () => void;
 };
 
 const buzz = (on: boolean, ms = 10) => {
@@ -26,10 +28,12 @@ function ControlButton({
   press: Props["press"];
   className?: string;
   active?: boolean;
+  onClick?: () => void;
 }) {
   return (
     <button
       type="button"
+      onClick={onClick}
       onPointerDown={(e) => {
         e.stopPropagation();
         e.currentTarget.setPointerCapture(e.pointerId);
@@ -142,7 +146,7 @@ function Pedal({
   );
 }
 
-export function FlatWheel({ settings, set, press }: Props) {
+export function FlatWheel({ settings, set, press, onModeChange, onSettings }: Props) {
   const steer = useRef(0);
   const pointer = useRef<{ id: number; last: number; acc: number } | null>(null);
   const [visualSteer, setVisualSteer] = useState(0);
@@ -213,11 +217,11 @@ export function FlatWheel({ settings, set, press }: Props) {
         <div className="flex items-center gap-2">
           <ControlButton label="MENU" id="menu" settings={settings} press={press} className="min-h-10 min-w-20" />
           <IconButton id="horn" label="Horn" settings={settings} press={press}><Volume2 size={18} /></IconButton>
-          <IconButton id="mode" label="Mode" settings={settings} press={press}><Gauge size={18} /></IconButton>
+          <button type="button" aria-label="Gamepad mode" onClick={onModeChange} className="grid size-11 place-items-center rounded-full border border-cyan-400/20 bg-[#1a222c] text-cyan-300 shadow-[inset_0_0_0_1px_rgba(255,255,255,.03),0_4px_12px_rgba(0,0,0,.35)]"><Gauge size={18} /></button>
         </div>
         <div className="flex items-center gap-2">
           <IconButton id="map" label="Map" settings={settings} press={press}><Map size={18} /></IconButton>
-          <button type="button" onClick={() => press("settings", true)} onPointerUp={() => press("settings", false)} className="grid size-11 place-items-center rounded-full border border-white/10 bg-[#242a33] text-slate-200 shadow-lg">
+          <button type="button" aria-label="Settings" onClick={onSettings} className="grid size-11 place-items-center rounded-full border border-white/10 bg-[#242a33] text-slate-200 shadow-lg">
             <Settings2 size={18} />
           </button>
         </div>
@@ -256,7 +260,7 @@ export function FlatWheel({ settings, set, press }: Props) {
           </div>
           <div className="flex items-center gap-3">
             <ControlButton label="ENTER" id="start" settings={settings} press={press} className="min-h-14 min-w-28 text-[10px]" />
-            <ControlButton label="MODE" id="mode" settings={settings} press={press} className="min-h-12 min-w-16 text-[9px]" />
+            <ControlButton label="MODE" id="mode" settings={settings} press={press} onClick={onModeChange} className="min-h-12 min-w-16 text-[9px]" />
           </div>
           <div className="flex gap-3">
             {["1", "2", "3"].map((id) => (

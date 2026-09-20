@@ -78,25 +78,25 @@ export function PadScene({ settings, set, press }: Props) {
       ))}
       {/* accent light bar */}
       <mesh position={[0, 0.5, -1.62]} rotation={[-0.3, 0, 0]}>
-        <boxGeometry args={[3.2, 0.05, 0.12]} />
-        <meshStandardMaterial color="#0ea5e9" emissive="#0ea5e9" emissiveIntensity={2.2} />
+        <boxGeometry args={[2.4, 0.05, 0.1]} />
+        <meshStandardMaterial color="#0ea5e9" emissive="#0ea5e9" emissiveIntensity={1.1} />
       </mesh>
 
       {/* shoulders + triggers */}
       <Pad3D
-        position={[-2.6, 0.52, -1.5]}
+        position={[-2.6, 0.5, -1.35]}
         label="LB"
         vibration={settings.vibration}
         onPress={(d) => press("lb", d)}
       />
       <Pad3D
-        position={[2.6, 0.52, -1.5]}
+        position={[2.6, 0.5, -1.35]}
         label="RB"
         vibration={settings.vibration}
         onPress={(d) => press("rb", d)}
       />
-      <Trigger3D position={[-2.6, 0.5, -2.05]} label="LT" onChange={(v) => set({ lt: v })} />
-      <Trigger3D position={[2.6, 0.5, -2.05]} label="RT" onChange={(v) => set({ rt: v })} />
+      <Trigger3D position={[-2.6, 0.62, -2.15]} label="LT" onChange={(v) => set({ lt: v })} />
+      <Trigger3D position={[2.6, 0.62, -2.15]} label="RT" onChange={(v) => set({ rt: v })} />
 
       {/* left stick + d-pad */}
       <Stick3D

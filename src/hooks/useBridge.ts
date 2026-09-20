@@ -22,7 +22,11 @@ const nowMs = () => (typeof performance !== "undefined" ? performance.now() : Da
  * - only the newest controller state is sent
  * - browser/transport buffering is bounded so stale input is not accumulated
  */
-export function useBridge(stateRef: React.MutableRefObject<ControllerState>, rateHz: number) {
+export function useBridge(
+  stateRef: React.MutableRefObject<ControllerState>,
+  rateHz: number,
+  outputMode: "xinput" | "ds4" = "xinput",
+) {
   const [status, setStatus] = useState<BridgeStatus>("idle");
   const [latency, setLatency] = useState<number | null>(null);
   const [packets, setPackets] = useState(0);
@@ -80,6 +84,7 @@ export function useBridge(stateRef: React.MutableRefObject<ControllerState>, rat
             version: 3,
             transport: "websocket",
             rateHz: clampRate(rateHz),
+            output: outputMode,
           }));
         } catch {
           /* socket may close immediately */
@@ -167,7 +172,7 @@ export function useBridge(stateRef: React.MutableRefObject<ControllerState>, rat
         }
       };
     },
-    [clearLoop, disconnect, rateHz, stateRef],
+    [clearLoop, disconnect, outputMode, rateHz, stateRef],
   );
 
   useEffect(() => () => disconnect(), [disconnect]);

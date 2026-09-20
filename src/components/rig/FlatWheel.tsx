@@ -61,7 +61,7 @@ function MomentaryButton({
         e.stopPropagation();
         release();
       }}
-      className={`absolute touch-none select-none border border-white/10 bg-[linear-gradient(180deg,#303840,#10151b)] font-black text-white shadow-[0_4px_10px_rgba(0,0,0,.5),inset_0_1px_0_rgba(255,255,255,.12)] transition active:translate-y-px active:brightness-150 ${className}`}
+      className={`pointer-events-auto absolute touch-none select-none border border-white/10 bg-[linear-gradient(180deg,#303840,#10151b)] font-black text-white shadow-[0_4px_10px_rgba(0,0,0,.5),inset_0_1px_0_rgba(255,255,255,.12)] transition active:translate-y-px active:brightness-150 ${className}`}
     >
       {label}
     </button>
@@ -112,7 +112,7 @@ function Paddle({
         e.stopPropagation();
         release();
       }}
-      className={`absolute z-50 h-[18%] w-[9%] touch-none select-none rounded-lg border border-[#d8dde2]/30 bg-[linear-gradient(180deg,#dce1e6,#727b85)] text-[7px] font-black text-slate-900 shadow-[0_7px_12px_rgba(0,0,0,.55),inset_0_1px_0_rgba(255,255,255,.75)] active:brightness-125 ${side === "left" ? "left-[14%] top-[26%] -rotate-[10deg]" : "right-[14%] top-[26%] rotate-[10deg]"}`}
+      className={`pointer-events-auto absolute z-50 h-[18%] w-[9%] touch-none select-none rounded-lg border border-[#d8dde2]/30 bg-[linear-gradient(180deg,#dce1e6,#727b85)] text-[7px] font-black text-slate-900 shadow-[0_7px_12px_rgba(0,0,0,.55),inset_0_1px_0_rgba(255,255,255,.75)] active:brightness-125 ${side === "left" ? "left-[14%] top-[26%] -rotate-[10deg]" : "right-[14%] top-[26%] rotate-[10deg]"}`}
     >
       {side === "left" ? "L1" : "R1"}
       <span className="absolute inset-x-0 bottom-1 text-[5px] tracking-wider">{gear === -1 ? "DOWN" : "UP"}</span>

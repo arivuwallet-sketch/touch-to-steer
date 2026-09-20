@@ -123,7 +123,7 @@ function DPadFlat({ settings, press }: { settings: Settings; press: Props["press
           {...hit(id)}
           type="button"
           aria-label={id}
-          className={`grid ${pos} touch-none place-items-center rounded-xl border border-white/10 bg-gradient-to-b from-[#303946] to-[#151a22] text-[clamp(1.4rem,3.2vw,2rem)] font-black text-slate-200 shadow-[0_5px_12px_rgba(0,0,0,.4),inset_0_1px_0_rgba(255,255,255,.07)] active:scale-95 active:brightness-125`}
+          className={`grid ${pos} touch-none place-items-center rounded-[0.9rem] border border-[#55616f]/70 bg-[linear-gradient(145deg,#566372_0%,#333e4a_42%,#171d24_100%)] text-[clamp(1.4rem,3.2vw,2rem)] font-black text-slate-100 shadow-[inset_0_2px_1px_rgba(255,255,255,.2),inset_0_-3px_5px_rgba(0,0,0,.48),0_5px_0_#0a0e13,0_9px_14px_rgba(0,0,0,.5)] transition-transform active:translate-y-[3px] active:shadow-[inset_0_2px_5px_rgba(0,0,0,.5),0_2px_0_#0a0e13] active:brightness-110`}
         >
           {icon}
         </button>
@@ -156,11 +156,11 @@ function Face({
       }}
       onPointerUp={() => press(id, false)}
       onPointerCancel={() => press(id, false)}
-      className={`absolute grid size-[8.5vh] max-h-16 max-w-16 touch-none place-items-center rounded-full border border-white/10 text-xl font-black italic shadow-[0_6px_14px_rgba(0,0,0,.42)] active:scale-95 ${className}`}
+      className={`absolute grid size-[8.5vh] max-h-16 max-w-16 touch-none place-items-center rounded-full border border-white/15 text-xl font-black italic shadow-[inset_0_2px_2px_rgba(255,255,255,.13),inset_0_-4px_8px_rgba(0,0,0,.65),0_6px_0_#090d12,0_11px_18px_rgba(0,0,0,.58)] transition-transform active:translate-y-[3px] active:shadow-[inset_0_3px_7px_rgba(0,0,0,.7),0_2px_0_#090d12] ${className}`}
       style={{
         color,
-        background: "radial-gradient(circle at 40% 30%, oklch(0.22 0.01 260), oklch(0.07 0 0) 75%)",
-        boxShadow: `0 0 16px ${color}, inset 0 0 10px oklch(0 0 0 / 80%), 0 0 0 1px oklch(0.3 0.01 260)`,
+        background: `radial-gradient(circle at 36% 26%, color-mix(in oklch, ${color} 16%, oklch(0.25 0.02 260)), oklch(0.07 0 0) 76%)`,
+        boxShadow: `0 0 12px color-mix(in oklch, ${color} 58%, transparent), inset 0 1px 1px oklch(1 0 0 / 12%), inset 0 -6px 10px oklch(0 0 0 / 72%), 0 6px 0 oklch(0.045 0 0), 0 11px 18px oklch(0 0 0 / 58%)`,
         textShadow: `0 0 10px ${color}`,
       }}
     >
@@ -197,8 +197,8 @@ function Shoulder({
           : "[clip-path:polygon(0_0,90%_0,100%_100%,0_100%)]"
       }`}
       style={{
-        background: "linear-gradient(180deg, oklch(0.2 0.03 255), oklch(0.09 0.01 260))",
-        boxShadow: "0 0 18px oklch(0.55 0.18 250 / 35%)",
+        background: "linear-gradient(145deg, #4c5764 0%, #242d37 46%, #10151b 100%)",
+        boxShadow: "inset 0 2px 1px rgba(255,255,255,.12), inset 0 -5px 8px rgba(0,0,0,.55), 0 5px 0 #090d12, 0 10px 16px rgba(0,0,0,.48)",
       }}
     >
       {label}
@@ -254,8 +254,8 @@ function TriggerFlat({
           : "[clip-path:polygon(0_0,72%_0,100%_100%,0_100%)]"
       }`}
       style={{
-        background: `linear-gradient(180deg, oklch(${0.2 + v * 0.35} ${0.04 + v * 0.1} 250), oklch(0.09 0.01 260))`,
-        boxShadow: `0 0 ${14 + v * 26}px oklch(0.6 0.18 250 / ${0.3 + v * 0.5})`,
+        background: `linear-gradient(145deg, oklch(${0.34 + v * 0.2} 0.035 255), oklch(0.12 0.01 260))`,
+        boxShadow: `inset 0 2px 1px rgba(255,255,255,.12), inset 0 -5px 9px rgba(0,0,0,.55), 0 5px 0 #090d12, 0 0 ${14 + v * 26}px oklch(0.6 0.18 250 / ${0.3 + v * 0.5})`,
       }}
     >
       {label}
@@ -285,7 +285,7 @@ function Pill({
       }}
       onPointerUp={() => press(id, false)}
       onPointerCancel={() => press(id, false)}
-      className={`touch-none rounded-md px-3 py-1 text-xs font-black tracking-wider text-[oklch(0.72_0.16_250)] active:brightness-150 ${className}`}
+      className={`touch-none rounded-lg border border-white/10 bg-[linear-gradient(145deg,#4a5562,#171d24)] px-4 py-2 text-xs font-black tracking-wider text-[oklch(0.72_0.16_250)] shadow-[inset_0_2px_1px_rgba(255,255,255,.12),inset_0_-3px_6px_rgba(0,0,0,.6),0_4px_0_#090d12,0_8px_12px_rgba(0,0,0,.42)] transition-transform active:translate-y-[2px] active:shadow-[inset_0_2px_5px_rgba(0,0,0,.55),0_2px_0_#090d12] ${className}`}
       style={{
         background: "linear-gradient(180deg, oklch(0.2 0.03 255), oklch(0.09 0.01 260))",
         boxShadow: "0 0 14px oklch(0.55 0.18 250 / 30%)",
@@ -318,7 +318,7 @@ function Round({
       }}
       onPointerUp={() => press(id, false)}
       onPointerCancel={() => press(id, false)}
-      className={`grid ${size} touch-none place-items-center rounded-full text-[10px] font-black text-[oklch(0.7_0.14_250)] active:brightness-150`}
+      className={`grid ${size} touch-none place-items-center rounded-full border border-white/10 bg-[radial-gradient(circle_at_35%_25%,#556170_0%,#242d37_48%,#10151b_100%)] text-[10px] font-black text-[oklch(0.78_0.14_250)] shadow-[inset_0_2px_2px_rgba(255,255,255,.14),inset_0_-5px_9px_rgba(0,0,0,.62),0_5px_0_#090d12,0_10px_16px_rgba(0,0,0,.5)] transition-transform active:translate-y-[3px] active:shadow-[inset_0_3px_6px_rgba(0,0,0,.62),0_2px_0_#090d12]`}
       style={{
         background: "radial-gradient(circle at 40% 30%, oklch(0.24 0.02 255), oklch(0.08 0 0) 75%)",
         boxShadow: "0 0 14px oklch(0.5 0.18 250 / 35%), inset 0 0 8px oklch(0 0 0 / 80%)",

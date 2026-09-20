@@ -18,6 +18,10 @@ export type ControllerState = {
   rt: number;
   /** -1 = down shift, 0 = none, 1 = up shift (momentary) */
   gear: number;
+  /** -1 = selector dial left, 0 = none, 1 = selector dial right (momentary) */
+  dial: number;
+  /** G29 platform selector */
+  wheelPlatform: "ps3" | "ps4";
   buttons: Record<string, boolean>;
 };
 
@@ -35,6 +39,8 @@ export const emptyState = (): ControllerState => ({
   lt: 0,
   rt: 0,
   gear: 0,
+  dial: 0,
+  wheelPlatform: "ps4",
   buttons: {},
 });
 
@@ -50,6 +56,8 @@ export type Settings = {
   linearity: number;
   autoCentre: boolean;
   vibration: boolean;
+  /** Phone-side haptic approximation of wheel force feedback. */
+  ffbHaptics: boolean;
   sendRateHz: number;
   invertTilt: boolean;
   invertLookY: boolean;
@@ -69,6 +77,7 @@ export const defaultSettings: Settings = {
   linearity: 1.4,
   autoCentre: false,
   vibration: true,
+  ffbHaptics: true,
   sendRateHz: 60,
   invertTilt: false,
   invertLookY: false,
@@ -88,7 +97,7 @@ export const PRESETS: Record<string, { label: string; patch: Partial<Settings> }
   },
   arcade: {
     label: "Arcade racing",
-    patch: { sensitivity: 1.2, steerSensitivity: 1.35, deadzone: 0.08, linearity: 1.1, maxTiltDeg: 25, wheelRotationDeg: 360 },
+    patch: { sensitivity: 1.2, steerSensitivity: 1.35, deadzone: 0.08, linearity: 1.1, maxTiltDeg: 360 },
   },
   fps: {
     label: "Shooter",

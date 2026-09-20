@@ -89,7 +89,7 @@ export function Label({
 export function Button3D({
   position,
   radius = 0.26,
-  color = "#2b3242",
+  color = "#3b4455",
   glow = "#7dd3fc",
   label,
   labelSize,
@@ -149,7 +149,7 @@ export function Pad3D({
   position,
   size = [0.9, 0.16, 0.42],
   label,
-  color = "#252c3a",
+  color = "#39424f",
   glow = "#7dd3fc",
   vibration = true,
   onPress,
@@ -270,15 +270,15 @@ export function Stick3D({
       <group ref={stick}>
         <mesh position={[0, 0.1, 0]} castShadow>
           <cylinderGeometry args={[radius * 0.42, radius * 0.5, 0.26, 32]} />
-          <meshStandardMaterial color="#1b2130" metalness={0.7} roughness={0.35} />
+          <meshStandardMaterial color="#3a4353" metalness={0.6} roughness={0.35} />
         </mesh>
         <mesh position={[0, 0.26, 0]} castShadow onPointerDown={onDown} onDoubleClick={clickHandler}>
           <cylinderGeometry args={[radius * 0.78, radius * 0.66, 0.14, 40]} />
-          <meshStandardMaterial color="#2a3142" metalness={0.35} roughness={0.55} />
+          <meshStandardMaterial color="#48525f" metalness={0.3} roughness={0.55} />
         </mesh>
         <mesh position={[0, 0.34, 0]}>
           <sphereGeometry args={[radius * 0.74, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-          <meshStandardMaterial color="#10151f" roughness={0.85} />
+          <meshStandardMaterial color="#1b2230" roughness={0.85} />
         </mesh>
         <mesh position={[0, 0.2, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[radius * 0.8, radius * 0.88, 40]} />

@@ -55,7 +55,7 @@ function Pedal3D({
           <RoundedBox args={[0.7, 0.1, 1.05]} radius={0.05} smoothness={4} castShadow onPointerDown={onDown}>
             <meshStandardMaterial
               ref={mat}
-              color="#20262f"
+              color="#343d4a"
               emissive={accent}
               emissiveIntensity={0.12}
               metalness={0.75}
@@ -177,7 +177,7 @@ export function WheelScene({ settings, set, press }: Props) {
   return (
     <group position={[0, -0.4, 0]}>
       {/* ---------------- wheel ---------------- */}
-      <group position={[-3.2, 0.9, 0.9]} rotation={[-0.95, 0, 0]} scale={0.88}>
+      <group position={[-2.9, 1.2, 0.9]} rotation={[-0.78, 0, 0]} scale={0.86}>
         {/* column */}
         <mesh position={[0, 0, -0.6]} castShadow>
           <cylinderGeometry args={[0.28, 0.4, 1.1, 24]} />
@@ -187,13 +187,13 @@ export function WheelScene({ settings, set, press }: Props) {
           {/* rim */}
           <mesh castShadow onPointerDown={onGrab}>
             <torusGeometry args={[2.0, 0.24, 24, 72]} />
-            <meshStandardMaterial color="#14181f" metalness={0.45} roughness={0.55} />
+            <meshStandardMaterial color="#242b36" metalness={0.4} roughness={0.5} />
           </mesh>
           {/* leather grips */}
           {[-1, 1].map((s) => (
             <mesh key={s} rotation={[0, 0, (s * Math.PI) / 2]} onPointerDown={onGrab} castShadow>
               <torusGeometry args={[2.0, 0.3, 20, 40, Math.PI * 0.5]} />
-              <meshStandardMaterial color="#231a16" roughness={0.95} metalness={0.05} />
+              <meshStandardMaterial color="#3a2b24" roughness={0.9} metalness={0.05} />
             </mesh>
           ))}
           {/* spokes */}
@@ -259,17 +259,17 @@ export function WheelScene({ settings, set, press }: Props) {
       </group>
 
       {/* ---------------- handbrake + extras ---------------- */}
-      <group position={[0.1, 0.25, 0.1]} rotation={[0.18, 0, 0]} scale={1.15}>
+      <group position={[0.55, 0.2, 0.3]} rotation={[0.18, 0, 0]} scale={1.2}>
         <Handbrake3D onChange={(v) => set({ handbrake: v })} />
       </group>
 
-      <group position={[-0.2, -0.55, 1.55]} rotation={[-0.35, 0, 0]}>
+      <group position={[-0.1, -0.95, 2.6]} rotation={[-0.35, 0, 0]}>
         <Pad3D position={[-1.5, 0, 0]} size={[1.0, 0.16, 0.5]} glow="#a855f7" label="NITRO" vibration={settings.vibration} onPress={(d) => set({ nitro: d ? 1 : 0 })} />
         <Pad3D position={[-0.35, 0, 0]} size={[1.0, 0.16, 0.5]} glow="#fde047" label="LIGHTS" vibration={settings.vibration} onPress={(d) => press("lights", d)} />
         <Pad3D position={[0.8, 0, 0]} size={[1.0, 0.16, 0.5]} glow="#22d3ee" label="LOOK" vibration={settings.vibration} onPress={(d) => press("look", d)} />
         <Pad3D position={[1.95, 0, 0]} size={[1.0, 0.16, 0.5]} glow="#94a3b8" label="RESET" vibration={settings.vibration} onPress={(d) => press("reset", d)} />
       </group>
-      <group position={[3.4, -0.55, 1.55]} rotation={[-0.35, 0, 0]}>
+      <group position={[3.5, -0.95, 2.6]} rotation={[-0.35, 0, 0]}>
         <Pad3D position={[0, 0, 0]} size={[0.9, 0.16, 0.5]} glow="#94a3b8" label="BACK" vibration={settings.vibration} onPress={(d) => press("back", d)} />
         <Pad3D position={[1.05, 0, 0]} size={[0.9, 0.16, 0.5]} glow="#94a3b8" label="START" vibration={settings.vibration} onPress={(d) => press("start", d)} />
       </group>

@@ -64,16 +64,16 @@ function Trigger3D({
 
 export function PadScene({ settings, set, press }: Props) {
   return (
-    <group position={[0, -0.2, 0]} rotation={[0.1, 0, 0]}>
+    <group position={[0, -0.2, 0]} rotation={[0.16, 0, 0]}>
       {/* main shell */}
       <RoundedBox args={[8.2, 0.55, 3.6]} radius={0.5} smoothness={6} receiveShadow castShadow>
-        <meshStandardMaterial color="#161c27" metalness={0.45} roughness={0.5} />
+        <meshStandardMaterial color="#28313f" metalness={0.35} roughness={0.45} />
       </RoundedBox>
       {/* grips */}
       {[-2.8, 2.8].map((x) => (
         <mesh key={x} position={[x, -0.55, 1.1]} rotation={[0.5, x > 0 ? -0.25 : 0.25, 0]} castShadow>
           <capsuleGeometry args={[0.62, 1.15, 8, 24]} />
-          <meshStandardMaterial color="#121822" metalness={0.3} roughness={0.75} />
+          <meshStandardMaterial color="#212936" metalness={0.25} roughness={0.7} />
         </mesh>
       ))}
       {/* accent light bar */}

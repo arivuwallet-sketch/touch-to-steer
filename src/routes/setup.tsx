@@ -24,7 +24,7 @@ export const Route = createFileRoute("/setup")({
 const steps = [
   {
     t: "1. Install the driver",
-    d: "On the PC, install ViGEmBus (free). It lets a program create a controller that Windows treats as a real Xbox pad.",
+    d: "On the PC, install the ViGEmBus virtual gamepad driver. The original project is retired, but its final Windows 10/11 installer is still available from the official Nefarius GitHub releases page.",
   },
   {
     t: "2. Install Node.js",
@@ -68,6 +68,15 @@ function Setup() {
           </li>
         ))}
       </ol>
+
+      <a
+        href="https://github.com/nefarius/ViGEmBus/releases/latest"
+        target="_blank"
+        rel="noreferrer"
+        className="mt-4 inline-flex rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold uppercase tracking-widest text-white hover:bg-white/10"
+      >
+        Install ViGEmBus
+      </a>
 
       <button
         type="button"

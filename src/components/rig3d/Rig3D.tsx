@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
-import { ContactShadows } from "@react-three/drei";
+import { ContactShadows, Environment, Lightformer } from "@react-three/drei";
 import { PadScene } from "./PadScene";
 import { WheelScene } from "./WheelScene";
 import type { ControllerState, Settings } from "@/lib/controller-types";
@@ -8,8 +8,8 @@ import type { ControllerState, Settings } from "@/lib/controller-types";
 function CameraRig({ mode }: { mode: "pad" | "wheel" }) {
   const camera = useThree((s) => s.camera);
   useEffect(() => {
-    if (mode === "pad") camera.position.set(0, 6.2, 6.6);
-    else camera.position.set(0, 8.6, 5.4);
+    if (mode === "pad") camera.position.set(0, 11.8, 0.01);
+    else camera.position.set(0, 12.8, 0.01);
     camera.lookAt(0, 0, 0);
     camera.updateProjectionMatrix();
   }, [mode, camera]);
@@ -32,7 +32,7 @@ export default function Rig3D({
       shadows
       dpr={[1, 2]}
       gl={{ antialias: true, alpha: true }}
-      camera={{ position: mode === "pad" ? [0, 6.8, 4.8] : [0, 6.6, 8.2], fov: 42 }}
+      camera={{ position: [0, 12, 0.01], fov: 42 }}
       style={{ touchAction: "none" }}
     >
       <color attach="background" args={["#080b11"]} />
@@ -51,8 +51,12 @@ export default function Rig3D({
       <pointLight position={[-6, 3, 4]} intensity={70} color="#38bdf8" distance={22} />
       <pointLight position={[6, 3, 4]} intensity={55} color="#f97316" distance={20} />
       <spotLight position={[0, 10, 0]} angle={0.8} penumbra={1} intensity={110} color="#c7d9ff" />
+      <Environment>
+        <Lightformer intensity={2} position={[0, 8, 0]} scale={[12, 12, 1]} />
+        <Lightformer intensity={1.2} color="#77bfff" position={[-7, 2, 0]} rotation-y={Math.PI / 2} scale={[12, 2, 1]} />
+      </Environment>
 
-      <group scale={mode === "pad" ? 1.0 : 0.92} position={[0, mode === "pad" ? 0.1 : 0.4, 0]}>
+      <group scale={mode === "pad" ? 1.05 : 0.88} position={[0, mode === "pad" ? 0.1 : 0.25, 0]}>
         {mode === "pad" ? (
           <PadScene settings={settings} set={set} press={press} />
         ) : (

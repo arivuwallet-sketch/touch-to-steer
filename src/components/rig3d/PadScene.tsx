@@ -64,7 +64,7 @@ function Trigger3D({
 
 export function PadScene({ settings, set, press }: Props) {
   return (
-    <group position={[0, -0.2, 0]} rotation={[0.16, 0, 0]}>
+    <group position={[0, -0.2, 0]}>
       {/* main shell */}
       <RoundedBox args={[8.2, 1.0, 3.6]} radius={0.34} smoothness={6} receiveShadow castShadow>
         <meshStandardMaterial color="#28313f" metalness={0.35} roughness={0.45} />
@@ -149,6 +149,14 @@ export function PadScene({ settings, set, press }: Props) {
         <meshStandardMaterial color="#38bdf8" emissive="#38bdf8" emissiveIntensity={1.6} />
       </mesh>
 
+      {/* Apex-style screen, profile and gyro controls */}
+      <RoundedBox args={[1.35, 0.12, 0.62]} radius={0.08} smoothness={4} position={[0, 0.55, -0.05]} castShadow>
+        <meshStandardMaterial color="#07131b" emissive="#0ea5e9" emissiveIntensity={0.35} metalness={0.45} roughness={0.3} />
+      </RoundedBox>
+      <Label position={[0, 0.64, -0.05]} size={9}>APEX 5 · 1000HZ</Label>
+      <Pad3D position={[-1.05, 0.54, -0.5]} size={[0.48, 0.13, 0.3]} label="−" glow="#22d3ee" vibration={settings.vibration} onPress={(d) => press("select", d)} />
+      <Pad3D position={[1.05, 0.54, -0.5]} size={[0.48, 0.13, 0.3]} label="+" glow="#22d3ee" vibration={settings.vibration} onPress={(d) => press("start", d)} />
+
       {/* ABXY diamond */}
       <group position={[2.6, 0.52, -0.35]}>
         <Button3D position={[0, 0, -0.62]} label="Y" glow="#facc15" color="#3a3320" vibration={settings.vibration} onPress={(d) => press("y", d)} />
@@ -165,6 +173,22 @@ export function PadScene({ settings, set, press }: Props) {
         onMove={(x, y) => set({ rx: x, ry: settings.invertLookY ? -y : y })}
         onClick3={(d) => press("r3", d)}
       />
+
+      {/* Six remappable Apex-style extra inputs */}
+      <group position={[0, 0.53, 1.42]}>
+        {[-2.5, -1.5, -0.5, 0.5, 1.5, 2.5].map((x, i) => (
+          <Pad3D
+            key={i}
+            position={[x, 0, 0]}
+            size={[0.72, 0.13, 0.3]}
+            label={`M${i + 1}`}
+            glow={i < 2 ? "#f97316" : "#22d3ee"}
+            vibration={settings.vibration}
+            onPress={(d) => press(`m${i + 1}`, d)}
+          />
+        ))}
+      </group>
+      <Pad3D position={[3.55, 0.52, 1.15]} size={[0.62, 0.13, 0.34]} label="GYRO" glow="#a3e635" vibration={settings.vibration} onPress={(d) => press("gyro", d)} />
     </group>
   );
 }

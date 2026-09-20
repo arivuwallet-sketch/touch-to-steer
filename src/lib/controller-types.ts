@@ -53,6 +53,10 @@ export type Settings = {
   sendRateHz: number;
   invertTilt: boolean;
   invertLookY: boolean;
+  /** visual wheel lock, matching a G29 at 900 degrees lock-to-lock */
+  wheelRotationDeg: number;
+  /** simulated stick tension for thumb travel */
+  stickTension: number;
 };
 
 export const defaultSettings: Settings = {
@@ -63,26 +67,28 @@ export const defaultSettings: Settings = {
   deadzone: 0.05,
   maxTiltDeg: 35,
   linearity: 1.4,
-  autoCentre: true,
+  autoCentre: false,
   vibration: true,
   sendRateHz: 60,
   invertTilt: false,
   invertLookY: false,
+  wheelRotationDeg: 900,
+  stickTension: 0.7,
 };
 
 /** Tuned presets so each genre feels right without manual fiddling. */
 export const PRESETS: Record<string, { label: string; patch: Partial<Settings> }> = {
   gtav: {
     label: "GTA V",
-    patch: { sensitivity: 1.1, steerSensitivity: 0.95, deadzone: 0.06, linearity: 1.4, maxTiltDeg: 35 },
+    patch: { sensitivity: 1.1, steerSensitivity: 0.95, deadzone: 0.06, linearity: 1.4, maxTiltDeg: 35, wheelRotationDeg: 540 },
   },
   forza: {
     label: "Forza / Sim",
-    patch: { sensitivity: 0.9, steerSensitivity: 0.8, deadzone: 0.02, linearity: 1.8, maxTiltDeg: 45 },
+    patch: { sensitivity: 0.9, steerSensitivity: 0.8, deadzone: 0.02, linearity: 1.8, maxTiltDeg: 45, wheelRotationDeg: 900 },
   },
   arcade: {
     label: "Arcade racing",
-    patch: { sensitivity: 1.2, steerSensitivity: 1.35, deadzone: 0.08, linearity: 1.1, maxTiltDeg: 25 },
+    patch: { sensitivity: 1.2, steerSensitivity: 1.35, deadzone: 0.08, linearity: 1.1, maxTiltDeg: 25, wheelRotationDeg: 360 },
   },
   fps: {
     label: "Shooter",

@@ -1,13 +1,12 @@
-import { ClientOnly, createFileRoute } from "@tanstack/react-router";
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
-import { Gamepad2, Settings as SettingsIcon, Gauge } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Gamepad2, Settings as SettingsIcon } from "lucide-react";
 import { SettingsPanel } from "@/components/rig/SettingsPanel";
 import { FlatPad } from "@/components/rig/FlatPad";
+import { FlatWheel } from "@/components/rig/FlatWheel";
 import { RotateGate } from "@/components/rig/RotateGate";
 import { Button } from "@/components/ui/button";
 import { useBridge } from "@/hooks/useBridge";
-const Rig3D = lazy(() => import("@/components/rig3d/Rig3D"));
-
 import {
   defaultSettings,
   emptyState,
@@ -85,11 +84,7 @@ function Rig() {
         {mode === "pad" ? (
           <FlatPad settings={settings} set={set} press={press} />
         ) : (
-          <ClientOnly fallback={<div className="grid h-full place-items-center text-xs uppercase tracking-widest text-muted-foreground">Loading 3D steering rig…</div>}>
-            <Suspense fallback={<div className="grid h-full place-items-center text-xs uppercase tracking-widest text-muted-foreground">Building steering rig…</div>}>
-              <Rig3D mode="wheel" settings={settings} set={set} press={press} />
-            </Suspense>
-          </ClientOnly>
+          <FlatWheel settings={settings} set={set} press={press} />
         )}
       </div>
 

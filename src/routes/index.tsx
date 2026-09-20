@@ -88,7 +88,7 @@ function Rig() {
         )}
       </div>
 
-      <div className="absolute right-[max(0.75rem,env(safe-area-inset-right))] top-[max(0.75rem,env(safe-area-inset-top))] z-30 flex items-center gap-2">
+      <div className="mode-toolbar absolute right-[max(0.75rem,env(safe-area-inset-right))] top-[max(0.75rem,env(safe-area-inset-top))] z-30 flex items-center gap-2">
         <div className="flex rounded-xl border border-white/10 bg-black/45 p-1 shadow-xl backdrop-blur-md">
           <Button
             onClick={() => setMode("pad")}

@@ -267,9 +267,6 @@ export function FlatWheel({ settings, set, press, onModeChange, onSettings }: Pr
               <div className="absolute inset-[14%] grid place-items-center rounded-full border border-white/10 bg-[#20262e]">
                 <span className="text-[clamp(1rem,2.3vw,1.55rem)] font-black tracking-tight text-slate-100">PS</span>
               </div>
-              <div className="absolute -bottom-[19%] left-1/2 grid h-[35%] w-[22%] -translate-x-1/2 place-items-center rounded-md border border-white/10 bg-[#252b33] text-[7px] font-black tracking-[0.12em] text-slate-300">
-                PS
-              </div>
             </div>
 
             <div className="absolute left-[3%] top-[25%]">

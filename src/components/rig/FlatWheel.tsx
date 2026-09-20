@@ -237,12 +237,21 @@ function Pedal({
   const [value, setValue] = useState(0);
   const active = useRef<number | null>(null);
   const pedalRef = useRef<HTMLButtonElement>(null);
+  const lastBand = useRef(-1);
+  const lastHapticAt = useRef(0);
 
   const update = (clientY: number) => {
     const el = pedalRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
     const next = Math.max(0, Math.min(1, (rect.bottom - clientY) / rect.height));
+    const band = Math.min(5, Math.floor(next * 6));
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    if (settings.vibration && band !== lastBand.current && now - lastHapticAt.current > 50) {
+      lastBand.current = band;
+      lastHapticAt.current = now;
+      buzz(true, Math.min(14, 3 + band * 2));
+    }
     setValue(next);
     set({ [id]: next } as Partial<ControllerState>);
     if (id === "throttle") onLevel?.(next);
@@ -250,8 +259,10 @@ function Pedal({
 
   const release = () => {
     active.current = null;
+    lastBand.current = -1;
     setValue(0);
     set({ [id]: 0 } as Partial<ControllerState>);
+    if (settings.vibration) buzz(true, id === "brake" ? [5, 12, 4] : 5);
     if (id === "throttle") onLevel?.(0);
   };
 
@@ -276,7 +287,8 @@ function Pedal({
         className="absolute inset-x-4 bottom-10 rounded-xl border border-white/10 bg-gradient-to-b from-[#edf1f4] via-[#b9c0c7] to-[#727a84] shadow-[0_6px_12px_rgba(0,0,0,.45),inset_0_1px_0_rgba(255,255,255,.6)] transition-all"
         style={{
           height: `calc(30% + ${value * 58}%)`,
-          boxShadow: `0 0 14px ${accent}33, 0 6px 12px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.6)`,
+          boxShadow: `0 0 ${8 + value * 12}px ${accent}33, 0 6px 12px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.6)`,
+          transform: `scaleY(${1 + value * 0.035})`,
         }}
       >
         <span className="absolute inset-x-2 top-3 grid gap-2">
@@ -299,6 +311,7 @@ function Handbrake({ settings, set }: { settings: Settings; set: Props["set"] })
   const [value, setValue] = useState(0);
   const active = useRef(false);
   const startY = useRef(0);
+  const engaged = useRef(false);
 
   const move = (y: number) => {
     const next = Math.max(0, Math.min(1, (startY.current - y) / 110));
@@ -310,6 +323,8 @@ function Handbrake({ settings, set }: { settings: Settings; set: Props["set"] })
     active.current = false;
     setValue(0);
     set({ handbrake: 0 });
+    if (engaged.current) buzz(settings.vibration, 6);
+    engaged.current = false;
   };
 
   return (
@@ -323,6 +338,8 @@ function Handbrake({ settings, set }: { settings: Settings; set: Props["set"] })
         buzz(settings.vibration, 8);
         set({ handbrake: 1 });
         setValue(1);
+        engaged.current = true;
+        buzz(settings.vibration, [7, 16, 6]);
       }}
       onPointerMove={(e) => active.current && move(e.clientY)}
       onPointerUp={release}
@@ -353,7 +370,7 @@ function Nitro({ settings, set }: { settings: Settings; set: Props["set"] }) {
         e.currentTarget.setPointerCapture(e.pointerId);
         setDown(true);
         set({ nitro: 1 });
-        buzz(settings.vibration, 10);
+        buzz(settings.vibration, [5, 18, 5, 18, 8]);
       }}
       onPointerUp={() => {
         setDown(false);
@@ -518,7 +535,9 @@ export function FlatWheel({ settings, set, press, telemetry = {} }: Props) {
 
   const maxLockDeg = Math.max(90, settings.wheelRotationDeg / 2);
   const rpmLive = typeof telemetry?.rpm === "number" && typeof telemetry?.rpmMax === "number" && telemetry.rpmMax > 0;
-  const rpmRatio = rpmLive ? Math.max(0, Math.min(1, telemetry!.rpm! / telemetry!.rpmMax!)) : localRev;
+  const rpmRatio = rpmLive
+    ? Math.max(0, Math.min(1, telemetry!.rpm! / telemetry!.rpmMax!))
+    : Math.max(0, Math.min(1, localRev * 0.78 + Math.abs(wheelAngleDeg.current / maxLockDeg) * 0.22));
 
   const paintWheel = useCallback((angleDeg: number) => {
     wheelAngleDeg.current = angleDeg;
@@ -677,14 +696,25 @@ export function FlatWheel({ settings, set, press, telemetry = {} }: Props) {
     paintWheel(next);
     emitRaw(next / maxLockDeg);
 
-    if (settings.ffbHaptics && Math.abs(delta) > 0.018) {
+    if (settings.ffbHaptics && Math.abs(delta) > 0.012) {
       const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-      if (now - lastFfbBuzzAt.value > 85) {
-        lastFfbBuzzAt.value = now;
-        buzz(true, Math.min(10, 3 + Math.round(Math.abs(delta) * 22)));
+      if (now - lastFfbBuzzAt.current > 75) {
+        lastFfbBuzzAt.current = now;
+        const intensity = Math.min(1, Math.abs(next) / maxLockDeg);
+        buzz(true, Math.min(12, 3 + Math.round(intensity * 8)));
       }
     }
   };
+
+  useEffect(() => {
+    if (!settings.ffbHaptics || typeof telemetry?.speed !== "number") return;
+    const speed = Math.max(0, telemetry.speed);
+    if (speed < 8) return;
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    if (now - lastFfbBuzzAt.current < 160) return;
+    lastFfbBuzzAt.current = now;
+    buzz(true, Math.min(8, 2 + Math.round(Math.min(1, speed / 160) * 6)));
+  }, [settings.ffbHaptics, telemetry?.speed]);
 
   useEffect(() => {
     const ffb = telemetry?.ffb;

@@ -289,19 +289,6 @@ export function WheelScene({ settings, set, press }: Props) {
             <Button3D position={[0.42, 0, 0]} radius={0.2} label="○" glow="#f87171" vibration={settings.vibration} onPress={(d) => press("b", d)} />
             <Button3D position={[0, 0, 0.42]} radius={0.2} label="×" glow="#60a5fa" vibration={settings.vibration} onPress={(d) => press("a", d)} />
           </group>
-          {/* paddle shifters */}
-          {[-1, 1].map((s) => (
-            <group key={s} position={[s * 1.75, -0.1, -0.45]} rotation={[0, 0, s * -0.2]}>
-              <Pad3D
-                position={[0, 0, 0]}
-                size={[0.34, 0.14, 1.5]}
-                color="#3b4252"
-                glow={s < 0 ? "#f472b6" : "#4ade80"}
-                label={s < 0 ? "DOWN" : "UP"}
-                vibration={settings.vibration}
-                onPress={(d) => set({ gear: d ? (s as -1 | 1) : 0 })}
-              />
-            </group>
           ))}
         </group>
       </group>
@@ -314,20 +301,13 @@ export function WheelScene({ settings, set, press }: Props) {
       </group>
 
       {/* ---------------- handbrake + extras ---------------- */}
-      <group position={[1.1, 0.15, 0.25]} rotation={[0, 0, 0]} scale={1.05}>
+      <group position={[1.0, 0.15, 0.45]} rotation={[0, 0, 0]} scale={1.0}>
         <Handbrake3D onChange={(v) => set({ handbrake: v })} />
       </group>
 
-      <group position={[0, 0.15, -2.05]}>
-        <Pad3D position={[-2.1, 0, 0]} size={[1.2, 0.16, 0.55]} glow="#a855f7" label="NITRO" vibration={settings.vibration} onPress={(d) => set({ nitro: d ? 1 : 0 })} />
-        <Pad3D position={[-0.7, 0, 0]} size={[1.2, 0.16, 0.55]} glow="#fde047" label="LIGHTS" vibration={settings.vibration} onPress={(d) => press("lights", d)} />
-        <Pad3D position={[0.7, 0, 0]} size={[1.2, 0.16, 0.55]} glow="#22d3ee" label="CAMERA" vibration={settings.vibration} onPress={(d) => press("look", d)} />
-        <Pad3D position={[2.1, 0, 0]} size={[1.2, 0.16, 0.55]} glow="#94a3b8" label="RESET" vibration={settings.vibration} onPress={(d) => press("reset", d)} />
-      </group>
-      <group position={[2.8, 0.15, -2.05]}>
-        <Pad3D position={[0, 0, 0]} size={[0.8, 0.16, 0.5]} glow="#94a3b8" label="−" vibration={settings.vibration} onPress={(d) => press("back", d)} />
-        <Pad3D position={[0.95, 0, 0]} size={[0.8, 0.16, 0.5]} glow="#94a3b8" label="+" vibration={settings.vibration} onPress={(d) => press("start", d)} />
-        <Button3D position={[1.85, 0, 0]} radius={0.24} label="↵" glow="#38bdf8" vibration={settings.vibration} onPress={(d) => press("home", d)} />
+
+      <group position={[1.05, 0.15, 1.95]}>
+        <Pad3D position={[0, 0, 0]} size={[1.25, 0.16, 0.55]} glow="#a855f7" label="NITRO" vibration={settings.vibration} onPress={(d) => set({ nitro: d ? 1 : 0 })} />
       </group>
     </group>
   );

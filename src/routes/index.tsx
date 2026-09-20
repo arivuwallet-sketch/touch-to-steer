@@ -2,6 +2,7 @@ import { createFileRoute, ClientOnly, Link } from "@tanstack/react-router";
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import { SettingsPanel } from "@/components/rig/SettingsPanel";
 import { RotateGate } from "@/components/rig/RotateGate";
+import { FlatPad } from "@/components/rig/FlatPad";
 import { useBridge } from "@/hooks/useBridge";
 import {
   PRESETS,
@@ -118,19 +119,23 @@ function Rig() {
     <main className="relative h-[100dvh] overflow-hidden bg-background">
       <RotateGate />
 
-      {/* ---------- 3D rig fills the screen ---------- */}
+      {/* ---------- rig fills the screen ---------- */}
       <div className="absolute inset-0">
-        <ClientOnly fallback={<div className="grid h-full place-items-center text-xs uppercase tracking-widest text-muted-foreground">Loading rig…</div>}>
-          <Suspense
-            fallback={
-              <div className="grid h-full place-items-center text-xs uppercase tracking-widest text-muted-foreground">
-                Building 3D rig…
-              </div>
-            }
-          >
-            <Rig3D key={mode} mode={mode} settings={settings} set={set} press={press} />
-          </Suspense>
-        </ClientOnly>
+        {mode === "pad" ? (
+          <FlatPad settings={settings} set={set} press={press} />
+        ) : (
+          <ClientOnly fallback={<div className="grid h-full place-items-center text-xs uppercase tracking-widest text-muted-foreground">Loading rig…</div>}>
+            <Suspense
+              fallback={
+                <div className="grid h-full place-items-center text-xs uppercase tracking-widest text-muted-foreground">
+                  Building 3D rig…
+                </div>
+              }
+            >
+              <Rig3D key={mode} mode={mode} settings={settings} set={set} press={press} />
+            </Suspense>
+          </ClientOnly>
+        )}
       </div>
 
       {/* ---------- floating HUD ---------- */}

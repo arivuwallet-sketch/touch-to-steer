@@ -562,10 +562,21 @@ export function FlatWheel({ settings, set, press, telemetry = {} }: Props) {
   const setWheelRaw = useCallback(
     (raw: number) => {
       const clamped = Math.max(-1, Math.min(1, raw));
-      paintWheel(clamped * maxLockDeg);
+      const angleDeg = clamped * maxLockDeg;
+      paintWheel(angleDeg);
       emitRaw(clamped);
+
+      if (settings.ffbHaptics) {
+        const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+        const nearCenter = Math.abs(angleDeg) < 2.5;
+        const nearLock = maxLockDeg - Math.abs(angleDeg) < 3.5;
+        if (now - lastFfbBuzzAt.current > 90 && (nearCenter || nearLock)) {
+          lastFfbBuzzAt.current = now;
+          buzz(true, nearLock ? [4, 12, 4] : 4);
+        }
+      }
     },
-    [emitRaw, maxLockDeg, paintWheel],
+    [emitRaw, maxLockDeg, paintWheel, settings.ffbHaptics],
   );
 
   const requestGyro = useCallback(async () => {

@@ -542,7 +542,6 @@ export function FlatWheel({ settings, set, press }: Props) {
           </div>
 
           <div className="flat-wheel-pedals absolute bottom-[4%] right-[18%] flex items-end gap-[clamp(.45rem,1.2vw,.9rem)] md:bottom-[7%] md:right-[18%] md:gap-[clamp(.75rem,1.5vw,1.3rem)]">
-            <Pedal id="clutch" label="CLUTCH" settings={settings} set={set} accent="#9ca3af" />
             <Pedal id="brake" label="BRAKE" settings={settings} set={set} accent="#ef4444" />
             <Pedal id="throttle" label="GAS" settings={settings} set={set} accent="#22c55e" />
           </div>
@@ -553,7 +552,7 @@ export function FlatWheel({ settings, set, press }: Props) {
           </div>
 
           <div className="flat-wheel-instructions pointer-events-none absolute bottom-1 left-[2%] hidden text-[7px] font-bold uppercase tracking-[0.16em] text-slate-500 md:bottom-3 md:left-[5%] md:block md:text-[8px] md:tracking-[0.2em]">
-            Touch the rim and release to auto-centre • 900° lock-to-lock • wheel + horn + pedals + handbrake + nitro
+            Touch the rim and release to auto-centre • 900° lock-to-lock • wheel + horn + brake + gas + handbrake + nitro
           </div>
         </div>
       </div>

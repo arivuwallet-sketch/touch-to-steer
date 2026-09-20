@@ -254,7 +254,14 @@ export function FlatPad({ settings, set, press }: Props) {
         </div>
 
         <div className="flex items-end gap-[clamp(1rem,3vw,2.5rem)]">
-          <DPad settings={settings} press={press} />
+          <div className="flex flex-col items-center gap-3">
+            <Stick
+              settings={settings}
+              onMove={(x, y) => set({ rx: x, ry: settings.invertLookY ? -y : y })}
+              onClick3={(d) => press("r3", d)}
+            />
+            <button type="button" onPointerDown={() => press("r3", true)} onPointerUp={() => press("r3", false)} className="rounded-full border border-white/10 bg-[#11171e] px-4 py-1 text-[8px] font-black tracking-[0.2em] text-slate-400">RSB</button>
+          </div>
           <div className="flex flex-col items-center gap-3">
             <div className="relative size-[clamp(8.5rem,28vh,12rem)]">
               <div className="absolute inset-0 rounded-full border border-cyan-400/20 bg-[radial-gradient(circle_at_42%_34%,#252f3a,#0b1016_72%)] shadow-[inset_0_0_22px_rgba(0,0,0,.88),0_10px_24px_rgba(0,0,0,.38)]" />

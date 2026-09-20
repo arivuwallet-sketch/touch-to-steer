@@ -58,6 +58,7 @@ export type Settings = {
   vibration: boolean;
   /** Phone-side haptic approximation of wheel force feedback. */
   ffbHaptics: boolean;
+  /** Controller packet target. 240 Hz is the low-latency ceiling; actual delivery depends on device/browser/network. */
   sendRateHz: number;
   invertTilt: boolean;
   invertLookY: boolean;
@@ -78,7 +79,7 @@ export const defaultSettings: Settings = {
   autoCentre: false,
   vibration: true,
   ffbHaptics: true,
-  sendRateHz: 60,
+  sendRateHz: 240,
   invertTilt: false,
   invertLookY: false,
   wheelRotationDeg: 900,

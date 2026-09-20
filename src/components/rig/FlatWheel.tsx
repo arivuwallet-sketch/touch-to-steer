@@ -375,12 +375,12 @@ export function FlatWheel({ settings, set }: Props) {
   };
 
   return (
-    <div className="absolute inset-0 overflow-hidden bg-[#080a0d] text-slate-100">
+    <div className="flat-wheel-root absolute inset-0 overflow-hidden bg-[#080a0d] text-slate-100">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_95%_at_50%_6%,#1a222b_0%,#080a0d_55%,#030405_100%)]" />
       <div className="pointer-events-none absolute inset-2 rounded-[1.7rem] border border-white/15" />
       <div className="pointer-events-none absolute inset-4 rounded-[1.4rem] border border-[#e11d2e]/15" />
 
-      <div className="absolute left-2 top-2 z-20 rounded-xl border border-white/10 bg-black/45 px-2.5 py-1.5 backdrop-blur-md md:left-5 md:top-5 md:px-3 md:py-2">
+      <div className="flat-wheel-root-title absolute left-2 top-2 z-20 rounded-xl border border-white/10 bg-black/45 px-2.5 py-1.5 backdrop-blur-md md:left-5 md:top-5 md:px-3 md:py-2">
         <div className="text-[6px] font-black uppercase tracking-[0.22em] text-slate-500 md:text-[8px] md:tracking-[0.25em]">STEERING MODE</div>
         <div className="mt-0.5 text-[11px] font-black tracking-tight text-white md:mt-1 md:text-sm">LOGITECH G29 STYLE</div>
         <div className="mt-0.5 text-[6px] font-semibold uppercase tracking-[0.15em] text-slate-500 md:text-[8px] md:tracking-[0.2em]">
@@ -389,7 +389,7 @@ export function FlatWheel({ settings, set }: Props) {
       </div>
 
       {settings.steerMode === "tilt" && !gyroReady && (
-        <div className="absolute left-1/2 top-[3.5rem] z-30 -translate-x-1/2 md:top-5">
+        <div className="flat-wheel-gyro absolute left-1/2 top-[3.5rem] z-30 -translate-x-1/2 md:top-5">
           <button
             type="button"
             onClick={requestGyro}
@@ -400,11 +400,11 @@ export function FlatWheel({ settings, set }: Props) {
         </div>
       )}
 
-      <div className="absolute inset-0 px-2 pb-2 pt-16 md:px-5 md:pb-5 md:pt-20">
+      <div className="flat-wheel-stage absolute inset-0 px-2 pb-2 pt-16 md:px-5 md:pb-5 md:pt-20">
         <div className="relative h-full w-full">
           <div
             ref={wheelHitRef}
-            className="absolute bottom-[4%] left-[2%] aspect-square w-[min(72svh,56svw)] touch-none select-none md:bottom-[7%] md:left-[4%] md:w-[min(63vh,53vw)] md:min-h-60 md:min-w-60"
+            className="flat-wheel-hit absolute bottom-[4%] left-[2%] aspect-square w-[min(72svh,56svw)] touch-none select-none md:bottom-[7%] md:left-[4%] md:w-[min(63vh,53vw)] md:min-h-60 md:min-w-60"
             onPointerDown={grabWheel}
             onPointerMove={dragWheel}
             onPointerUp={releaseWheel}
@@ -413,18 +413,18 @@ export function FlatWheel({ settings, set }: Props) {
             <G29Wheel wheelVisualRef={wheelVisualRef} settings={settings} />
           </div>
 
-          <div className="absolute bottom-[4%] right-[18%] flex items-end gap-[clamp(.45rem,1.2vw,.9rem)] md:bottom-[7%] md:right-[18%] md:gap-[clamp(.75rem,1.5vw,1.3rem)]">
+          <div className="flat-wheel-pedals absolute bottom-[4%] right-[18%] flex items-end gap-[clamp(.45rem,1.2vw,.9rem)] md:bottom-[7%] md:right-[18%] md:gap-[clamp(.75rem,1.5vw,1.3rem)]">
             <Pedal id="clutch" label="CLUTCH" settings={settings} set={set} accent="#9ca3af" />
             <Pedal id="brake" label="BRAKE" settings={settings} set={set} accent="#ef4444" />
             <Pedal id="throttle" label="GAS" settings={settings} set={set} accent="#22c55e" />
           </div>
 
-          <div className="absolute bottom-[5%] right-[1.5%] flex flex-col items-center gap-2 md:bottom-[12%] md:right-[4%] md:gap-3">
+          <div className="flat-wheel-aux absolute bottom-[5%] right-[1.5%] flex flex-col items-center gap-2 md:bottom-[12%] md:right-[4%] md:gap-3">
             <Handbrake settings={settings} set={set} />
             <Nitro settings={settings} set={set} />
           </div>
 
-          <div className="pointer-events-none absolute bottom-1 left-[2%] hidden text-[7px] font-bold uppercase tracking-[0.16em] text-slate-500 md:bottom-3 md:left-[5%] md:block md:text-[8px] md:tracking-[0.2em]">
+          <div className="flat-wheel-instructions pointer-events-none absolute bottom-1 left-[2%] hidden text-[7px] font-bold uppercase tracking-[0.16em] text-slate-500 md:bottom-3 md:left-[5%] md:block md:text-[8px] md:tracking-[0.2em]">
             Touch the rim and rotate • {settings.wheelRotationDeg}° lock-to-lock
           </div>
         </div>

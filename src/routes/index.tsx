@@ -7,6 +7,7 @@ import { ActionButton } from "@/components/rig/ActionButton";
 import { SettingsPanel } from "@/components/rig/SettingsPanel";
 import { DPad } from "@/components/rig/DPad";
 import { Trigger } from "@/components/rig/Trigger";
+import { RotateGate } from "@/components/rig/RotateGate";
 import { useBridge } from "@/hooks/useBridge";
 import {
   PRESETS,
@@ -105,9 +106,10 @@ function Rig() {
         : "text-muted-foreground";
 
   return (
-    <main className="min-h-screen px-2 pb-4 pt-2 sm:px-4">
+    <main className="flex h-[100dvh] flex-col gap-1.5 overflow-hidden px-2 py-1.5 sm:px-4">
+      <RotateGate />
       {/* ---------- top bar ---------- */}
-      <header className="panel grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2">
+      <header className="panel grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-1.5">
         <div className="flex min-w-0 items-center gap-2.5">
           <div
             className="grid size-8 shrink-0 place-items-center rounded-lg text-xs font-black text-primary-foreground"
@@ -145,8 +147,8 @@ function Rig() {
       </header>
 
       {/* ---------- mode + preset ---------- */}
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <div className="flex rounded-xl border border-border p-0.5">
+      <div className="flex shrink-0 flex-nowrap items-center gap-2">
+        <div className="flex shrink-0 rounded-xl border border-border p-0.5">
           {(["pad", "wheel"] as const).map((m) => (
             <button
               key={m}
@@ -182,7 +184,7 @@ function Rig() {
         <WheelLayout settings={settings} set={set} press={press} hud={hud} />
       )}
 
-      <p className="mt-3 text-center text-[11px] text-muted-foreground">
+      <p className="shrink-0 text-center text-[10px] text-muted-foreground">
         <Link to="/setup" className="font-semibold text-primary underline">
           PC setup guide
         </Link>
@@ -205,7 +207,7 @@ type LayoutProps = {
 /* ---------------- Gamepad: console layout, everything on one screen ------- */
 function GamepadLayout({ settings, set, press, hud }: LayoutProps) {
   return (
-    <section className="mt-2 space-y-2">
+    <section className="flex min-h-0 flex-1 flex-col justify-between gap-1.5">
       {/* shoulders */}
       <div className="flex items-start justify-between">
         <div className="flex gap-2">
@@ -318,7 +320,7 @@ function GamepadLayout({ settings, set, press, hud }: LayoutProps) {
 /* ---------------- Steering rig: wheel + full pedal set -------------------- */
 function WheelLayout({ settings, set, press, hud }: LayoutProps) {
   return (
-    <section className="mt-2 space-y-2">
+    <section className="flex min-h-0 flex-1 flex-col justify-between gap-1.5">
       <div className="grid grid-cols-3 gap-1.5">
         {[
           { k: "Steer", v: hud.a },

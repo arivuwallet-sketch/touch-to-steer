@@ -66,47 +66,47 @@ export function PadScene({ settings, set, press }: Props) {
   return (
     <group position={[0, -0.2, 0]} rotation={[0.16, 0, 0]}>
       {/* main shell */}
-      <RoundedBox args={[8.2, 0.55, 3.6]} radius={0.5} smoothness={6} receiveShadow castShadow>
+      <RoundedBox args={[8.2, 1.0, 3.6]} radius={0.34} smoothness={6} receiveShadow castShadow>
         <meshStandardMaterial color="#28313f" metalness={0.35} roughness={0.45} />
       </RoundedBox>
       {/* grips */}
       {[-2.8, 2.8].map((x) => (
-        <mesh key={x} position={[x, -0.55, 1.1]} rotation={[0.5, x > 0 ? -0.25 : 0.25, 0]} castShadow>
+        <mesh key={x} position={[x, -0.5, 1.15]} rotation={[0.5, x > 0 ? -0.25 : 0.25, 0]} castShadow>
           <capsuleGeometry args={[0.62, 1.15, 8, 24]} />
           <meshStandardMaterial color="#212936" metalness={0.25} roughness={0.7} />
         </mesh>
       ))}
       {/* accent light bar */}
-      <mesh position={[0, 0.3, -1.55]} rotation={[-0.3, 0, 0]}>
+      <mesh position={[0, 0.5, -1.62]} rotation={[-0.3, 0, 0]}>
         <boxGeometry args={[3.2, 0.05, 0.12]} />
         <meshStandardMaterial color="#0ea5e9" emissive="#0ea5e9" emissiveIntensity={2.2} />
       </mesh>
 
       {/* shoulders + triggers */}
       <Pad3D
-        position={[-2.6, 0.3, -1.75]}
+        position={[-2.6, 0.52, -1.5]}
         label="LB"
         vibration={settings.vibration}
         onPress={(d) => press("lb", d)}
       />
       <Pad3D
-        position={[2.6, 0.3, -1.75]}
+        position={[2.6, 0.52, -1.5]}
         label="RB"
         vibration={settings.vibration}
         onPress={(d) => press("rb", d)}
       />
-      <Trigger3D position={[-2.6, 0.55, -2.45]} label="LT" onChange={(v) => set({ lt: v })} />
-      <Trigger3D position={[2.6, 0.55, -2.45]} label="RT" onChange={(v) => set({ rt: v })} />
+      <Trigger3D position={[-2.6, 0.5, -2.05]} label="LT" onChange={(v) => set({ lt: v })} />
+      <Trigger3D position={[2.6, 0.5, -2.05]} label="RT" onChange={(v) => set({ rt: v })} />
 
       {/* left stick + d-pad */}
       <Stick3D
-        position={[-2.6, 0.3, -0.35]}
+        position={[-2.6, 0.52, -0.35]}
         label="MOVE"
         vibration={settings.vibration}
         onMove={(x, y) => set({ lx: x, ly: y })}
         onClick3={(d) => press("l3", d)}
       />
-      <group position={[-1.0, 0.3, 0.95]}>
+      <group position={[-1.0, 0.52, 0.95]}>
         {(
           [
             ["up", [0, 0, -0.42]],
@@ -129,7 +129,7 @@ export function PadScene({ settings, set, press }: Props) {
 
       {/* centre */}
       <Button3D
-        position={[-0.55, 0.3, -0.5]}
+        position={[-0.55, 0.52, -0.5]}
         radius={0.19}
         label="BACK"
         labelSize={8}
@@ -137,20 +137,20 @@ export function PadScene({ settings, set, press }: Props) {
         onPress={(d) => press("back", d)}
       />
       <Button3D
-        position={[0.55, 0.3, -0.5]}
+        position={[0.55, 0.52, -0.5]}
         radius={0.19}
         label="START"
         labelSize={8}
         vibration={settings.vibration}
         onPress={(d) => press("start", d)}
       />
-      <mesh position={[0, 0.32, 0.15]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0, 0.54, 0.15]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.22, 0.3, 32]} />
         <meshStandardMaterial color="#38bdf8" emissive="#38bdf8" emissiveIntensity={1.6} />
       </mesh>
 
       {/* ABXY diamond */}
-      <group position={[2.6, 0.3, -0.35]}>
+      <group position={[2.6, 0.52, -0.35]}>
         <Button3D position={[0, 0, -0.62]} label="Y" glow="#facc15" color="#3a3320" vibration={settings.vibration} onPress={(d) => press("y", d)} />
         <Button3D position={[-0.62, 0, 0]} label="X" glow="#60a5fa" color="#1f2c44" vibration={settings.vibration} onPress={(d) => press("x", d)} />
         <Button3D position={[0.62, 0, 0]} label="B" glow="#f87171" color="#3a2023" vibration={settings.vibration} onPress={(d) => press("b", d)} />
@@ -159,7 +159,7 @@ export function PadScene({ settings, set, press }: Props) {
 
       {/* right stick */}
       <Stick3D
-        position={[1.0, 0.3, 0.95]}
+        position={[1.0, 0.52, 0.95]}
         label="AIM"
         vibration={settings.vibration}
         onMove={(x, y) => set({ rx: x, ry: settings.invertLookY ? -y : y })}

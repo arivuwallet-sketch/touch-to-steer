@@ -354,17 +354,17 @@ export function FlatPad({ settings, set, press }: Props) {
       <div className="pointer-events-none absolute inset-x-[18%] top-0 h-16 rounded-b-3xl border-x border-b border-[oklch(0.4_0.16_255/45%)]" />
 
       {/* shoulders + triggers */}
-      <div className="absolute left-4 top-3 flex items-start gap-2">
+      <div className="absolute left-4 top-14 flex items-start gap-2">
         <Shoulder label="LB" side="l" settings={settings} press={press} />
         <TriggerFlat label="LT" side="l" settings={settings} onChange={(v) => set({ lt: v })} />
       </div>
-      <div className="absolute right-4 top-3 flex items-start gap-2">
+      <div className="absolute right-4 top-14 flex items-start gap-2">
         <TriggerFlat label="RT" side="r" settings={settings} onChange={(v) => set({ rt: v })} />
         <Shoulder label="RB" side="r" settings={settings} press={press} />
       </div>
 
       {/* left stick + LSB */}
-      <div className="absolute bottom-[22%] left-[4%] flex flex-col items-center gap-3">
+      <div className="absolute bottom-[20%] left-[4%] flex flex-col items-center gap-3">
         <Stick
           settings={settings}
           label="move"
@@ -390,7 +390,7 @@ export function FlatPad({ settings, set, press }: Props) {
       </div>
 
       {/* right stick + RSB */}
-      <div className="absolute bottom-[14%] right-[26%] flex flex-col items-center gap-3">
+      <div className="absolute bottom-[20%] right-[28%] flex flex-col items-center gap-3">
         <Stick
           settings={settings}
           label="aim"
@@ -401,7 +401,7 @@ export function FlatPad({ settings, set, press }: Props) {
       </div>
 
       {/* ABXY diamond */}
-      <div className="absolute right-[6%] top-[34%] size-[22vh] max-h-44 max-w-44">
+      <div className="absolute right-[8%] top-[38%] size-[22vh] max-h-44 max-w-44">
         <Face id="y" label="Y" color="oklch(0.82 0.18 95)" className="left-1/2 top-0 -translate-x-1/2" settings={settings} press={press} />
         <Face id="x" label="X" color="oklch(0.7 0.19 250)" className="left-0 top-1/2 -translate-y-1/2" settings={settings} press={press} />
         <Face id="b" label="B" color="oklch(0.63 0.24 27)" className="right-0 top-1/2 -translate-y-1/2" settings={settings} press={press} />
@@ -409,7 +409,7 @@ export function FlatPad({ settings, set, press }: Props) {
       </div>
 
       {/* mode */}
-      <div className="absolute bottom-4 right-4">
+      <div className="absolute bottom-16 right-4">
         <Round id="mode" settings={settings} press={press} size="size-12">
           MODE
         </Round>

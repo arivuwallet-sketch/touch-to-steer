@@ -171,11 +171,11 @@ export function SettingsPanel({
               className="w-40 accent-[var(--primary)]"
             />
           </Row>
-          <Row label={`Update rate ${settings.sendRateHz} Hz`}>
+          <Row label={`Controller update ${settings.sendRateHz} Hz`}>
             <input
               type="range"
-              min={30}
-              max={120}
+              min={60}
+              max={240}
               step={10}
               value={settings.sendRateHz}
               onChange={(e) => onChange({ sendRateHz: Number(e.target.value) })}
@@ -214,6 +214,10 @@ export function SettingsPanel({
               className="size-5 accent-[var(--primary)]"
             />
           </Row>
+        </div>
+
+        <div className="mt-4 rounded-lg border border-cyan-300/15 bg-cyan-300/5 p-3 text-[11px] leading-relaxed text-muted-foreground">
+          <strong className="text-slate-200">Ultra-low-latency mode</strong> targets 240 Hz output (about 4.17 ms between packets). Actual end-to-end latency depends on the phone, browser, Wi-Fi/LAN path, PC load, and game input polling.
         </div>
 
         <p className="mt-6 text-xs leading-relaxed text-muted-foreground">

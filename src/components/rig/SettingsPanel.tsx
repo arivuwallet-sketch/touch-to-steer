@@ -192,13 +192,8 @@ export function SettingsPanel({
               className="size-5 accent-[var(--primary)]"
             />
           </Row>
-          <Row label="Auto-centre on release">
-            <input
-              type="checkbox"
-              checked={settings.autoCentre}
-              onChange={(e) => onChange({ autoCentre: e.target.checked })}
-              className="size-5 accent-[var(--primary)]"
-            />
+          <Row label="Steering auto-centre">
+            <span className="rounded-lg border border-emerald-300/20 bg-emerald-300/5 px-2 py-1.5 text-xs font-black text-emerald-200">ALWAYS ON</span>
           </Row>
           <Row label="General phone haptics">
             <input

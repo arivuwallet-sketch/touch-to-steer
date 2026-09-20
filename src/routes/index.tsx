@@ -2,6 +2,7 @@ import { createFileRoute, ClientOnly, Link } from "@tanstack/react-router";
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import { SettingsPanel } from "@/components/rig/SettingsPanel";
 import { RotateGate } from "@/components/rig/RotateGate";
+import { FlatPad } from "@/components/rig/FlatPad";
 import { useBridge } from "@/hooks/useBridge";
 import {
   PRESETS,

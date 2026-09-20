@@ -13,8 +13,8 @@ function CameraRig({ mode }: { mode: "pad" | "wheel" }) {
       camera.lookAt(0, 0, 0);
     } else {
       // Driver-seat eye point: slightly above the wheel, looking forward/down.
-      camera.position.set(0, 2.55, 10.8);
-      camera.lookAt(0, 0.15, 0);
+      camera.position.set(0, 1.65, 11.6);
+      camera.lookAt(0, 0.0, 0.35);
     }
     camera.updateProjectionMatrix();
   }, [mode, camera]);
@@ -37,7 +37,7 @@ export default function Rig3D({
       shadows
       dpr={1}
       gl={{ antialias: true, alpha: true }}
-      camera={{ position: [0, 2.55, 10.8], fov: 48 }}
+      camera={{ position: [0, 1.65, 11.6], fov: 46 }}
       style={{ touchAction: "none" }}
     >
       <color attach="background" args={["#080b11"]} />

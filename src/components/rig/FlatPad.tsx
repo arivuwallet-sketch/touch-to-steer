@@ -9,8 +9,14 @@ type Props = {
 
 type TriggerMode = "regular" | "race" | "sniper" | "recoil" | "lock";
 
-const buzz = (enabled: boolean, ms = 10) => {
-  if (enabled && typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(ms);
+const buzz = (enabled: boolean, pattern: number | number[] = 10) => {
+  if (enabled && typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(pattern);
+};
+
+const feelBuzz = (enabled: boolean, intensity: number) => {
+  if (!enabled) return;
+  const ms = Math.max(3, Math.min(18, Math.round(3 + intensity * 15)));
+  buzz(true, ms);
 };
 
 function SurfaceButton({
@@ -33,6 +39,7 @@ function SurfaceButton({
   onClick?: () => void;
 }) {
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastHapticAt = useRef(0);
 
   const stopTurbo = useCallback(() => {
     if (timer.current) clearInterval(timer.current);
@@ -43,12 +50,17 @@ function SurfaceButton({
   const down = (e: PointerEvent<HTMLButtonElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
     e.stopPropagation();
-    buzz(settings.vibration, 8);
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    if (now - lastHapticAt.current > 50) {
+      lastHapticAt.current = now;
+      feelBuzz(settings.vibration, 0.35);
+    }
     press(id, true);
 
     if (turbo) {
       timer.current = setInterval(() => {
         press(id, false);
+        feelBuzz(settings.vibration, 0.6);
         window.setTimeout(() => press(id, true), 18);
       }, 92);
     }
@@ -87,6 +99,8 @@ function Stick({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const pointer = useRef<number | null>(null);
+  const lastHapticMagnitude = useRef(0);
+  const pointMagnitude = useRef(0);
   const [point, setPoint] = useState({ x: 0, y: 0 });
 
   const update = (e: PointerEvent<HTMLDivElement>) => {
@@ -105,6 +119,18 @@ function Stick({
     }
 
     const travel = 22 + settings.stickTension * 12;
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    if (now - lastHapticMagnitude.current > 75) {
+      const magnitude = Math.hypot(x, y);
+      if (magnitude > 0.55 && Math.abs(magnitude - pointMagnitude.current) > 0.12) {
+        feelBuzz(settings.vibration, magnitude * 0.55);
+      }
+      if (magnitude >= 0.92 && pointMagnitude.current < 0.92) {
+        buzz(settings.vibration, [5, 18, 4]);
+      }
+      lastHapticMagnitude.current = now;
+    }
+    pointMagnitude.current = Math.hypot(x, y);
     setPoint({ x, y });
     onMove(
       applyCurve(x, settings.deadzone, settings.linearity, settings.sensitivity),
@@ -117,6 +143,7 @@ function Stick({
 
   const release = () => {
     pointer.current = null;
+    pointMagnitude.current = 0;
     setPoint({ x: 0, y: 0 });
     const thumb = ref.current?.querySelector<HTMLElement>("[data-stick-thumb]");
     if (thumb) thumb.style.transform = "translate(-50%,-50%) translate(0px,0px)";
@@ -220,6 +247,8 @@ function Trigger({
 }) {
   const [value, setValue] = useState(0);
   const pointer = useRef<number | null>(null);
+  const lastFeel = useRef(0);
+  const lastBand = useRef(-1);
 
   const mapValue = (v: number) => {
     const p = Math.max(0, Math.min(1, v));
@@ -234,12 +263,20 @@ function Trigger({
     const r = e.currentTarget.getBoundingClientRect();
     const raw = Math.max(0, Math.min(1, (e.clientY - r.top) / r.height));
     const next = mapValue(raw);
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const band = Math.min(4, Math.floor(next * 5));
+    if (band !== lastBand.current && now - lastFeel.current > 55) {
+      lastBand.current = band;
+      lastFeel.current = now;
+      feelBuzz(settings.vibration, 0.25 + band * 0.14);
+    }
     setValue(next);
     set({ [id]: next } as Partial<ControllerState>);
   };
 
   const release = () => {
     pointer.current = null;
+    lastBand.current = -1;
     setValue(0);
     set({ [id]: 0 } as Partial<ControllerState>);
   };
@@ -258,7 +295,12 @@ function Trigger({
       onPointerUp={release}
       onPointerCancel={release}
       className="flat-pad-trigger grid h-[clamp(2.75rem,7.8svh,3.5rem)] w-[clamp(4.5rem,8vw,6rem)] touch-none place-items-center rounded-xl border border-white/10 bg-[linear-gradient(180deg,#303b47,#10151b)] text-[10px] font-black tracking-[0.25em] text-cyan-300 shadow-[inset_0_2px_2px_rgba(255,255,255,.08),0_6px_14px_rgba(0,0,0,.5)]"
-      style={{ boxShadow: value ? "0 0 20px rgba(34,211,238,.25), inset 0 0 12px rgba(0,0,0,.65)" : undefined }}
+      style={{
+        boxShadow: value
+          ? "0 0 20px rgba(34,211,238,.25), inset 0 0 12px rgba(0,0,0,.65)"
+          : undefined,
+        transform: `translateY(${value * 2}px)`,
+      }}
     >
       <span>{label}</span>
       <span className="absolute bottom-1 text-[5px] tracking-[0.12em] text-slate-500">{mode}</span>

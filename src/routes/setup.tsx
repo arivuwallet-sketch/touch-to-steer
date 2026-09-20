@@ -69,16 +69,35 @@ function Setup() {
         ))}
       </ol>
 
-      <a
-        href="/bridge/rig-bridge.js"
-        download
+      <button
+        type="button"
+        onClick={async () => {
+          try {
+            const response = await fetch("/bridge/rig-bridge.js", { cache: "no-store" });
+            if (!response.ok) throw new Error("Bridge file unavailable");
+            const source = await response.text();
+            if (!source.includes("Mobile Rig -> PC low-latency bridge")) {
+              throw new Error("Bridge file content was not returned");
+            }
+
+            const blob = new Blob([source], { type: "application/octet-stream" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "rig-bridge.js";
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+          } catch {
+            window.open("/bridge/rig-bridge.js", "_blank", "noopener,noreferrer");
+          }
+        }}
         className="mt-6 inline-flex rounded-xl px-5 py-3 text-sm font-bold uppercase tracking-widest text-primary-foreground glow"
         style={{ background: "var(--gradient-primary)" }}
       >
         Download rig-bridge.js
-      </a>
-
-
+      </button>
 
       <div className="panel mt-6 p-4">
         <h2 className="text-base font-bold">Compatibility</h2>

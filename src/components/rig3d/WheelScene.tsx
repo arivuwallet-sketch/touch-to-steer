@@ -263,13 +263,13 @@ export function WheelScene({ settings, set, press }: Props) {
         <Handbrake3D onChange={(v) => set({ handbrake: v })} />
       </group>
 
-      <group position={[-0.1, -0.95, 2.6]} rotation={[-0.35, 0, 0]}>
+      <group position={[-0.7, -0.9, 2.2]} rotation={[-0.35, 0, 0]}>
         <Pad3D position={[-2.1, 0, 0]} size={[1.2, 0.16, 0.55]} glow="#a855f7" label="NITRO" vibration={settings.vibration} onPress={(d) => set({ nitro: d ? 1 : 0 })} />
         <Pad3D position={[-0.7, 0, 0]} size={[1.2, 0.16, 0.55]} glow="#fde047" label="LIGHTS" vibration={settings.vibration} onPress={(d) => press("lights", d)} />
         <Pad3D position={[0.7, 0, 0]} size={[1.2, 0.16, 0.55]} glow="#22d3ee" label="LOOK" vibration={settings.vibration} onPress={(d) => press("look", d)} />
         <Pad3D position={[2.1, 0, 0]} size={[1.2, 0.16, 0.55]} glow="#94a3b8" label="RESET" vibration={settings.vibration} onPress={(d) => press("reset", d)} />
       </group>
-      <group position={[4.3, -0.95, 2.6]} rotation={[-0.35, 0, 0]}>
+      <group position={[3.3, -0.9, 2.2]} rotation={[-0.35, 0, 0]}>
         <Pad3D position={[0, 0, 0]} size={[0.9, 0.16, 0.5]} glow="#94a3b8" label="BACK" vibration={settings.vibration} onPress={(d) => press("back", d)} />
         <Pad3D position={[1.05, 0, 0]} size={[0.9, 0.16, 0.5]} glow="#94a3b8" label="START" vibration={settings.vibration} onPress={(d) => press("start", d)} />
       </group>

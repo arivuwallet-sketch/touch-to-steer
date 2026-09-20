@@ -14,13 +14,12 @@ const buzz = (on: boolean, ms = 10) => {
   if (on && typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(ms);
 };
 
-function ControlButton({
+function WheelButton({
   label,
   id,
   settings,
   press,
   className = "",
-  active = false,
   onClick,
 }: {
   label: React.ReactNode;
@@ -28,13 +27,15 @@ function ControlButton({
   settings: Settings;
   press: Props["press"];
   className?: string;
-  active?: boolean;
   onClick?: () => void;
 }) {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick?.();
+      }}
       onPointerDown={(e) => {
         e.stopPropagation();
         e.currentTarget.setPointerCapture(e.pointerId);
@@ -46,45 +47,9 @@ function ControlButton({
         press(id, false);
       }}
       onPointerCancel={() => press(id, false)}
-      className={`grid min-h-14 min-w-14 touch-none select-none place-items-center rounded-lg border border-white/10 bg-[#252b34] px-4 text-xs font-black uppercase tracking-[0.16em] text-slate-200 shadow-[0_4px_10px_rgba(0,0,0,.38),inset_0_1px_0_rgba(255,255,255,.06)] active:scale-[0.96] ${active ? "ring-1 ring-cyan-400/60" : ""} ${className}`}
+      className={`grid touch-none select-none place-items-center rounded-[0.65rem] border border-white/10 bg-gradient-to-b from-[#3a424d] to-[#1a1f27] text-slate-100 shadow-[0_4px_8px_rgba(0,0,0,.45),inset_0_1px_0_rgba(255,255,255,.08)] active:scale-95 active:brightness-125 ${className}`}
     >
       {label}
-    </button>
-  );
-}
-
-function IconButton({
-  id,
-  label,
-  settings,
-  press,
-  children,
-}: {
-  id: string;
-  label: string;
-  settings: Settings;
-  press: Props["press"];
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      onPointerDown={(e) => {
-        e.stopPropagation();
-        e.currentTarget.setPointerCapture(e.pointerId);
-        buzz(settings.vibration);
-        press(id, true);
-      }}
-      onPointerUp={(e) => {
-        e.stopPropagation();
-        press(id, false);
-      }}
-      onPointerCancel={() => press(id, false)}
-      className="grid size-11 touch-none place-items-center rounded-full border border-cyan-400/20 bg-[#1a222c] text-cyan-300 shadow-[inset_0_0_0_1px_rgba(255,255,255,.03),0_4px_12px_rgba(0,0,0,.35)] active:scale-95"
-    >
-      {children}
     </button>
   );
 }
@@ -94,20 +59,28 @@ function Pedal({
   id,
   settings,
   set,
+  wide = false,
 }: {
   label: string;
   id: "throttle" | "brake" | "clutch";
   settings: Settings;
   set: Props["set"];
+  wide?: boolean;
 }) {
   const [value, setValue] = useState(0);
-  const active = useRef<number | null>(null);
+  const pointer = useRef<number | null>(null);
   const start = useRef(0);
 
   const update = (y: number) => {
-    const v = Math.max(0, Math.min(1, (start.current - y) / 130));
+    const v = Math.max(0, Math.min(1, (start.current - y) / 125));
     setValue(v);
     set({ [id]: v } as Partial<ControllerState>);
+  };
+
+  const release = () => {
+    pointer.current = null;
+    setValue(0);
+    set({ [id]: 0 } as Partial<ControllerState>);
   };
 
   return (
@@ -116,34 +89,77 @@ function Pedal({
       onPointerDown={(e) => {
         e.stopPropagation();
         e.currentTarget.setPointerCapture(e.pointerId);
-        active.current = e.pointerId;
+        pointer.current = e.pointerId;
         start.current = e.clientY;
         setValue(1);
         set({ [id]: 1 } as Partial<ControllerState>);
         buzz(settings.vibration, 8);
       }}
-      onPointerMove={(e) => active.current === e.pointerId && update(e.clientY)}
-      onPointerUp={() => {
-        active.current = null;
-        setValue(0);
-        set({ [id]: 0 } as Partial<ControllerState>);
-      }}
-      onPointerCancel={() => {
-        active.current = null;
-        setValue(0);
-        set({ [id]: 0 } as Partial<ControllerState>);
-      }}
-      className="relative h-[34vh] min-h-36 w-[clamp(4.5rem,7vw,6.5rem)] touch-none overflow-hidden rounded-lg border border-white/10 bg-[#242a33] shadow-[0_8px_18px_rgba(0,0,0,.45),inset_0_1px_0_rgba(255,255,255,.05)] active:brightness-125"
+      onPointerMove={(e) => pointer.current === e.pointerId && update(e.clientY)}
+      onPointerUp={release}
+      onPointerCancel={release}
+      aria-label={label}
+      className={`relative h-[32vh] min-h-36 ${wide ? "w-[clamp(4.8rem,7.2vw,6.5rem)]" : "w-[clamp(4.25rem,6.6vw,6rem)]"} touch-none overflow-hidden rounded-[1.2rem] border border-black/70 bg-gradient-to-b from-[#191d22] to-[#080a0d] p-2 shadow-[0_10px_22px_rgba(0,0,0,.62),inset_0_1px_0_rgba(255,255,255,.08)] active:brightness-125`}
     >
-      <span className="absolute inset-2 rounded-md border border-white/5 bg-gradient-to-b from-[#353d49] to-[#171c24]" />
+      <span className="absolute inset-x-2 top-2 bottom-2 rounded-[0.9rem] border border-white/5 bg-[#0c1015]" />
       <span
-        className="absolute inset-x-5 bottom-4 rounded-md bg-cyan-400/20"
-        style={{ height: `calc((100% - 2rem) * ${Math.max(0.08, value)})` }}
-      />
-      <span className="absolute inset-x-0 bottom-4 text-center text-[10px] font-black tracking-[0.18em] text-slate-300">
+        className="absolute inset-x-4 bottom-5 rounded-md border border-slate-200/10 bg-gradient-to-b from-[#d7dde4] to-[#7d858f] shadow-[0_3px_7px_rgba(0,0,0,.5),inset_0_1px_0_rgba(255,255,255,.45)]"
+        style={{ height: `calc(34% + ${value * 58}%)` }}
+      >
+        <span className="absolute inset-x-2 top-2 grid gap-1.5">
+          {[0, 1, 2, 3].map((row) => (
+            <span key={row} className="grid grid-cols-2 gap-2">
+              <i className="size-2 rounded-full bg-[#31373e]/85 shadow-inner" />
+              <i className="size-2 rounded-full bg-[#31373e]/85 shadow-inner" />
+            </span>
+          ))}
+        </span>
+      </span>
+      <span className="absolute inset-x-0 bottom-1.5 text-center text-[9px] font-black tracking-[0.18em] text-slate-400">
         {label}
       </span>
     </button>
+  );
+}
+
+function DPad({ settings, press }: { settings: Settings; press: Props["press"] }) {
+  const button = (id: string, label: string, className: string) => (
+    <WheelButton
+      key={id}
+      label={label}
+      id={`dpad_${id}`}
+      settings={settings}
+      press={press}
+      className={`absolute ${className} size-11 text-xl`}
+    />
+  );
+
+  return (
+    <div className="relative size-24">
+      <div className="absolute left-1/2 top-1/2 size-7 -translate-x-1/2 -translate-y-1/2 rounded-md bg-[#171b21] shadow-inner" />
+      {button("up", "↑", "left-1/2 top-0 -translate-x-1/2")}
+      {button("left", "←", "left-0 top-1/2 -translate-y-1/2")}
+      {button("right", "→", "right-0 top-1/2 -translate-y-1/2")}
+      {button("down", "↓", "bottom-0 left-1/2 -translate-x-1/2")}
+    </div>
+  );
+}
+
+function FaceButtons({ settings, press }: { settings: Settings; press: Props["press"] }) {
+  const items = [
+    ["triangle", "△", "text-emerald-300"],
+    ["circle", "○", "text-red-400"],
+    ["cross", "×", "text-sky-300"],
+    ["square", "□", "text-pink-300"],
+  ] as const;
+
+  return (
+    <div className="relative size-24">
+      <WheelButton label={items[0][1]} id="y" settings={settings} press={press} className="absolute left-1/2 top-0 size-10 -translate-x-1/2 text-lg text-emerald-300" />
+      <WheelButton label={items[1][1]} id="b" settings={settings} press={press} className="absolute right-0 top-1/2 size-10 -translate-y-1/2 text-lg text-red-400" />
+      <WheelButton label={items[2][1]} id="a" settings={settings} press={press} className="absolute bottom-0 left-1/2 size-10 -translate-x-1/2 text-lg text-sky-300" />
+      <WheelButton label={items[3][1]} id="x" settings={settings} press={press} className="absolute left-0 top-1/2 size-10 -translate-y-1/2 text-lg text-pink-300" />
+    </div>
   );
 }
 
@@ -170,8 +186,10 @@ export function FlatWheel({ settings, set, press, onModeChange, onSettings }: Pr
 
   useEffect(() => {
     if (settings.steerMode !== "tilt") return;
-    const onOrient = (e: DeviceOrientationEvent) =>
-      emit((settings.invertTilt ? -(e.gamma ?? 0) : (e.gamma ?? 0)) / (settings.maxTiltDeg || 30));
+    const onOrient = (e: DeviceOrientationEvent) => {
+      const gamma = e.gamma ?? 0;
+      emit((settings.invertTilt ? -gamma : gamma) / (settings.maxTiltDeg || 30));
+    };
     window.addEventListener("deviceorientation", onOrient);
     return () => window.removeEventListener("deviceorientation", onOrient);
   }, [settings.steerMode, settings.invertTilt, settings.maxTiltDeg, emit]);
@@ -211,75 +229,107 @@ export function FlatWheel({ settings, set, press, onModeChange, onSettings }: Pr
   };
 
   return (
-    <div className="absolute inset-0 overflow-hidden bg-[radial-gradient(120%_100%_at_50%_0%,#151d28_0%,#07090d_68%)] text-slate-200">
-      <div className="pointer-events-none absolute inset-2 rounded-[2rem] border border-white/20" />
-      <div className="pointer-events-none absolute inset-3 rounded-[1.8rem] border border-cyan-400/15" />
-      <div className="absolute inset-x-0 top-0 flex items-center justify-between px-[max(1rem,env(safe-area-inset-left))] py-3">
+    <div className="absolute inset-0 overflow-hidden bg-[#090b0f] text-slate-200">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_90%_at_38%_20%,#1c232c_0%,#080a0e_64%)]" />
+
+      <header className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-[max(1rem,env(safe-area-inset-left))] py-3">
         <div className="flex items-center gap-2">
-          <ControlButton label="MENU" id="menu" settings={settings} press={press} className="min-h-10 min-w-20" />
-          <IconButton id="horn" label="Horn" settings={settings} press={press}><Volume2 size={18} /></IconButton>
-          <button type="button" aria-label="Gamepad mode" onClick={onModeChange} className="grid size-11 place-items-center rounded-full border border-cyan-400/20 bg-[#1a222c] text-cyan-300 shadow-[inset_0_0_0_1px_rgba(255,255,255,.03),0_4px_12px_rgba(0,0,0,.35)]"><Gauge size={18} /></button>
-        </div>
-        <div className="flex items-center gap-2">
-          <IconButton id="map" label="Map" settings={settings} press={press}><Map size={18} /></IconButton>
-          <button type="button" aria-label="Settings" onClick={onSettings} className="grid size-11 place-items-center rounded-full border border-white/10 bg-[#242a33] text-slate-200 shadow-lg">
+          <button type="button" onClick={onModeChange} className="grid size-11 place-items-center rounded-full border border-white/10 bg-[#1a1f26] text-sky-300 shadow-lg" aria-label="Gamepad mode">
+            <Gauge size={18} />
+          </button>
+          <button type="button" onClick={onSettings} className="grid size-11 place-items-center rounded-full border border-white/10 bg-[#1a1f26] text-slate-300 shadow-lg" aria-label="Settings">
             <Settings2 size={18} />
           </button>
         </div>
-      </div>
+        <div className="rounded-full border border-white/10 bg-[#151a21] px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
+          G29 STYLE
+        </div>
+      </header>
 
-      <div className="absolute left-[max(1.25rem,env(safe-area-inset-left))] top-1/2 -translate-y-1/2">
+      <div className="absolute left-[max(1rem,env(safe-area-inset-left))] top-1/2 -translate-y-1/2">
         <div
-          className="relative size-[clamp(13rem,42vh,24rem)] touch-none"
+          className="relative size-[clamp(18rem,54vh,27rem)] touch-none select-none"
           onPointerDown={onWheelDown}
           onPointerMove={onWheelMove}
           onPointerUp={release}
           onPointerCancel={release}
         >
-          <div className="absolute inset-0 rounded-full border-[clamp(0.75rem,2vh,1.2rem)] border-[#11161e] bg-[#202731] shadow-[0_18px_35px_rgba(0,0,0,.55),inset_0_0_0_2px_rgba(255,255,255,.05)]" />
+          <div className="absolute inset-0 rounded-full bg-[#171b21] shadow-[0_20px_40px_rgba(0,0,0,.72)]" />
+          <div className="absolute inset-[4%] rounded-full border-[clamp(1.1rem,3.1vh,1.7rem)] border-[#06080b] bg-[#05070a] shadow-[inset_0_0_0_2px_rgba(255,255,255,.045),inset_0_0_22px_rgba(0,0,0,.9)]" />
           <div
-            className="absolute inset-[8%] rounded-full border-[clamp(.35rem,1vh,.65rem)] border-[#303946] bg-[#171d26] transition-transform duration-75"
+            className="absolute inset-[8%] rounded-full border-[clamp(.8rem,2.2vh,1.25rem)] border-[#20262d] bg-[#11161d] transition-transform duration-75"
             style={{ transform: `rotate(${visualSteer * 450}deg)` }}
           >
-            <div className="absolute left-1/2 top-0 h-[18%] w-[8%] -translate-x-1/2 rounded-b-md bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,.7)]" />
-            <div className="absolute left-[13%] top-[16%] h-[17%] w-[14%] rounded-[35%] bg-[#252d38] shadow-[inset_0_0_0_2px_rgba(255,255,255,.04)]" />
-            <div className="absolute right-[13%] top-[16%] h-[17%] w-[14%] rounded-[35%] bg-[#252d38] shadow-[inset_0_0_0_2px_rgba(255,255,255,.04)]" />
-            <div className="absolute bottom-[15%] left-1/2 h-[17%] w-[18%] -translate-x-1/2 rounded-xl bg-[#252d38] shadow-[inset_0_0_0_2px_rgba(255,255,255,.04)]" />
-            <div className="absolute left-1/2 top-1/2 h-[27%] w-[27%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-400/25 bg-[#202733] shadow-[inset_0_0_16px_rgba(0,0,0,.55)]">
-              <div className="grid h-full place-items-center text-[clamp(.5rem,1.2vw,.8rem)] font-black tracking-[.22em] text-cyan-300/80">STEER</div>
+            <div className="absolute left-1/2 top-[-1%] h-[8%] w-[5%] -translate-x-1/2 rounded-b-md bg-[#21b6e9] shadow-[0_0_10px_rgba(33,182,233,.65)]" />
+
+            <div className="absolute left-[4%] top-[44%] h-[27%] w-[23%] -rotate-[10deg] rounded-[0.85rem] bg-[#1b2129] shadow-[inset_0_0_0_2px_rgba(255,255,255,.04)]" />
+            <div className="absolute right-[4%] top-[44%] h-[27%] w-[23%] rotate-[10deg] rounded-[0.85rem] bg-[#1b2129] shadow-[inset_0_0_0_2px_rgba(255,255,255,.04)]" />
+
+            <div className="absolute left-1/2 top-1/2 z-10 size-[30%] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#303741] bg-[#171b22] shadow-[0_5px_10px_rgba(0,0,0,.5),inset_0_0_18px_rgba(0,0,0,.65)]">
+              <div className="absolute inset-[14%] grid place-items-center rounded-full border border-white/10 bg-[#20262e]">
+                <span className="text-[clamp(1rem,2.3vw,1.55rem)] font-black tracking-tight text-slate-200">G</span>
+              </div>
+              <div className="absolute -bottom-[19%] left-1/2 grid h-[35%] w-[22%] -translate-x-1/2 place-items-center rounded-md border border-white/10 bg-[#252b33] text-[7px] font-black tracking-[0.12em] text-slate-300">
+                PS
+              </div>
             </div>
+
+            <div className="absolute left-[8%] top-[26%]">
+              <DPad settings={settings} press={press} />
+            </div>
+            <div className="absolute right-[8%] top-[26%]">
+              <FaceButtons settings={settings} press={press} />
+            </div>
+
+            <div className="absolute left-[27%] top-[57%] flex flex-col gap-2">
+              <WheelButton label="+" id="plus" settings={settings} press={press} className="size-11 text-xl" />
+              <WheelButton label="−" id="minus" settings={settings} press={press} className="size-11 text-xl" />
+            </div>
+
+            <div className="absolute right-[24%] top-[57%] size-14 rounded-full border-[0.32rem] border-[#171a1f] bg-[#b32825] shadow-[inset_0_0_0_2px_rgba(255,255,255,.13),0_5px_10px_rgba(0,0,0,.45)]">
+              <button
+                type="button"
+                aria-label="Rotary selector"
+                onPointerDown={(e) => { e.stopPropagation(); e.currentTarget.setPointerCapture(e.pointerId); buzz(settings.vibration); press("wheel_spinner", true); }}
+                onPointerUp={(e) => { e.stopPropagation(); press("wheel_spinner", false); }}
+                onPointerCancel={() => press("wheel_spinner", false)}
+                className="absolute inset-0 rounded-full"
+              />
+              <div className="pointer-events-none absolute inset-[20%] rounded-full border border-black/30 bg-[#181b20]" />
+              <div className="pointer-events-none absolute left-1/2 top-1/2 h-[56%] w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#d84845]" />
+            </div>
+
+            <div className="absolute left-[12%] top-[63%]">
+              <WheelButton label="L3" id="l3" settings={settings} press={press} className="size-10 text-[9px]" />
+            </div>
+            <div className="absolute right-[12%] top-[63%]">
+              <WheelButton label="R3" id="r3" settings={settings} press={press} className="size-10 text-[9px]" />
+            </div>
+
+            <div className="absolute left-1/2 bottom-[7%] flex -translate-x-1/2 flex-col gap-1.5">
+              <WheelButton label="SHARE" id="share" settings={settings} press={press} className="h-7 min-w-16 text-[7px]" />
+              <WheelButton label="OPTIONS" id="start" settings={settings} press={press} className="h-7 min-w-16 text-[7px]" />
+            </div>
+
+            <div className="absolute left-[17%] top-[4%] h-[16%] w-[8%] rounded-[0.7rem] bg-gradient-to-b from-[#cbd0d6] to-[#6d737a] shadow-[0_5px_10px_rgba(0,0,0,.55)]" />
+            <div className="absolute right-[17%] top-[4%] h-[16%] w-[8%] rounded-[0.7rem] bg-gradient-to-b from-[#cbd0d6] to-[#6d737a] shadow-[0_5px_10px_rgba(0,0,0,.55)]" />
           </div>
         </div>
       </div>
 
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-        <div className="flex flex-col items-center gap-4">
-          <div className="flex gap-3">
-            {["4", "5", "6"].map((id) => (
-              <ControlButton key={id} label={id} id={`wheel_${id}`} settings={settings} press={press} className="min-h-12 min-w-16" />
-            ))}
+      <div className="absolute right-[max(1rem,env(safe-area-inset-right))] top-1/2 -translate-y-1/2">
+        <div className="rounded-[1.35rem] border border-black/70 bg-[#11151a] p-3 shadow-[0_15px_30px_rgba(0,0,0,.58)]">
+          <div className="mb-2 text-center text-[8px] font-black uppercase tracking-[0.22em] text-slate-500">PEDALS</div>
+          <div className="flex items-end gap-[clamp(.65rem,1.4vw,1rem)]">
+            <Pedal label="CLUTCH" id="clutch" settings={settings} set={set} />
+            <Pedal label="BRAKE" id="brake" settings={settings} set={set} wide />
+            <Pedal label="GAS" id="throttle" settings={settings} set={set} />
           </div>
-          <div className="flex items-center gap-3">
-            <ControlButton label="ENTER" id="start" settings={settings} press={press} className="min-h-14 min-w-28 text-[10px]" />
-            <ControlButton label="MODE" id="mode" settings={settings} press={press} onClick={onModeChange} className="min-h-12 min-w-16 text-[9px]" />
-          </div>
-          <div className="flex gap-3">
-            {["1", "2", "3"].map((id) => (
-              <ControlButton key={id} label={id} id={`wheel_${id}`} settings={settings} press={press} className="min-h-12 min-w-16" />
-            ))}
-          </div>
+          <div className="mt-2 h-2 rounded-full bg-[#07090c] shadow-inner" />
         </div>
       </div>
 
-      <div className="absolute right-[max(1.25rem,env(safe-area-inset-right))] top-1/2 -translate-y-1/2">
-        <div className="flex items-end gap-3">
-          <Pedal label="CLUTCH" id="clutch" settings={settings} set={set} />
-          <Pedal label="BRAKE" id="brake" settings={settings} set={set} />
-          <Pedal label="GAS" id="throttle" settings={settings} set={set} />
-        </div>
-      </div>
-
-      <div className="absolute bottom-[max(.75rem,env(safe-area-inset-bottom))] right-[max(1.25rem,env(safe-area-inset-right))] text-[9px] font-black uppercase tracking-[.2em] text-cyan-300/70">
+      <div className="pointer-events-none absolute bottom-[max(.75rem,env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] text-[8px] font-black uppercase tracking-[0.18em] text-slate-600">
         TOUCH STEERING
       </div>
     </div>

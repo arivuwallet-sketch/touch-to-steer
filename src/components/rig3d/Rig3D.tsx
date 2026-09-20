@@ -9,7 +9,7 @@ function CameraRig({ mode }: { mode: "pad" | "wheel" }) {
   const camera = useThree((s) => s.camera);
   useEffect(() => {
     if (mode === "pad") camera.position.set(0, 11.8, 0.01);
-    else camera.position.set(0, 12.8, 0.01);
+    else camera.position.set(0, 0, 11.5);
     camera.lookAt(0, 0, 0);
     camera.updateProjectionMatrix();
   }, [mode, camera]);
@@ -32,7 +32,7 @@ export default function Rig3D({
       shadows
       dpr={1}
       gl={{ antialias: true, alpha: true }}
-      camera={{ position: [0, 12, 0.01], fov: 42 }}
+      camera={{ position: [0, 0, 12], fov: 38 }}
       style={{ touchAction: "none" }}
     >
       <color attach="background" args={["#080b11"]} />
@@ -47,16 +47,16 @@ export default function Rig3D({
         castShadow
         shadow-mapSize={[1024, 1024]}
       />
-      <directionalLight position={[0, 4, 9]} intensity={1.6} color="#dfe9ff" />
+      <directionalLight position={[0, 5, 9]} intensity={2.2} color="#dfe9ff" />
       <pointLight position={[-6, 3, 4]} intensity={70} color="#38bdf8" distance={22} />
       <pointLight position={[6, 3, 4]} intensity={55} color="#f97316" distance={20} />
-      <spotLight position={[0, 10, 0]} angle={0.8} penumbra={1} intensity={110} color="#c7d9ff" />
+      <spotLight position={[0, 0, 10]} angle={0.8} penumbra={1} intensity={120} color="#c7d9ff" />
       <Environment resolution={64}>
         <Lightformer intensity={2} position={[0, 8, 0]} scale={[12, 12, 1]} />
         <Lightformer intensity={1.2} color="#77bfff" position={[-7, 2, 0]} rotation-y={Math.PI / 2} scale={[12, 2, 1]} />
       </Environment>
 
-      <group scale={mode === "pad" ? 1.05 : 0.88} position={[0, mode === "pad" ? 0.1 : 0.25, 0]}>
+      <group scale={mode === "pad" ? 1.05 : 1.0} position={[0, mode === "pad" ? 0.1 : 0.25, 0]}>
         {mode === "pad" ? (
           <PadScene settings={settings} set={set} press={press} />
         ) : (

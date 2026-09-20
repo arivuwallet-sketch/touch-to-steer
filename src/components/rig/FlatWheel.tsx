@@ -21,6 +21,7 @@ function ControlButton({
   press,
   className = "",
   active = false,
+  onClick,
 }: {
   label: React.ReactNode;
   id: string;

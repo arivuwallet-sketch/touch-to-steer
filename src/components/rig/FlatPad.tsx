@@ -97,11 +97,10 @@ function Stick({
 
 /* ---------------- d-pad ---------------- */
 function DPadFlat({ settings, press }: { settings: Settings; press: Props["press"] }) {
-  const arm =
-    "absolute touch-none bg-[linear-gradient(180deg,oklch(0.82_0.005_260),oklch(0.55_0.005_260))] shadow-[0_3px_6px_oklch(0_0_0/70%)] active:brightness-75";
   const hit = (d: string) => ({
     onPointerDown: (e: React.PointerEvent) => {
-      (e.currentTarget as Element).setPointerCapture(e.pointerId);
+      e.stopPropagation();
+      e.currentTarget.setPointerCapture(e.pointerId);
       buzz(settings.vibration);
       press(`dpad_${d}`, true);
     },
@@ -109,37 +108,29 @@ function DPadFlat({ settings, press }: { settings: Settings; press: Props["press
     onPointerCancel: () => press(`dpad_${d}`, false),
   });
 
+  const keys = [
+    ["up", "↑", "col-start-2 row-start-1"],
+    ["left", "←", "col-start-1 row-start-2"],
+    ["right", "→", "col-start-3 row-start-2"],
+    ["down", "↓", "col-start-2 row-start-3"],
+  ] as const;
+
   return (
-    <div className="relative size-[30vh] max-w-44">
-      <div
-        className="absolute inset-0 rounded-full"
-        style={{ background: "radial-gradient(circle, oklch(0.18 0.01 260), transparent 72%)" }}
-      />
-      <button
-        {...hit("up")}
-        aria-label="up"
-        className={`${arm} left-[35%] top-[2%] h-[36%] w-[30%] rounded-xl [clip-path:polygon(50%_0,100%_78%,100%_100%,0_100%,0_78%)]`}
-      />
-      <button
-        {...hit("down")}
-        aria-label="down"
-        className={`${arm} bottom-[2%] left-[35%] h-[36%] w-[30%] rounded-xl [clip-path:polygon(0_0,100%_0,100%_22%,50%_100%,0_22%)]`}
-      />
-      <button
-        {...hit("left")}
-        aria-label="left"
-        className={`${arm} left-[2%] top-[35%] h-[30%] w-[36%] rounded-xl [clip-path:polygon(0_50%,78%_0,100%_0,100%_100%,78%_100%)]`}
-      />
-      <button
-        {...hit("right")}
-        aria-label="right"
-        className={`${arm} right-[2%] top-[35%] h-[30%] w-[36%] rounded-xl [clip-path:polygon(0_0,22%_0,100%_50%,22%_100%,0_100%)]`}
-      />
-      <div className="pointer-events-none absolute left-[34%] top-[34%] size-[32%] rotate-45 bg-[linear-gradient(180deg,oklch(0.78_0.005_260),oklch(0.5_0.005_260))] shadow-[inset_0_0_6px_oklch(0_0_0/50%)]" />
+    <div className="grid size-[30vh] max-h-44 max-w-44 grid-cols-3 grid-rows-3 gap-[clamp(.5rem,1.3vw,.9rem)] rounded-3xl border border-white/5 bg-[#0b1017]/55 p-[clamp(.35rem,.8vw,.6rem)] shadow-[inset_0_0_20px_rgba(0,0,0,.55)]">
+      {keys.map(([id, icon, pos]) => (
+        <button
+          key={id}
+          {...hit(id)}
+          type="button"
+          aria-label={id}
+          className={`grid ${pos} touch-none place-items-center rounded-xl border border-white/10 bg-gradient-to-b from-[#303946] to-[#151a22] text-[clamp(1.4rem,3.2vw,2rem)] font-black text-slate-200 shadow-[0_5px_12px_rgba(0,0,0,.4),inset_0_1px_0_rgba(255,255,255,.07)] active:scale-95 active:brightness-125`}
+        >
+          {icon}
+        </button>
+      ))}
     </div>
   );
 }
-
 /* ---------------- face buttons ---------------- */
 function Face({
   label,
@@ -165,7 +156,7 @@ function Face({
       }}
       onPointerUp={() => press(id, false)}
       onPointerCancel={() => press(id, false)}
-      className={`absolute grid size-[11vh] max-h-20 max-w-20 touch-none place-items-center rounded-full text-xl font-black italic active:scale-95 ${className}`}
+      className={`absolute grid size-[8.5vh] max-h-16 max-w-16 touch-none place-items-center rounded-full border border-white/10 text-xl font-black italic shadow-[0_6px_14px_rgba(0,0,0,.42)] active:scale-95 ${className}`}
       style={{
         color,
         background: "radial-gradient(circle at 40% 30%, oklch(0.22 0.01 260), oklch(0.07 0 0) 75%)",
@@ -401,11 +392,11 @@ export function FlatPad({ settings, set, press }: Props) {
       </div>
 
       {/* ABXY diamond */}
-      <div className="absolute right-[7%] top-[35%] size-[24vh] max-h-44 max-w-44">
-        <Face id="y" label="Y" color="oklch(0.82 0.18 95)" className="left-1/2 top-0 -translate-x-1/2" settings={settings} press={press} />
-        <Face id="x" label="X" color="oklch(0.7 0.19 250)" className="left-0 top-1/2 -translate-y-1/2" settings={settings} press={press} />
-        <Face id="b" label="B" color="oklch(0.63 0.24 27)" className="right-0 top-1/2 -translate-y-1/2" settings={settings} press={press} />
-        <Face id="a" label="A" color="oklch(0.75 0.21 145)" className="bottom-0 left-1/2 -translate-x-1/2" settings={settings} press={press} />
+      <div className="absolute right-[6%] top-[32%] size-[32vh] max-h-52 max-w-52">
+        <Face id="y" label="Y" color="oklch(0.82 0.18 95)" className="left-1/2 top-[1%] -translate-x-1/2" settings={settings} press={press} />
+        <Face id="x" label="X" color="oklch(0.7 0.19 250)" className="left-[1%] top-1/2 -translate-y-1/2" settings={settings} press={press} />
+        <Face id="b" label="B" color="oklch(0.63 0.24 27)" className="right-[1%] top-1/2 -translate-y-1/2" settings={settings} press={press} />
+        <Face id="a" label="A" color="oklch(0.75 0.21 145)" className="bottom-[1%] left-1/2 -translate-x-1/2" settings={settings} press={press} />
       </div>
 
       {/* mode */}

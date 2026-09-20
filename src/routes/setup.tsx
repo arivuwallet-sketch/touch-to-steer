@@ -27,11 +27,15 @@ const steps = [
     d: "On the PC, install the ViGEmBus virtual gamepad driver. The original project is retired, but its final Windows 10/11 installer is still available from the official Nefarius GitHub releases page.",
   },
   {
-    t: "2. Install Node.js",
-    d: "Grab Node.js 18 or newer from nodejs.org and finish the installer with the default options.",
+    t: "2. Install the C++ build tools",
+    d: "Install Visual Studio Build Tools 2022 and select the Desktop development with C++ workload. The vigemclient package contains native C++ code and node-gyp needs a Visual C++ compiler to build it.",
   },
   {
-    t: "3. Get the bridge",
+    t: "3. Install Node.js",
+    d: "Install Node.js 18 or newer. Your current Node.js 24 installation is okay; reopen the terminal after installing the C++ tools.",
+  },
+  {
+    t: "4. Get the bridge",
     d: "Download rig-bridge.js below into an empty folder, open that folder in a terminal, and run: npm init -y && npm i ws vigemclient",
   },
   {
@@ -69,14 +73,24 @@ function Setup() {
         ))}
       </ol>
 
-      <a
-        href="https://github.com/nefarius/ViGEmBus/releases/latest"
-        target="_blank"
-        rel="noreferrer"
-        className="mt-4 inline-flex rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold uppercase tracking-widest text-white hover:bg-white/10"
-      >
-        Install ViGEmBus
-      </a>
+      <div className="mt-4 flex flex-wrap gap-3">
+        <a
+          href="https://github.com/nefarius/ViGEmBus/releases/latest"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold uppercase tracking-widest text-white hover:bg-white/10"
+        >
+          Install ViGEmBus
+        </a>
+        <a
+          href="https://visualstudio.microsoft.com/visual-cpp-build-tools/"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold uppercase tracking-widest text-white hover:bg-white/10"
+        >
+          Install C++ Build Tools
+        </a>
+      </div>
 
       <button
         type="button"
@@ -112,6 +126,17 @@ function Setup() {
         <h2 className="text-base font-bold">Compatibility</h2>
         <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
           XInput is the default PC output and a DualShock 4 virtual output is available for games that expect PlayStation-style input. Custom keyboard bindings are still controlled by the game or a separate input mapper. No browser controller can guarantee a fixed 3 ms end-to-end latency or support every anti-cheat/protected input path; network, device refresh, browser scheduling, driver, and game polling all affect the final result.
+        </p>
+      </div>
+
+      <div className="panel mt-6 p-4">
+        <h2 className="text-base font-bold">If npm install fails with node-gyp</h2>
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+          An error such as “could not use Visual Studio”, “Failure details: undefined”, or
+          “Desktop development with C++” means the native C++ compiler is missing. Install the
+          C++ Build Tools above, reopen Command Prompt, then run the install command again.
+          If a previous failed install left a locked node_modules folder, close Node/VS Code and
+          remove node_modules before retrying.
         </p>
       </div>
 

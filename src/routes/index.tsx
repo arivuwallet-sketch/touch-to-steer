@@ -7,6 +7,7 @@ import { ActionButton } from "@/components/rig/ActionButton";
 import { SettingsPanel } from "@/components/rig/SettingsPanel";
 import { DPad } from "@/components/rig/DPad";
 import { Trigger } from "@/components/rig/Trigger";
+import { RotateGate } from "@/components/rig/RotateGate";
 import { useBridge } from "@/hooks/useBridge";
 import {
   PRESETS,

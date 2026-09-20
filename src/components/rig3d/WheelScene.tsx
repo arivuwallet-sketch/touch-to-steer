@@ -170,7 +170,7 @@ export function WheelScene({ settings, set, press }: Props) {
         while (d > Math.PI) d -= Math.PI * 2;
         while (d < -Math.PI) d += Math.PI * 2;
         last = a;
-        acc = Math.max(-1.9, Math.min(1.9, acc - d));
+        acc = Math.max(-1.9, Math.min(1.9, acc + d));
         emit(acc / 1.9);
       };
       const up = () => {

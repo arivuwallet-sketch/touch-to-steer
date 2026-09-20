@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
-import { useFrame, type ThreeEvent } from "@react-three/fiber";
+import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { RoundedBox } from "@react-three/drei";
-import type { Group, MeshStandardMaterial } from "three";
+import { Vector3, type Group, type MeshStandardMaterial } from "three";
 import { Button3D, Label, Pad3D, useAnalogPointer } from "./primitives";
 import { applyCurve, type ControllerState, type Settings } from "@/lib/controller-types";
 
@@ -147,14 +147,32 @@ export function WheelScene({ settings, set, press }: Props) {
     return () => window.removeEventListener("deviceorientation", onOrient);
   }, [settings.steerMode, settings.invertTilt, settings.maxTiltDeg, emit]);
 
-  /* touch steering: rotate the rim with your thumbs */
+  /* touch steering: grab the rim and actually turn it with your thumb */
+  const { camera, size, gl } = useThree();
   const onGrab = useCallback(
     (e: ThreeEvent<PointerEvent>) => {
-      if (settings.steerMode !== "touch") return;
       e.stopPropagation();
-      const sx = e.nativeEvent.clientX;
-      const base = steer.current;
-      const move = (ev: PointerEvent) => emit(base + (ev.clientX - sx) / 140);
+      // screen position of the wheel hub
+      const hub = new Vector3();
+      wheel.current?.getWorldPosition(hub);
+      hub.project(camera);
+      const rect = gl.domElement.getBoundingClientRect();
+      const cx = rect.left + ((hub.x + 1) / 2) * size.width;
+      const cy = rect.top + ((1 - hub.y) / 2) * size.height;
+
+      const angleOf = (x: number, y: number) => Math.atan2(y - cy, x - cx);
+      let last = angleOf(e.nativeEvent.clientX, e.nativeEvent.clientY);
+      let acc = steer.current * 1.9; // current wheel rotation in radians
+
+      const move = (ev: PointerEvent) => {
+        const a = angleOf(ev.clientX, ev.clientY);
+        let d = a - last;
+        while (d > Math.PI) d -= Math.PI * 2;
+        while (d < -Math.PI) d += Math.PI * 2;
+        last = a;
+        acc = Math.max(-1.9, Math.min(1.9, acc + d));
+        emit(acc / 1.9);
+      };
       const up = () => {
         if (settings.autoCentre) emit(0);
         window.removeEventListener("pointermove", move);
@@ -165,7 +183,7 @@ export function WheelScene({ settings, set, press }: Props) {
       window.addEventListener("pointerup", up);
       window.addEventListener("pointercancel", up);
     },
-    [emit, settings.steerMode, settings.autoCentre],
+    [emit, settings.autoCentre, camera, size.width, size.height, gl],
   );
 
   useFrame((_, dt) => {
@@ -177,7 +195,7 @@ export function WheelScene({ settings, set, press }: Props) {
   return (
     <group position={[0, -0.4, 0]}>
       {/* ---------------- wheel ---------------- */}
-      <group position={[-3.0, 1.0, 1.2]} rotation={[-0.55, 0, 0]} scale={0.92}>
+      <group position={[-3.0, 1.0, 1.2]} rotation={[-0.95, 0, 0]} scale={0.9}>
         {/* column */}
         <mesh position={[0, 0, -0.6]} castShadow>
           <cylinderGeometry args={[0.28, 0.4, 1.1, 24]} />

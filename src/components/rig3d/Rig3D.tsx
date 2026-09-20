@@ -9,7 +9,7 @@ function CameraRig({ mode }: { mode: "pad" | "wheel" }) {
   const camera = useThree((s) => s.camera);
   useEffect(() => {
     if (mode === "pad") camera.position.set(0, 6.2, 6.6);
-    else camera.position.set(0, 5.0, 8.1);
+    else camera.position.set(0, 8.6, 5.4);
     camera.lookAt(0, 0, 0);
     camera.updateProjectionMatrix();
   }, [mode, camera]);

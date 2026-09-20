@@ -57,7 +57,7 @@ export type Settings = {
 
 export const defaultSettings: Settings = {
   bridgeUrl: "ws://192.168.1.10:8787",
-  steerMode: "tilt",
+  steerMode: "touch",
   sensitivity: 1,
   steerSensitivity: 1,
   deadzone: 0.05,

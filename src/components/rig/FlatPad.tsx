@@ -436,7 +436,7 @@ export function FlatPad({ settings, set, press }: Props) {
             <SurfaceButton label="MENU" id="start" settings={settings} press={press} className="h-10 min-w-16 rounded-lg text-[8px] text-slate-300" />
           </div>
           <div className="mt-2 flex items-center justify-center gap-2">
-            <SurfaceButton label="PROFILE −" id="minus" settings={settings} press={press} onPointerDown={() => undefined} className="h-9 min-w-20 rounded-md text-[7px]" />
+            <SurfaceButton label="PROFILE −" id="minus" settings={settings} press={press} className="h-9 min-w-20 rounded-md text-[7px]" />
             <SurfaceButton label="HOME" id="home" settings={settings} press={press} className="h-9 min-w-20 rounded-md text-[7px]" />
             <SurfaceButton label="PROFILE +" id="plus" settings={settings} press={press} className="h-9 min-w-20 rounded-md text-[7px]" />
           </div>

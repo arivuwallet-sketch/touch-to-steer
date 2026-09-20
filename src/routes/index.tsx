@@ -43,7 +43,7 @@ function Rig() {
   const [showSettings, setShowSettings] = useState(false);
   const [mode, setMode] = useState<"pad" | "wheel">("pad");
   const stateRef = useRef<ControllerState>(emptyState());
-  const { status, latency, telemetry, connect, disconnect } = useBridge(stateRef, settings.sendRateHz);
+  const { status, latency, telemetry, connect, disconnect } = useBridge(stateRef, 240, settings.outputMode);
 
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -74,6 +74,30 @@ function Rig() {
       buttons: { ...stateRef.current.buttons, [id]: down },
     };
   }, []);
+
+  const releaseAll = useCallback(() => {
+    stateRef.current = emptyState();
+  }, []);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState !== "visible") releaseAll();
+    };
+    const handleBlur = () => releaseAll();
+
+    document.addEventListener("visibilitychange", handleVisibility, { passive: true });
+    window.addEventListener("blur", handleBlur, { passive: true });
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("blur", handleBlur);
+    };
+  }, [releaseAll]);
+
+  useEffect(() => {
+    // Never carry a pressed/analog state from one controller mode into the other.
+    releaseAll();
+  }, [mode, releaseAll]);
 
   return (
     <main className="relative h-[100dvh] overflow-hidden bg-background">

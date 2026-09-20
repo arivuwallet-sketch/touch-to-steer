@@ -76,6 +76,16 @@ export function SettingsPanel({
         </div>
 
         <div className="mt-4 divide-y divide-border">
+          <Row label="PC controller output">
+            <select
+              value={settings.outputMode}
+              onChange={(e) => onChange({ outputMode: e.target.value as Settings["outputMode"] })}
+              className="rounded-lg border border-input bg-background px-2 py-1.5 text-xs"
+            >
+              <option value="xinput">XInput / Xbox 360</option>
+              <option value="ds4">DualShock 4</option>
+            </select>
+          </Row>
           <Row label="Steering input">
             <select
               value={settings.steerMode}
@@ -171,16 +181,8 @@ export function SettingsPanel({
               className="w-40 accent-[var(--primary)]"
             />
           </Row>
-          <Row label={`Controller update ${settings.sendRateHz} Hz`}>
-            <input
-              type="range"
-              min={60}
-              max={240}
-              step={10}
-              value={settings.sendRateHz}
-              onChange={(e) => onChange({ sendRateHz: Number(e.target.value) })}
-              className="w-40 accent-[var(--primary)]"
-            />
+          <Row label="Controller update">
+            <span className="rounded-lg border border-cyan-300/20 bg-cyan-300/5 px-2 py-1.5 text-xs font-black text-cyan-200">240 Hz</span>
           </Row>
           <Row label="Invert tilt">
             <input

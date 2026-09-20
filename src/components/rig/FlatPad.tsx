@@ -21,6 +21,7 @@ function SurfaceButton({
   className = "",
   style,
   turbo = false,
+  onClick,
 }: {
   label: ReactNode;
   id: string;
@@ -29,6 +30,7 @@ function SurfaceButton({
   className?: string;
   style?: CSSProperties;
   turbo?: boolean;
+  onClick?: () => void;
 }) {
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -63,6 +65,7 @@ function SurfaceButton({
       onPointerDown={down}
       onPointerUp={stopTurbo}
       onPointerCancel={stopTurbo}
+      onClick={onClick}
       className={`grid touch-none select-none place-items-center rounded-xl border border-white/10 bg-[linear-gradient(145deg,#3a4551,#151b22)] font-black text-slate-100 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),inset_0_-5px_9px_rgba(0,0,0,.62),0_5px_0_#06090d,0_9px_14px_rgba(0,0,0,.5)] transition-transform active:translate-y-[3px] active:shadow-[inset_0_2px_6px_rgba(0,0,0,.65),0_2px_0_#06090d] ${className}`}
       style={style}
     >
@@ -436,11 +439,13 @@ export function FlatPad({ settings, set, press }: Props) {
             <SurfaceButton label="MENU" id="start" settings={settings} press={press} className="h-10 min-w-16 rounded-lg text-[8px] text-slate-300" />
           </div>
           <div className="mt-2 flex items-center justify-center gap-2">
-            <SurfaceButton label="PROFILE −" id="minus" settings={settings} press={press} className="h-9 min-w-20 rounded-md text-[7px]" />
+            <SurfaceButton label="PROFILE −" id="minus" settings={settings} press={press} onClick={() => cycleProfile(-1)} className="h-9 min-w-20 rounded-md text-[7px]" />
             <SurfaceButton label="HOME" id="home" settings={settings} press={press} className="h-9 min-w-20 rounded-md text-[7px]" />
-            <SurfaceButton label="PROFILE +" id="plus" settings={settings} press={press} className="h-9 min-w-20 rounded-md text-[7px]" />
+            <SurfaceButton label="PROFILE +" id="plus" settings={settings} press={press} onClick={() => cycleProfile(1)} className="h-9 min-w-20 rounded-md text-[7px]" />
           </div>
-          <div className="mt-2 flex justify-center gap-2">
+          <div className="mt-2 flex items-center justify-center gap-2">
+            <SurfaceButton label="FN" id="fn" settings={settings} press={press} className="h-8 min-w-12 rounded-lg text-[7px] text-slate-300" />
+            <SurfaceButton label="LOGO" id="logo" settings={settings} press={press} className="h-8 min-w-14 rounded-lg text-[7px] text-slate-300" />
             <button type="button" onClick={() => setTurbo((v) => !v)} className={`h-8 min-w-16 rounded-lg border px-2 text-[7px] font-black uppercase tracking-[0.14em] ${turbo ? "border-orange-300/50 bg-orange-300/10 text-orange-200" : "border-white/10 bg-black/20 text-slate-400"}`}>TURBO</button>
             <GyroControl enabled={gyroEnabled} denied={gyroDenied} onToggle={requestGyro} />
             <button type="button" onClick={nextTriggerMode} className="h-8 min-w-20 rounded-lg border border-white/10 bg-black/20 px-2 text-[7px] font-black uppercase tracking-[0.14em] text-slate-400">TRIGGER</button>
@@ -462,7 +467,7 @@ export function FlatPad({ settings, set, press }: Props) {
       </div>
 
       <div className="pointer-events-none absolute left-1/2 bottom-1 -translate-x-1/2 text-[6px] font-bold uppercase tracking-[0.14em] text-slate-600">
-        FORCEFLEX • FORCEADAPT • 6 EXTRA • MACRO-READY • GYRO • RGB • TURBO
+        FORCEFLEX TENSION • FORCEADAPT MODES • 6 EXTRA • GYRO • RGB • TURBO
       </div>
     </div>
   );

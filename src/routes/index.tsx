@@ -207,7 +207,7 @@ type LayoutProps = {
 /* ---------------- Gamepad: console layout, everything on one screen ------- */
 function GamepadLayout({ settings, set, press, hud }: LayoutProps) {
   return (
-    <section className="mt-2 space-y-2">
+    <section className="flex min-h-0 flex-1 flex-col justify-between gap-1.5">
       {/* shoulders */}
       <div className="flex items-start justify-between">
         <div className="flex gap-2">
@@ -320,7 +320,7 @@ function GamepadLayout({ settings, set, press, hud }: LayoutProps) {
 /* ---------------- Steering rig: wheel + full pedal set -------------------- */
 function WheelLayout({ settings, set, press, hud }: LayoutProps) {
   return (
-    <section className="mt-2 space-y-2">
+    <section className="flex min-h-0 flex-1 flex-col justify-between gap-1.5">
       <div className="grid grid-cols-3 gap-1.5">
         {[
           { k: "Steer", v: hud.a },

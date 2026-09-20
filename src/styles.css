@@ -132,3 +132,238 @@
 @utility glow {
   box-shadow: var(--shadow-glow);
 }
+
+
+/* Dedicated controller layouts for touch devices. These use viewport height so
+   landscape phones do not inherit desktop/tablet width breakpoints. */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 650px) {
+  .mode-toolbar {
+    top: 6px !important;
+    right: 6px !important;
+    gap: 3px !important;
+  }
+
+  .mode-toolbar > .flex {
+    padding: 2px !important;
+    border-radius: 10px !important;
+  }
+
+  .mode-toolbar button {
+    width: 42px !important;
+    height: 38px !important;
+  }
+
+  .mode-toolbar > button {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  /* ---------- mobile APEX gamepad ---------- */
+  .flat-pad-root .flat-pad-top {
+    top: 6px !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  .flat-pad-root .flat-pad-top > div {
+    gap: 6px !important;
+  }
+
+  .flat-pad-root .flat-pad-trigger {
+    width: 82px !important;
+    height: 42px !important;
+    border-radius: 12px !important;
+    font-size: 8px !important;
+  }
+
+  .flat-pad-root .flat-pad-top button {
+    min-width: 58px !important;
+    height: 42px !important;
+  }
+
+  .flat-pad-root .flat-pad-frame {
+    inset: 4px !important;
+    border-radius: 20px !important;
+  }
+
+  .flat-pad-root .flat-pad-shell {
+    inset-inline: 4% !important;
+    top: 15% !important;
+    bottom: 6% !important;
+    border-radius: 24% !important;
+  }
+
+  .flat-pad-root .flat-pad-left,
+  .flat-pad-root .flat-pad-right {
+    bottom: 9% !important;
+    gap: 10px !important;
+    align-items: center !important;
+  }
+
+  .flat-pad-root .flat-pad-left { left: 3% !important; }
+  .flat-pad-root .flat-pad-right { right: 3% !important; }
+
+  .flat-pad-root .flat-pad-stick {
+    width: min(29svh, 25vw) !important;
+    height: min(29svh, 25vw) !important;
+  }
+
+  .flat-pad-root .flat-pad-stick > div:nth-child(2) {
+    transform: translate(-50%,-50%) translate(0,0) !important;
+  }
+
+  .flat-pad-root .flat-pad-dpad {
+    width: min(25svh, 22vw) !important;
+    height: min(25svh, 22vw) !important;
+  }
+
+  .flat-pad-root .flat-pad-dpad button {
+    width: min(8.2svh, 7vw) !important;
+    height: min(8.2svh, 7vw) !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    border-radius: 9px !important;
+    font-size: min(4.8svh, 4.4vw) !important;
+  }
+
+  .flat-pad-root .flat-pad-face {
+    width: min(27svh, 24vw) !important;
+    height: min(27svh, 24vw) !important;
+  }
+
+  .flat-pad-root .flat-pad-face button {
+    width: min(9svh, 8vw) !important;
+    height: min(9svh, 8vw) !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+    font-size: min(5.5svh, 5vw) !important;
+  }
+
+  .flat-pad-root .flat-pad-center {
+    top: 25% !important;
+  }
+
+  .flat-pad-root .flat-pad-center-box {
+    width: min(31vw, 255px) !important;
+    padding: 9px !important;
+    border-radius: 18px !important;
+  }
+
+  .flat-pad-root .flat-pad-center-box > div:first-child {
+    gap: 6px !important;
+  }
+
+  .flat-pad-root .flat-pad-screen {
+    width: 86px !important;
+    height: 42px !important;
+  }
+
+  .flat-pad-root .flat-pad-center-box button {
+    min-width: 48px !important;
+    height: 31px !important;
+    font-size: 6px !important;
+  }
+
+  .flat-pad-root .flat-pad-center-box > div:last-child {
+    margin-top: 7px !important;
+    gap: 5px !important;
+  }
+
+  .flat-pad-root .flat-pad-bottom {
+    bottom: 2% !important;
+    gap: 5px !important;
+  }
+
+  .flat-pad-root .flat-pad-bottom button {
+    height: 32px !important;
+    min-width: 50px !important;
+    padding-inline: 8px !important;
+    font-size: 7px !important;
+  }
+
+  .flat-pad-root .flat-pad-left .text-\[8px\],
+  .flat-pad-root .flat-pad-right .text-\[8px\] {
+    font-size: 6px !important;
+  }
+
+  /* ---------- mobile G29 steering ---------- */
+  .flat-wheel-root {
+    touch-action: none;
+  }
+
+  .flat-wheel-root .flat-wheel-hit {
+    width: min(66svh, 38vw) !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    left: 2% !important;
+    bottom: 4% !important;
+  }
+
+  .flat-wheel-root .flat-wheel-pedals {
+    right: 14% !important;
+    bottom: 4% !important;
+    gap: 6px !important;
+  }
+
+  .flat-wheel-root .flat-wheel-aux {
+    right: 1.5% !important;
+    bottom: 5% !important;
+    gap: 5px !important;
+  }
+
+  .flat-wheel-root .flat-wheel-pedals button {
+    width: min(7.2vw, 52px) !important;
+    height: 56svh !important;
+    min-height: 0 !important;
+    padding: 3px !important;
+    border-radius: 12px !important;
+  }
+
+  .flat-wheel-root .flat-wheel-pedals button > span:nth-child(2) {
+    inset-inline: 7px !important;
+    bottom: 25px !important;
+  }
+
+  .flat-wheel-root .flat-wheel-pedals button > span:last-child {
+    bottom: 7px !important;
+    font-size: 6px !important;
+    letter-spacing: .16em !important;
+  }
+
+  .flat-wheel-root .flat-wheel-aux > button:first-child {
+    width: min(8.5vw, 62px) !important;
+    height: 43svh !important;
+  }
+
+  .flat-wheel-root .flat-wheel-aux > button:last-child {
+    width: min(8.5vw, 62px) !important;
+    height: 38px !important;
+  }
+
+  .flat-wheel-root .flat-wheel-aux > button:first-child > span:last-child {
+    font-size: 6px !important;
+  }
+
+  .flat-wheel-root .flat-wheel-root-title {
+    max-width: 145px !important;
+  }
+
+  .flat-wheel-root .flat-wheel-root-title {
+    left: 6px !important;
+    top: 6px !important;
+    padding: 5px 8px !important;
+  }
+}
+
+@media (pointer: coarse) and (orientation: portrait) and (max-width: 650px) {
+  .mode-toolbar {
+    top: 6px !important;
+    right: 6px !important;
+    gap: 3px !important;
+  }
+
+  .mode-toolbar button {
+    width: 40px !important;
+    height: 38px !important;
+  }
+}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type PointerEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type PointerEvent, type RefObject } from "react";
 import { applyCurve, type ControllerState, type Settings } from "@/lib/controller-types";
 
 type Props = {
@@ -162,7 +162,7 @@ function G29Wheel({
   wheelVisualRef,
   settings,
 }: {
-  wheelVisualRef: React.RefObject<HTMLDivElement | null>;
+  wheelVisualRef: RefObject<HTMLDivElement | null>;
   settings: Settings;
 }) {
   return (
@@ -209,7 +209,7 @@ function G29Wheel({
   );
 }
 
-export function FlatWheel({ settings, set, press }: Props) {
+export function FlatWheel({ settings, set }: Props) {
   const wheelHitRef = useRef<HTMLDivElement>(null);
   const wheelVisualRef = useRef<HTMLDivElement>(null);
   const touchPointer = useRef<number | null>(null);

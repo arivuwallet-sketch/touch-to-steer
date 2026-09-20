@@ -354,17 +354,17 @@ export function FlatPad({ settings, set, press }: Props) {
       <div className="pointer-events-none absolute inset-x-[18%] top-0 h-16 rounded-b-3xl border-x border-b border-[oklch(0.4_0.16_255/45%)]" />
 
       {/* shoulders + triggers */}
-      <div className="absolute left-4 top-14 flex items-start gap-2">
+      <div className="absolute left-[max(1rem,env(safe-area-inset-left))] top-[12%] flex items-start gap-[clamp(0.75rem,2vw,1.5rem)]">
         <Shoulder label="LB" side="l" settings={settings} press={press} />
         <TriggerFlat label="LT" side="l" settings={settings} onChange={(v) => set({ lt: v })} />
       </div>
-      <div className="absolute right-4 top-14 flex items-start gap-2">
+      <div className="absolute right-[max(1rem,env(safe-area-inset-right))] top-[12%] flex items-start gap-[clamp(0.75rem,2vw,1.5rem)]">
         <TriggerFlat label="RT" side="r" settings={settings} onChange={(v) => set({ rt: v })} />
         <Shoulder label="RB" side="r" settings={settings} press={press} />
       </div>
 
       {/* left stick + LSB */}
-      <div className="absolute bottom-[20%] left-[4%] flex flex-col items-center gap-3">
+      <div className="absolute bottom-[14%] left-[4%] flex flex-col items-center gap-3">
         <Stick
           settings={settings}
           label="move"
@@ -375,12 +375,12 @@ export function FlatPad({ settings, set, press }: Props) {
       </div>
 
       {/* d-pad */}
-      <div className="absolute bottom-[12%] left-[26%]">
+      <div className="absolute bottom-[10%] left-[27%]">
         <DPadFlat settings={settings} press={press} />
       </div>
 
       {/* centre buttons */}
-      <div className="absolute bottom-[26%] left-1/2 flex -translate-x-1/2 items-center gap-8">
+      <div className="absolute bottom-[27%] left-1/2 flex -translate-x-1/2 items-center gap-[clamp(2rem,5vw,4rem)]">
         <Round id="back" settings={settings} press={press}>
           ❐
         </Round>
@@ -390,7 +390,7 @@ export function FlatPad({ settings, set, press }: Props) {
       </div>
 
       {/* right stick + RSB */}
-      <div className="absolute bottom-[20%] right-[28%] flex flex-col items-center gap-3">
+      <div className="absolute bottom-[14%] right-[27%] flex flex-col items-center gap-3">
         <Stick
           settings={settings}
           label="aim"
@@ -401,7 +401,7 @@ export function FlatPad({ settings, set, press }: Props) {
       </div>
 
       {/* ABXY diamond */}
-      <div className="absolute right-[8%] top-[38%] size-[22vh] max-h-44 max-w-44">
+      <div className="absolute right-[7%] top-[35%] size-[24vh] max-h-44 max-w-44">
         <Face id="y" label="Y" color="oklch(0.82 0.18 95)" className="left-1/2 top-0 -translate-x-1/2" settings={settings} press={press} />
         <Face id="x" label="X" color="oklch(0.7 0.19 250)" className="left-0 top-1/2 -translate-y-1/2" settings={settings} press={press} />
         <Face id="b" label="B" color="oklch(0.63 0.24 27)" className="right-0 top-1/2 -translate-y-1/2" settings={settings} press={press} />
@@ -409,7 +409,7 @@ export function FlatPad({ settings, set, press }: Props) {
       </div>
 
       {/* mode */}
-      <div className="absolute bottom-16 right-4">
+      <div className="absolute bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))]">
         <Round id="mode" settings={settings} press={press} size="size-12">
           MODE
         </Round>

@@ -4,5 +4,5 @@
 - [x] Rebuild the driving rig as a full-screen G29-inspired control surface.
 - [x] Implement continuous 900-degree touch steering with optional return.
 - [x] Add extended controls and bridge mappings.
-- [ ] Simplify the controller screen and consolidate connection controls into settings.
-- [ ] Improve spacing and verify phone and tablet layouts.
+- [x] Simplify the controller screen and consolidate connection controls into settings.
+- [x] Improve spacing and verify phone and tablet layouts.

@@ -391,3 +391,36 @@
     height: 38px !important;
   }
 }
+
+/* ---------- high-frequency input path ---------- */
+.flat-pad-root,
+.flat-wheel-root {
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  contain: layout paint style;
+}
+
+.flat-pad-root .flat-pad-stick,
+.flat-pad-root [data-stick-thumb],
+.flat-pad-root .flat-pad-trigger,
+.flat-wheel-root .flat-wheel-hit,
+.flat-wheel-root .flat-wheel-hit > div,
+.flat-wheel-root .flat-wheel-aux button,
+.flat-wheel-root .flat-wheel-pedals button {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.flat-pad-root [data-stick-thumb],
+.flat-wheel-root .flat-wheel-hit > div {
+  contain: layout paint;
+}
+
+.flat-pad-root button,
+.flat-wheel-root button {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}

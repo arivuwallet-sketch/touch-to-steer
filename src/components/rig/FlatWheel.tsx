@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { applyCurve, type ControllerState, type Settings } from "@/lib/controller-types";
-import { Gauge, Map, Menu, RotateCcw, Settings2, Volume2 } from "lucide-react";
+import { Gauge, Map, Settings2, Volume2 } from "lucide-react";
 
 type Props = {
   settings: Settings;

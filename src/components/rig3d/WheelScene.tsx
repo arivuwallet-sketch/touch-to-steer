@@ -57,10 +57,10 @@ function Pedal3D({
 
       <group ref={face}>
         <RoundedBox
-          args={[width, 0.14, 1.18]}
+          args={[width, 1.18, 0.16]}
           radius={0.07}
           smoothness={5}
-          position={[0, 0.06, -0.02]}
+          position={[0, 0.48, -0.02]}
           castShadow
           onPointerDown={onDown}
         >
@@ -76,17 +76,17 @@ function Pedal3D({
 
         {[-0.38, -0.13, 0.12, 0.37].map((z) => (
           <group key={z}>
-            <mesh position={[-0.17, 0.145, z]}>
+            <mesh position={[-0.17, z + 0.18, 0.09]}>
               <sphereGeometry args={[0.055, 14, 10]} />
               <meshStandardMaterial color="#30363e" roughness={0.9} />
             </mesh>
-            <mesh position={[0.17, 0.145, z]}>
+            <mesh position={[0.17, z + 0.18, 0.09]}>
               <sphereGeometry args={[0.055, 14, 10]} />
               <meshStandardMaterial color="#30363e" roughness={0.9} />
             </mesh>
           </group>
         ))}
-        <Label position={[0, -0.05, 0.7]} size={9} dim>{label}</Label>
+        <Label position={[0, -0.72, 0.1]} size={9} dim>{label}</Label>
       </group>
     </group>
   );
@@ -270,7 +270,7 @@ export function WheelScene({ settings, set, press }: Props) {
     }
 
     const target = -steer.current * maxRadians;
-    wheel.current.rotation.y += (target - wheel.current.rotation.y) * Math.min(1, dt * 20);
+    wheel.current.rotation.z += (target - wheel.current.rotation.z) * Math.min(1, dt * 20);
   });
 
   return (
@@ -340,7 +340,7 @@ export function WheelScene({ settings, set, press }: Props) {
       </group>
 
       {/* Separate pedals, handbrake and nitro: no controller controls. */}
-      <group position={[2.15, -0.05, 0.7]}>
+      <group position={[2.8, -0.05, 0.7]}>
         <RoundedBox args={[4.35, 0.25, 3.25]} radius={0.16} smoothness={6} position={[0, -0.35, 0.15]} receiveShadow>
           <meshStandardMaterial color="#090d12" metalness={0.84} roughness={0.46} />
         </RoundedBox>

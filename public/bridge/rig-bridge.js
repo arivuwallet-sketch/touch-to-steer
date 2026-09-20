@@ -12,8 +12,17 @@
  *   5. Enter ws://<this-pc-lan-ip>:8787 on the phone.
  *
  * Packet shape (JSON):
- *   { type:"state", steer:-1..1, throttle:0..1, brake:0..1, clutch:0..1,
- *     handbrake:0..1, lx,ly,rx,ry:-1..1, gear:-1|0|1, buttons:{a:true,...} }
+ *   {
+ *     type:"state",
+ *     steer:-1..1, throttle/brake/clutch/handbrake/nitro:0..1,
+ *     lx,ly,rx,ry:-1..1, lt/rt:0..1, gear:-1|0|1,
+ *     dial:-1|0|1, wheelPlatform:"ps3"|"ps4",
+ *     buttons:{...}
+ *   }
+ *
+ * The mobile wheel exposes the complete G29-style control surface. This bridge
+ * maps those controls into the closest standard Xbox 360 virtual-pad inputs
+ * so existing PC games can use them without custom drivers.
  */
 
 const PORT = 8787;
@@ -32,6 +41,40 @@ try {
 }
 
 const BTN = {
+  // G29 face buttons -> Xbox face buttons
+  cross: "A",
+  circle: "B",
+  square: "X",
+  triangle: "Y",
+
+  // Wheel paddles / upper shoulder controls
+  l1: "LEFT_SHOULDER",
+  r1: "RIGHT_SHOULDER",
+
+  // Sticks/thumb-clicks
+  l3: "LEFT_THUMB",
+  r3: "RIGHT_THUMB",
+
+  // D-pad
+  dpad_up: "DPAD_UP",
+  dpad_down: "DPAD_DOWN",
+  dpad_left: "DPAD_LEFT",
+  dpad_right: "DPAD_RIGHT",
+
+  // Navigation / console controls
+  share: "BACK",
+  options: "START",
+  ps: "GUIDE",
+  enter: "A",
+
+  // G29 + / - buttons
+  plus: "START",
+  minus: "BACK",
+
+  // 24-point selector press
+  dial_press: "A",
+
+  // Existing gamepad aliases kept for compatibility
   a: "A",
   b: "B",
   x: "X",
@@ -40,20 +83,14 @@ const BTN = {
   rb: "RIGHT_SHOULDER",
   start: "START",
   back: "BACK",
-  l3: "LEFT_THUMB",
-  r3: "RIGHT_THUMB",
-  dpad_up: "DPAD_UP",
-  dpad_down: "DPAD_DOWN",
-  dpad_left: "DPAD_LEFT",
-  dpad_right: "DPAD_RIGHT",
+  home: "GUIDE",
+  select: "BACK",
   m1: "LEFT_SHOULDER",
   m2: "RIGHT_SHOULDER",
   m3: "LEFT_THUMB",
   m4: "RIGHT_THUMB",
   m5: "BACK",
   m6: "START",
-  home: "GUIDE",
-  select: "BACK",
 };
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, Number(v) || 0));
@@ -66,28 +103,44 @@ function apply(s) {
   };
 
   const steer = clamp(s.steer, -1, 1);
-  // Steering takes the left stick when the wheel is in use, otherwise the stick does.
   pad.axis.leftX.setValue(steer !== 0 ? steer : clamp(s.lx, -1, 1));
   pad.axis.leftY.setValue(-clamp(s.ly, -1, 1));
   pad.axis.rightX.setValue(clamp(s.rx, -1, 1));
   pad.axis.rightY.setValue(-clamp(s.ry, -1, 1));
 
-  // Brake and clutch share the left trigger; gas and the pad's own RT share the right.
+  // Preserve analog pedal behavior. G29 L2/R2 are also exposed as digital
+  // wheel controls, so a pressed button forces the corresponding trigger to 1.
   pad.axis.leftTrigger.setValue(
-    Math.max(clamp(s.brake, 0, 1), clamp(s.clutch, 0, 1) * 0.6, clamp(s.lt, 0, 1)),
+    Math.max(
+      clamp(s.brake, 0, 1),
+      clamp(s.clutch, 0, 1) * 0.6,
+      clamp(s.lt, 0, 1),
+      s.buttons?.l2 ? 1 : 0,
+    ),
   );
-  pad.axis.rightTrigger.setValue(Math.max(clamp(s.throttle, 0, 1), clamp(s.rt, 0, 1)));
+  pad.axis.rightTrigger.setValue(
+    Math.max(
+      clamp(s.throttle, 0, 1),
+      clamp(s.rt, 0, 1),
+      s.buttons?.r2 ? 1 : 0,
+    ),
+  );
 
   const buttons = s.buttons || {};
   for (const [id, name] of Object.entries(BTN)) if (buttons[id]) mark(name);
 
+  // G29 24-point dial: rotate one detent at a time. The virtual Xbox mapping
+  // uses the D-pad as the nearest universal menu/setting control.
+  if (s.dial === 1) mark("DPAD_RIGHT");
+  if (s.dial === -1) mark("DPAD_LEFT");
+
   // Driving extras -> the bindings these games expect on a pad.
-  if (buttons.horn) mark("LEFT_THUMB"); // GTA V horn
+  if (buttons.horn) mark("LEFT_THUMB");
   if (buttons.lights) mark("DPAD_LEFT");
   if (buttons.look) mark("RIGHT_THUMB");
   if (buttons.reset) mark("Y");
-  if (clamp(s.handbrake, 0, 1) > 0.5) mark("A"); // GTA V / Forza handbrake
-  if (clamp(s.nitro, 0, 1) > 0.5) mark("LEFT_SHOULDER"); // boost
+  if (clamp(s.handbrake, 0, 1) > 0.5) mark("A");
+  if (clamp(s.nitro, 0, 1) > 0.5) mark("LEFT_SHOULDER");
   if (s.gear === 1) mark("RIGHT_SHOULDER");
   if (s.gear === -1) mark("LEFT_SHOULDER");
 

@@ -3,7 +3,6 @@ import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react"
 import { Gamepad2, Settings as SettingsIcon, Gauge } from "lucide-react";
 import { SettingsPanel } from "@/components/rig/SettingsPanel";
 import { RotateGate } from "@/components/rig/RotateGate";
-import { FlatPad } from "@/components/rig/FlatPad";
 import { Button } from "@/components/ui/button";
 import { useBridge } from "@/hooks/useBridge";
 const Rig3D = lazy(() => import("@/components/rig3d/Rig3D"));
@@ -82,15 +81,11 @@ function Rig() {
 
       {/* ---------- rig fills the screen ---------- */}
       <div className="absolute inset-0">
-        {mode === "pad" ? (
-          <FlatPad settings={settings} set={set} press={press} />
-        ) : (
-          <ClientOnly fallback={<div className="grid h-full place-items-center text-xs uppercase tracking-widest text-muted-foreground">Loading 3D rig…</div>}>
-            <Suspense fallback={<div className="grid h-full place-items-center text-xs uppercase tracking-widest text-muted-foreground">Building driving rig…</div>}>
-              <Rig3D mode="wheel" settings={settings} set={set} press={press} />
-            </Suspense>
-          </ClientOnly>
-        )}
+        <ClientOnly fallback={<div className="grid h-full place-items-center text-xs uppercase tracking-widest text-muted-foreground">Loading 3D controller…</div>}>
+          <Suspense fallback={<div className="grid h-full place-items-center text-xs uppercase tracking-widest text-muted-foreground">Building 3D controller…</div>}>
+            <Rig3D mode={mode} settings={settings} set={set} press={press} />
+          </Suspense>
+        </ClientOnly>
       </div>
 
       {mode === "pad" && (

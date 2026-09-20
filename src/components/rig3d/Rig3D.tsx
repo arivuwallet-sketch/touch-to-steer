@@ -8,9 +8,14 @@ import type { ControllerState, Settings } from "@/lib/controller-types";
 function CameraRig({ mode }: { mode: "pad" | "wheel" }) {
   const camera = useThree((s) => s.camera);
   useEffect(() => {
-    if (mode === "pad") camera.position.set(0, 11.8, 0.01);
-    else camera.position.set(0, 0, 11.5);
-    camera.lookAt(0, 0, 0);
+    if (mode === "pad") {
+      camera.position.set(0, 11.8, 0.01);
+      camera.lookAt(0, 0, 0);
+    } else {
+      // Driver-seat eye point: slightly above the wheel, looking forward/down.
+      camera.position.set(0, 2.55, 10.8);
+      camera.lookAt(0, 0.15, 0);
+    }
     camera.updateProjectionMatrix();
   }, [mode, camera]);
   return null;
@@ -32,7 +37,7 @@ export default function Rig3D({
       shadows
       dpr={1}
       gl={{ antialias: true, alpha: true }}
-      camera={{ position: [0, 0, 12], fov: 38 }}
+      camera={{ position: [0, 2.55, 10.8], fov: 48 }}
       style={{ touchAction: "none" }}
     >
       <color attach="background" args={["#080b11"]} />

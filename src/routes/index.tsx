@@ -70,7 +70,8 @@ function Rig() {
 
   const applyPreset = (key: string) => {
     setPreset(key);
-    patch(PRESETS[key].patch);
+    const p = PRESETS[key];
+    if (p) patch(p.patch);
   };
 
   const set = useCallback((p: Partial<ControllerState>) => {

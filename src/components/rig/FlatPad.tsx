@@ -7,403 +7,265 @@ type Props = {
   press: (id: string, down: boolean) => void;
 };
 
-const buzz = (on: boolean, ms = 10) => {
-  if (on && typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(ms);
+const buzz = (enabled: boolean, ms = 10) => {
+  if (enabled && typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(ms);
 };
 
-/* ---------------- analog thumbstick ---------------- */
 function Stick({
   settings,
   onMove,
   onClick3,
-  label,
 }: {
   settings: Settings;
   onMove: (x: number, y: number) => void;
   onClick3: (down: boolean) => void;
-  label: string;
 }) {
-  const box = useRef<HTMLDivElement>(null);
-  const [p, setP] = useState({ x: 0, y: 0 });
-  const id = useRef<number | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  const [point, setPoint] = useState({ x: 0, y: 0 });
+  const pointer = useRef<number | null>(null);
 
-  const move = (e: React.PointerEvent) => {
-    const el = box.current;
+  const update = (e: React.PointerEvent) => {
+    const el = ref.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
-    const max = r.width / 2;
-    let dx = (e.clientX - cx) / max;
-    let dy = (e.clientY - cy) / max;
-    const m = Math.hypot(dx, dy);
-    if (m > 1) {
-      dx /= m;
-      dy /= m;
-    }
-    setP({ x: dx, y: dy });
+    const dx = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
+    const dy = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
+    const len = Math.hypot(dx, dy);
+    const x = len > 1 ? dx / len : dx;
+    const y = len > 1 ? dy / len : dy;
+    setPoint({ x, y });
     onMove(
-      applyCurve(dx, settings.deadzone, settings.linearity, settings.sensitivity),
-      applyCurve(-dy, settings.deadzone, settings.linearity, settings.sensitivity),
+      applyCurve(x, settings.deadzone, settings.linearity, settings.sensitivity),
+      applyCurve(-y, settings.deadzone, settings.linearity, settings.sensitivity),
     );
   };
 
   const release = () => {
-    id.current = null;
-    setP({ x: 0, y: 0 });
+    pointer.current = null;
+    setPoint({ x: 0, y: 0 });
     onMove(0, 0);
   };
 
-  const travel = 20 + settings.stickTension * 8;
-
   return (
     <div
-      ref={box}
+      ref={ref}
       onPointerDown={(e) => {
-        (e.currentTarget as Element).setPointerCapture(e.pointerId);
-        id.current = e.pointerId;
+        e.currentTarget.setPointerCapture(e.pointerId);
+        pointer.current = e.pointerId;
         buzz(settings.vibration, 8);
-        move(e);
+        update(e);
       }}
-      onPointerMove={(e) => id.current === e.pointerId && move(e)}
+      onPointerMove={(e) => pointer.current === e.pointerId && update(e)}
       onPointerUp={release}
       onPointerCancel={release}
       onDoubleClick={() => {
         onClick3(true);
         setTimeout(() => onClick3(false), 90);
       }}
-      aria-label={label}
-      className="relative size-[30vh] max-h-40 max-w-40 touch-none rounded-full"
-      style={{
-        background:
-          "radial-gradient(circle at 50% 35%, oklch(0.3 0.02 260), oklch(0.12 0.01 260) 70%)",
-        boxShadow:
-          "inset 0 0 26px oklch(0 0 0 / 80%), 0 0 0 2px oklch(0.25 0.02 260), 0 0 34px oklch(0.55 0.18 250 / 25%)",
-      }}
+      className="relative size-[clamp(8.5rem,28vh,12rem)] touch-none rounded-full border border-cyan-400/20 bg-[radial-gradient(circle_at_42%_34%,#252e39,#0b1016_72%)] shadow-[inset_0_0_22px_rgba(0,0,0,.88),0_10px_24px_rgba(0,0,0,.38)]"
     >
+      <div className="absolute inset-[9%] rounded-full border border-white/5 bg-[#080c11]" />
       <div
-        className="absolute left-1/2 top-1/2 size-[62%] rounded-full"
+        className="absolute left-1/2 top-1/2 size-[54%] rounded-full border border-white/10 bg-[radial-gradient(circle_at_38%_28%,#4b5663,#161d25_72%)] shadow-[0_8px_15px_rgba(0,0,0,.6),inset_0_-6px_10px_rgba(0,0,0,.55)]"
         style={{
-          transform: `translate(-50%,-50%) translate(${p.x * travel}px, ${p.y * travel}px)`,
-          background:
-            "radial-gradient(circle at 42% 30%, oklch(0.42 0.02 260), oklch(0.13 0.01 260) 75%)",
-          boxShadow: "0 6px 14px oklch(0 0 0 / 70%), inset 0 -4px 10px oklch(0 0 0 / 60%)",
-          transition: p.x === 0 && p.y === 0 ? "transform 120ms ease-out" : "none",
+          transform: `translate(-50%,-50%) translate(${point.x * 34}px,${point.y * 34}px)`,
+          transition: point.x === 0 && point.y === 0 ? "transform 140ms ease-out" : "none",
         }}
       />
     </div>
   );
 }
 
-/* ---------------- d-pad ---------------- */
-function DPadFlat({ settings, press }: { settings: Settings; press: Props["press"] }) {
-  const hit = (d: string) => ({
-    onPointerDown: (e: React.PointerEvent) => {
-      e.stopPropagation();
-      e.currentTarget.setPointerCapture(e.pointerId);
-      buzz(settings.vibration);
-      press(`dpad_${d}`, true);
-    },
-    onPointerUp: () => press(`dpad_${d}`, false),
-    onPointerCancel: () => press(`dpad_${d}`, false),
-  });
+function Face({
+  id,
+  label,
+  color,
+  settings,
+  press,
+  position,
+}: {
+  id: string;
+  label: string;
+  color: string;
+  settings: Settings;
+  press: Props["press"];
+  position: string;
+}) {
+  return (
+    <button
+      type="button"
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        buzz(settings.vibration);
+        press(id, true);
+      }}
+      onPointerUp={() => press(id, false)}
+      onPointerCancel={() => press(id, false)}
+      className={`absolute ${position} grid size-[clamp(3rem,8vh,4rem)] touch-none place-items-center rounded-full border border-white/15 font-black text-lg shadow-[inset_0_2px_2px_rgba(255,255,255,.12),inset_0_-5px_9px_rgba(0,0,0,.65),0_5px_0_#05080b,0_10px_16px_rgba(0,0,0,.5)] transition-transform active:translate-y-[3px]`}
+      style={{ color, textShadow: `0 0 10px ${color}`, background: `radial-gradient(circle_at_35%_28%,${color}2a,#151a21_70%)` }}
+    >
+      {label}
+    </button>
+  );
+}
 
-  const keys = [
-    ["up", "↑", "col-start-2 row-start-1"],
-    ["left", "←", "col-start-1 row-start-2"],
-    ["right", "→", "col-start-3 row-start-2"],
-    ["down", "↓", "col-start-2 row-start-3"],
-  ] as const;
+function DPad({ settings, press }: { settings: Settings; press: Props["press"] }) {
+  const button = (id: string, label: string, pos: string) => (
+    <button
+      type="button"
+      key={id}
+      aria-label={id}
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        buzz(settings.vibration);
+        press(`dpad_${id}`, true);
+      }}
+      onPointerUp={() => press(`dpad_${id}`, false)}
+      onPointerCancel={() => press(`dpad_${id}`, false)}
+      className={`absolute ${pos} grid size-11 touch-none place-items-center rounded-lg border border-white/10 bg-[linear-gradient(145deg,#3d4651,#151a20)] text-xl font-black text-slate-200 shadow-[inset_0_2px_1px_rgba(255,255,255,.15),inset_0_-4px_7px_rgba(0,0,0,.6),0_4px_0_#05080b,0_8px_12px_rgba(0,0,0,.48)] active:translate-y-[2px]`}
+    >
+      {label}
+    </button>
+  );
 
   return (
-    <div className="grid size-[30vh] max-h-44 max-w-44 grid-cols-3 grid-rows-3 gap-[clamp(.5rem,1.3vw,.9rem)] rounded-3xl border border-white/5 bg-[#0b1017]/55 p-[clamp(.35rem,.8vw,.6rem)] shadow-[inset_0_0_20px_rgba(0,0,0,.55)]">
-      {keys.map(([id, icon, pos]) => (
-        <button
-          key={id}
-          {...hit(id)}
-          type="button"
-          aria-label={id}
-          className={`grid ${pos} touch-none place-items-center rounded-[0.9rem] border border-[#55616f]/70 bg-[linear-gradient(145deg,#566372_0%,#333e4a_42%,#171d24_100%)] text-[clamp(1.4rem,3.2vw,2rem)] font-black text-slate-100 shadow-[inset_0_2px_1px_rgba(255,255,255,.2),inset_0_-3px_5px_rgba(0,0,0,.48),0_5px_0_#0a0e13,0_9px_14px_rgba(0,0,0,.5)] transition-transform active:translate-y-[3px] active:shadow-[inset_0_2px_5px_rgba(0,0,0,.5),0_2px_0_#0a0e13] active:brightness-110`}
-        >
-          {icon}
-        </button>
-      ))}
+    <div className="relative size-[clamp(8rem,25vh,10rem)]">
+      {button("up", "↑", "left-1/2 top-0 -translate-x-1/2")}
+      {button("left", "←", "left-0 top-1/2 -translate-y-1/2")}
+      {button("right", "→", "right-0 top-1/2 -translate-y-1/2")}
+      {button("down", "↓", "bottom-0 left-1/2 -translate-x-1/2")}
     </div>
   );
 }
-/* ---------------- face buttons ---------------- */
-function Face({
-  label,
-  color,
-  className,
-  settings,
-  press,
-  id,
-}: {
-  label: string;
-  color: string;
-  className: string;
-  settings: Settings;
-  press: Props["press"];
-  id: string;
-}) {
-  return (
-    <button
-      onPointerDown={(e) => {
-        (e.currentTarget as Element).setPointerCapture(e.pointerId);
-        buzz(settings.vibration);
-        press(id, true);
-      }}
-      onPointerUp={() => press(id, false)}
-      onPointerCancel={() => press(id, false)}
-      className={`absolute grid size-[8.5vh] max-h-16 max-w-16 touch-none place-items-center rounded-full border border-white/15 text-xl font-black italic shadow-[inset_0_2px_2px_rgba(255,255,255,.13),inset_0_-4px_8px_rgba(0,0,0,.65),0_6px_0_#090d12,0_11px_18px_rgba(0,0,0,.58)] transition-transform active:translate-y-[3px] active:shadow-[inset_0_3px_7px_rgba(0,0,0,.7),0_2px_0_#090d12] ${className}`}
-      style={{
-        color,
-        background: `radial-gradient(circle at 36% 26%, color-mix(in oklch, ${color} 16%, oklch(0.25 0.02 260)), oklch(0.07 0 0) 76%)`,
-        boxShadow: `0 0 12px color-mix(in oklch, ${color} 58%, transparent), inset 0 1px 1px oklch(1 0 0 / 12%), inset 0 -6px 10px oklch(0 0 0 / 72%), 0 6px 0 oklch(0.045 0 0), 0 11px 18px oklch(0 0 0 / 58%)`,
-        textShadow: `0 0 10px ${color}`,
-      }}
-    >
-      {label}
-    </button>
-  );
-}
 
-/* ---------------- shoulders / triggers ---------------- */
 function Shoulder({
+  id,
   label,
-  side,
   settings,
   press,
+  side,
 }: {
+  id: string;
   label: string;
-  side: "l" | "r";
   settings: Settings;
   press: Props["press"];
+  side: "left" | "right";
 }) {
-  const id = side === "l" ? "lb" : "rb";
   return (
     <button
+      type="button"
       onPointerDown={(e) => {
-        (e.currentTarget as Element).setPointerCapture(e.pointerId);
+        e.currentTarget.setPointerCapture(e.pointerId);
         buzz(settings.vibration);
         press(id, true);
       }}
       onPointerUp={() => press(id, false)}
       onPointerCancel={() => press(id, false)}
-      className={`h-10 w-24 touch-none text-sm font-black tracking-wider text-[oklch(0.72_0.16_250)] active:brightness-150 ${
-        side === "l"
-          ? "[clip-path:polygon(10%_0,100%_0,100%_100%,0_100%)]"
-          : "[clip-path:polygon(0_0,90%_0,100%_100%,0_100%)]"
-      }`}
-      style={{
-        background: "linear-gradient(145deg, #4c5764 0%, #242d37 46%, #10151b 100%)",
-        boxShadow: "inset 0 2px 1px rgba(255,255,255,.12), inset 0 -5px 8px rgba(0,0,0,.55), 0 5px 0 #090d12, 0 10px 16px rgba(0,0,0,.48)",
-      }}
+      className={`h-12 w-28 touch-none rounded-xl border border-white/10 bg-[linear-gradient(180deg,#27313b,#0d1218)] text-[10px] font-black tracking-[0.25em] text-cyan-300 shadow-[inset_0_2px_2px_rgba(255,255,255,.08),0_6px_12px_rgba(0,0,0,.45)] active:translate-y-[2px] ${side === "left" ? "rounded-bl-[1.8rem]" : "rounded-br-[1.8rem]"}`}
     >
       {label}
     </button>
   );
 }
 
-function TriggerFlat({
+function Trigger({
+  id,
   label,
-  side,
   settings,
-  onChange,
+  set,
 }: {
+  id: "lt" | "rt";
   label: string;
-  side: "l" | "r";
   settings: Settings;
-  onChange: (v: number) => void;
+  set: Props["set"];
 }) {
-  const [v, setV] = useState(0);
-  const start = useRef(0);
-  const active = useRef<number | null>(null);
+  const [value, setValue] = useState(0);
+  const pointer = useRef<number | null>(null);
+  const startY = useRef(0);
 
-  const upd = (y: number) => {
-    const val = Math.max(0, Math.min(1, (y - start.current) / 70));
-    setV(val);
-    onChange(val);
+  const move = (y: number) => {
+    const v = Math.max(0, Math.min(1, (y - startY.current) / 80));
+    setValue(v);
+    set({ [id]: v } as Partial<ControllerState>);
+  };
+
+  const release = () => {
+    pointer.current = null;
+    setValue(0);
+    set({ [id]: 0 } as Partial<ControllerState>);
   };
 
   return (
     <button
+      type="button"
+      aria-label={label}
       onPointerDown={(e) => {
-        (e.currentTarget as Element).setPointerCapture(e.pointerId);
-        active.current = e.pointerId;
-        start.current = e.clientY;
+        e.currentTarget.setPointerCapture(e.pointerId);
+        pointer.current = e.pointerId;
+        startY.current = e.clientY;
+        setValue(1);
+        set({ [id]: 1 } as Partial<ControllerState>);
         buzz(settings.vibration, 8);
-        setV(1);
-        onChange(1);
       }}
-      onPointerMove={(e) => active.current === e.pointerId && upd(e.clientY)}
-      onPointerUp={() => {
-        active.current = null;
-        setV(0);
-        onChange(0);
-      }}
-      onPointerCancel={() => {
-        active.current = null;
-        setV(0);
-        onChange(0);
-      }}
-      className={`h-16 w-16 touch-none text-sm font-black tracking-wider text-[oklch(0.72_0.16_250)] ${
-        side === "l"
-          ? "[clip-path:polygon(28%_0,100%_0,100%_100%,0_100%)]"
-          : "[clip-path:polygon(0_0,72%_0,100%_100%,0_100%)]"
-      }`}
-      style={{
-        background: `linear-gradient(145deg, oklch(${0.34 + v * 0.2} 0.035 255), oklch(0.12 0.01 260))`,
-        boxShadow: `inset 0 2px 1px rgba(255,255,255,.12), inset 0 -5px 9px rgba(0,0,0,.55), 0 5px 0 #090d12, 0 0 ${14 + v * 26}px oklch(0.6 0.18 250 / ${0.3 + v * 0.5})`,
-      }}
+      onPointerMove={(e) => pointer.current === e.pointerId && move(e.clientY)}
+      onPointerUp={release}
+      onPointerCancel={release}
+      className="grid h-16 w-20 touch-none place-items-center rounded-xl border border-cyan-500/15 bg-[linear-gradient(180deg,#2b3541,#0c1117)] text-[10px] font-black tracking-[0.2em] text-cyan-300 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),0_7px_15px_rgba(0,0,0,.48)]"
     >
       {label}
     </button>
   );
 }
 
-function Pill({
-  label,
-  id,
-  settings,
-  press,
-  className = "",
-}: {
-  label: string;
-  id: string;
-  settings: Settings;
-  press: Props["press"];
-  className?: string;
-}) {
-  return (
-    <button
-      onPointerDown={(e) => {
-        (e.currentTarget as Element).setPointerCapture(e.pointerId);
-        buzz(settings.vibration);
-        press(id, true);
-      }}
-      onPointerUp={() => press(id, false)}
-      onPointerCancel={() => press(id, false)}
-      className={`touch-none rounded-lg border border-white/10 bg-[linear-gradient(145deg,#4a5562,#171d24)] px-4 py-2 text-xs font-black tracking-wider text-[oklch(0.72_0.16_250)] shadow-[inset_0_2px_1px_rgba(255,255,255,.12),inset_0_-3px_6px_rgba(0,0,0,.6),0_4px_0_#090d12,0_8px_12px_rgba(0,0,0,.42)] transition-transform active:translate-y-[2px] active:shadow-[inset_0_2px_5px_rgba(0,0,0,.55),0_2px_0_#090d12] ${className}`}
-      style={{
-        background: "linear-gradient(180deg, oklch(0.2 0.03 255), oklch(0.09 0.01 260))",
-        boxShadow: "0 0 14px oklch(0.55 0.18 250 / 30%)",
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
-function Round({
-  children,
-  id,
-  settings,
-  press,
-  size = "size-11",
-}: {
-  children: React.ReactNode;
-  id: string;
-  settings: Settings;
-  press: Props["press"];
-  size?: string;
-}) {
-  return (
-    <button
-      onPointerDown={(e) => {
-        (e.currentTarget as Element).setPointerCapture(e.pointerId);
-        buzz(settings.vibration);
-        press(id, true);
-      }}
-      onPointerUp={() => press(id, false)}
-      onPointerCancel={() => press(id, false)}
-      className={`grid ${size} touch-none place-items-center rounded-full border border-white/10 bg-[radial-gradient(circle_at_35%_25%,#556170_0%,#242d37_48%,#10151b_100%)] text-[10px] font-black text-[oklch(0.78_0.14_250)] shadow-[inset_0_2px_2px_rgba(255,255,255,.14),inset_0_-5px_9px_rgba(0,0,0,.62),0_5px_0_#090d12,0_10px_16px_rgba(0,0,0,.5)] transition-transform active:translate-y-[3px] active:shadow-[inset_0_3px_6px_rgba(0,0,0,.62),0_2px_0_#090d12]`}
-      style={{
-        background: "radial-gradient(circle at 40% 30%, oklch(0.24 0.02 255), oklch(0.08 0 0) 75%)",
-        boxShadow: "0 0 14px oklch(0.5 0.18 250 / 35%), inset 0 0 8px oklch(0 0 0 / 80%)",
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-/* ---------------- layout ---------------- */
 export function FlatPad({ settings, set, press }: Props) {
   return (
-    <div
-      className="absolute inset-0 overflow-hidden"
-      style={{
-        background:
-          "radial-gradient(120% 90% at 50% 0%, oklch(0.16 0.04 258) 0%, oklch(0.05 0.01 260) 62%)",
-      }}
-    >
-      {/* side glow strips */}
-      <div className="pointer-events-none absolute left-3 top-1/2 h-28 w-1 -translate-y-1/2 rounded-full bg-[oklch(0.55_0.2_255)] blur-[3px] opacity-70" />
-      <div className="pointer-events-none absolute right-3 top-1/2 h-28 w-1 -translate-y-1/2 rounded-full bg-[oklch(0.55_0.2_255)] blur-[3px] opacity-70" />
-      <div className="pointer-events-none absolute inset-x-[18%] top-0 h-16 rounded-b-3xl border-x border-b border-[oklch(0.4_0.16_255/45%)]" />
+    <div className="absolute inset-0 overflow-hidden bg-[#05080c] text-slate-100">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(95%_85%_at_50%_8%,#121d2a_0%,#04070b_68%)]" />
+      <div className="pointer-events-none absolute inset-2 rounded-[1.7rem] border border-white/20" />
+      <div className="pointer-events-none absolute inset-4 rounded-[1.45rem] border border-cyan-400/10" />
 
-      {/* shoulders + triggers */}
-      <div className="absolute left-[max(1rem,env(safe-area-inset-left))] top-[12%] flex items-start gap-[clamp(0.75rem,2vw,1.5rem)]">
-        <Shoulder label="LB" side="l" settings={settings} press={press} />
-        <TriggerFlat label="LT" side="l" settings={settings} onChange={(v) => set({ lt: v })} />
-      </div>
-      <div className="absolute right-[max(1rem,env(safe-area-inset-right))] top-[12%] flex items-start gap-[clamp(0.75rem,2vw,1.5rem)]">
-        <TriggerFlat label="RT" side="r" settings={settings} onChange={(v) => set({ rt: v })} />
-        <Shoulder label="RB" side="r" settings={settings} press={press} />
+      <div className="absolute inset-x-0 top-0 flex items-start justify-between px-6 py-4">
+        <div className="flex gap-3">
+          <Shoulder id="lb" label="LB" settings={settings} press={press} side="left" />
+          <Trigger id="lt" label="LT" settings={settings} set={set} />
+        </div>
+        <div className="flex gap-3">
+          <Trigger id="rt" label="RT" settings={settings} set={set} />
+          <Shoulder id="rb" label="RB" settings={settings} press={press} side="right" />
+        </div>
       </div>
 
-      {/* left stick + LSB */}
-      <div className="absolute bottom-[14%] left-[4%] flex flex-col items-center gap-3">
-        <Stick
-          settings={settings}
-          label="move"
-          onMove={(x, y) => set({ lx: x, ly: y })}
-          onClick3={(d) => press("l3", d)}
-        />
-        <Pill label="LSB" id="l3" settings={settings} press={press} />
-      </div>
+      <div className="absolute inset-x-0 bottom-[10%] flex items-end justify-between px-[5%]">
+        <div className="flex items-end gap-[clamp(1rem,3vw,2.5rem)]">
+          <div className="flex flex-col items-center gap-3">
+            <Stick
+              settings={settings}
+              onMove={(x, y) => set({ lx: x, ly: y })}
+              onClick3={(d) => press("l3", d)}
+            />
+            <button type="button" onClick={() => press("l3", true)} onPointerUp={() => press("l3", false)} className="rounded-full border border-white/10 bg-[#11171e] px-4 py-1 text-[8px] font-black tracking-[0.2em] text-slate-400">LSB</button>
+          </div>
+          <DPad settings={settings} press={press} />
+        </div>
 
-      {/* d-pad */}
-      <div className="absolute bottom-[10%] left-[27%]">
-        <DPadFlat settings={settings} press={press} />
-      </div>
+        <div className="absolute left-1/2 bottom-[1%] flex -translate-x-1/2 items-center gap-7">
+          <button type="button" onPointerDown={() => press("back", true)} onPointerUp={() => press("back", false)} className="grid size-12 place-items-center rounded-full border border-white/10 bg-[#10161d] text-slate-400 shadow-[inset_0_0_8px_rgba(0,0,0,.8),0_6px_12px_rgba(0,0,0,.45)]">▣</button>
+          <button type="button" onPointerDown={() => press("start", true)} onPointerUp={() => press("start", false)} className="grid size-12 place-items-center rounded-full border border-white/10 bg-[#10161d] text-slate-400 shadow-[inset_0_0_8px_rgba(0,0,0,.8),0_6px_12px_rgba(0,0,0,.45)]">☰</button>
+        </div>
 
-      {/* centre buttons */}
-      <div className="absolute bottom-[27%] left-1/2 flex -translate-x-1/2 items-center gap-[clamp(2rem,5vw,4rem)]">
-        <Round id="back" settings={settings} press={press}>
-          ❐
-        </Round>
-        <Round id="start" settings={settings} press={press}>
-          ☰
-        </Round>
-      </div>
-
-      {/* right stick + RSB */}
-      <div className="absolute bottom-[14%] right-[27%] flex flex-col items-center gap-3">
-        <Stick
-          settings={settings}
-          label="aim"
-          onMove={(x, y) => set({ rx: x, ry: settings.invertLookY ? -y : y })}
-          onClick3={(d) => press("r3", d)}
-        />
-        <Pill label="RSB" id="r3" settings={settings} press={press} />
-      </div>
-
-      {/* ABXY diamond */}
-      <div className="absolute right-[6%] top-[32%] size-[32vh] max-h-52 max-w-52">
-        <Face id="y" label="Y" color="oklch(0.82 0.18 95)" className="left-1/2 top-[1%] -translate-x-1/2" settings={settings} press={press} />
-        <Face id="x" label="X" color="oklch(0.7 0.19 250)" className="left-[1%] top-1/2 -translate-y-1/2" settings={settings} press={press} />
-        <Face id="b" label="B" color="oklch(0.63 0.24 27)" className="right-[1%] top-1/2 -translate-y-1/2" settings={settings} press={press} />
-        <Face id="a" label="A" color="oklch(0.75 0.21 145)" className="bottom-[1%] left-1/2 -translate-x-1/2" settings={settings} press={press} />
-      </div>
-
-      {/* mode */}
-      <div className="absolute bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))]">
-        <Round id="mode" settings={settings} press={press} size="size-12">
-          MODE
-        </Round>
+        <div className="flex items-end gap-[clamp(1rem,3vw,2.5rem)]">
+          <DPad settings={settings} press={press} />
+          <div className="flex flex-col items-center gap-3">
+            <div className="relative size-[clamp(8.5rem,28vh,12rem)]">
+              <div className="absolute inset-0 rounded-full border border-cyan-400/20 bg-[radial-gradient(circle_at_42%_34%,#252f3a,#0b1016_72%)] shadow-[inset_0_0_22px_rgba(0,0,0,.88),0_10px_24px_rgba(0,0,0,.38)]" />
+              <Face id="y" label="Y" color="#facc15" position="left-1/2 top-0 -translate-x-1/2" settings={settings} press={press} />
+              <Face id="x" label="X" color="#38bdf8" position="left-0 top-1/2 -translate-y-1/2" settings={settings} press={press} />
+              <Face id="b" label="B" color="#ef4444" position="right-0 top-1/2 -translate-y-1/2" settings={settings} press={press} />
+              <Face id="a" label="A" color="#4ade80" position="bottom-0 left-1/2 -translate-x-1/2" settings={settings} press={press} />
+            </div>
+            <button type="button" onPointerDown={() => press("r3", true)} onPointerUp={() => press("r3", false)} className="rounded-full border border-white/10 bg-[#11171e] px-4 py-1 text-[8px] font-black tracking-[0.2em] text-slate-400">RSB</button>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -170,15 +170,15 @@
   }
 
   .flat-pad-root .flat-pad-trigger {
-    width: 82px !important;
-    height: 42px !important;
+    width: 90px !important;
+    height: 46px !important;
     border-radius: 12px !important;
     font-size: 8px !important;
   }
 
   .flat-pad-root .flat-pad-top button {
-    min-width: 58px !important;
-    height: 42px !important;
+    min-width: 62px !important;
+    height: 46px !important;
   }
 
   .flat-pad-root .flat-pad-frame {
@@ -208,22 +208,18 @@
     height: min(29svh, 25vw) !important;
   }
 
-  .flat-pad-root .flat-pad-stick > div:nth-child(2) {
-    transform: translate(-50%,-50%) translate(0,0) !important;
-  }
-
   .flat-pad-root .flat-pad-dpad {
     width: min(25svh, 22vw) !important;
     height: min(25svh, 22vw) !important;
   }
 
   .flat-pad-root .flat-pad-dpad button {
-    width: min(8.2svh, 7vw) !important;
-    height: min(8.2svh, 7vw) !important;
-    min-width: 32px !important;
-    min-height: 32px !important;
+    width: min(9.4svh, 8vw) !important;
+    height: min(9.4svh, 8vw) !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
     border-radius: 9px !important;
-    font-size: min(4.8svh, 4.4vw) !important;
+    font-size: min(5.2svh, 4.8vw) !important;
   }
 
   .flat-pad-root .flat-pad-face {
@@ -232,11 +228,11 @@
   }
 
   .flat-pad-root .flat-pad-face button {
-    width: min(9svh, 8vw) !important;
-    height: min(9svh, 8vw) !important;
-    min-width: 34px !important;
-    min-height: 34px !important;
-    font-size: min(5.5svh, 5vw) !important;
+    width: min(10.2svh, 9vw) !important;
+    height: min(10.2svh, 9vw) !important;
+    min-width: 42px !important;
+    min-height: 42px !important;
+    font-size: min(6svh, 5.5vw) !important;
   }
 
   .flat-pad-root .flat-pad-center {
@@ -275,8 +271,8 @@
   }
 
   .flat-pad-root .flat-pad-bottom button {
-    height: 32px !important;
-    min-width: 50px !important;
+    height: 36px !important;
+    min-width: 58px !important;
     padding-inline: 8px !important;
     font-size: 7px !important;
   }

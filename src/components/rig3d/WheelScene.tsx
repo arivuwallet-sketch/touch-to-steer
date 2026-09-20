@@ -27,66 +27,58 @@ function Pedal3D({
   const face = useRef<Group>(null);
   const material = useRef<MeshStandardMaterial>(null);
   const value = useRef(0);
+
   const onDown = useAnalogPointer((v) => {
     value.current = v;
     onChange(v);
-  }, 100, 0.25);
+  }, 105, 0.35);
 
   useFrame((_, dt) => {
     const k = Math.min(1, dt * 18);
     if (face.current) {
-      face.current.position.z += value.current * 0.08 - face.current.position.z;
+      face.current.rotation.x += (value.current * 0.12 - face.current.rotation.x) * k;
+      face.current.position.z += (-value.current * 0.08 - face.current.position.z) * k;
     }
     if (material.current) {
       material.current.emissiveIntensity +=
-        (0.05 + value.current * 0.6 - material.current.emissiveIntensity) * k;
+        (0.03 + value.current * 0.5 - material.current.emissiveIntensity) * k;
     }
   });
 
   return (
     <group position={position}>
-      <RoundedBox
-        args={[1.05, 0.16, 1.75]}
-        radius={0.08}
-        smoothness={5}
-        position={[0, -0.1, 0.15]}
-        receiveShadow
-      >
-        <meshStandardMaterial color="#0a0e13" metalness={0.82} roughness={0.48} />
-      </RoundedBox>
+      <mesh position={[0, 0.05, 0]} castShadow>
+        <boxGeometry args={[0.12, 1.15, 0.16]} />
+        <meshStandardMaterial color="#7f8994" metalness={0.92} roughness={0.25} />
+      </mesh>
 
       <group ref={face}>
         <RoundedBox
-          args={[width, 1.18, 0.16]}
-          radius={0.07}
+          args={[width, 1.25, 0.18]}
+          radius={0.08}
           smoothness={5}
-          position={[0, 0.48, -0.02]}
+          position={[0, 0.56, 0.12]}
           castShadow
           onPointerDown={onDown}
         >
           <meshStandardMaterial
             ref={material}
-            color="#cdd3d9"
+            color="#d1d6db"
             emissive={accent}
-            emissiveIntensity={0.05}
-            metalness={0.8}
-            roughness={0.28}
+            emissiveIntensity={0.03}
+            metalness={0.82}
+            roughness={0.27}
           />
         </RoundedBox>
 
-        {[-0.38, -0.13, 0.12, 0.37].map((z) => (
-          <group key={z}>
-            <mesh position={[-0.17, z + 0.18, 0.09]}>
-              <sphereGeometry args={[0.055, 14, 10]} />
-              <meshStandardMaterial color="#30363e" roughness={0.9} />
-            </mesh>
-            <mesh position={[0.17, z + 0.18, 0.09]}>
-              <sphereGeometry args={[0.055, 14, 10]} />
-              <meshStandardMaterial color="#30363e" roughness={0.9} />
-            </mesh>
-          </group>
+        {[[-0.16, 0.18], [0.16, 0.18], [-0.16, 0.42], [0.16, 0.42], [-0.16, 0.66], [0.16, 0.66], [-0.16, 0.9], [0.16, 0.9]].map(([x, y], i) => (
+          <mesh key={i} position={[x, y, 0.23]}>
+            <sphereGeometry args={[0.055, 14, 10]} />
+            <meshStandardMaterial color="#30363e" roughness={0.9} />
+          </mesh>
         ))}
-        <Label position={[0, -0.72, 0.1]} size={9} dim>{label}</Label>
+
+        <Label position={[0, -0.12, 0.24]} size={9} dim>{label}</Label>
       </group>
     </group>
   );
@@ -103,88 +95,70 @@ function Handbrake3D({ settings, set }: { settings: Settings; set: Props["set"] 
 
   useFrame((_, dt) => {
     if (!lever.current) return;
-    lever.current.rotation.x +=
-      (0.08 + value.current * 0.7 - lever.current.rotation.x) * Math.min(1, dt * 14);
+    const target = 0.05 + value.current * 0.7;
+    lever.current.rotation.z += (target - lever.current.rotation.z) * Math.min(1, dt * 16);
   });
 
   return (
-    <group position={[4.1, -0.15, 1.1]}>
-      <RoundedBox args={[1.05, 0.2, 1.55]} radius={0.1} smoothness={5} receiveShadow>
-        <meshStandardMaterial color="#090d12" metalness={0.78} roughness={0.48} />
+    <group position={[4.05, -0.95, 0.45]}>
+      <RoundedBox args={[1.0, 0.24, 1.8]} radius={0.1} smoothness={5} receiveShadow>
+        <meshStandardMaterial color="#090d12" metalness={0.8} roughness={0.45} />
       </RoundedBox>
 
       <group ref={lever}>
-        <mesh position={[0, 0.34, 0]} castShadow onPointerDown={onDown}>
-          <boxGeometry args={[0.17, 1.45, 0.18]} />
-          <meshStandardMaterial color="#8e98a3" metalness={0.95} roughness={0.24} />
+        <mesh position={[0, 0.65, 0]} castShadow onPointerDown={onDown}>
+          <boxGeometry args={[0.16, 1.5, 0.18]} />
+          <meshStandardMaterial color="#8e98a3" metalness={0.95} roughness={0.25} />
         </mesh>
         <RoundedBox
-          args={[0.34, 0.45, 0.34]}
-          radius={0.12}
+          args={[0.34, 0.5, 0.34]}
+          radius={0.13}
           smoothness={6}
-          position={[0, 1.1, 0]}
+          position={[0, 1.4, 0]}
           castShadow
           onPointerDown={onDown}
         >
-          <meshStandardMaterial color="#141920" roughness={0.86} />
+          <meshStandardMaterial color="#171b21" roughness={0.85} />
         </RoundedBox>
       </group>
 
-      <Label position={[0, -0.18, 0.78]} size={8} dim>HANDBRAKE</Label>
+      <Label position={[0, -0.38, 0.92]} size={9} dim>HANDBRAKE</Label>
     </group>
   );
 }
 
 function Nitro3D({ settings, set }: { settings: Settings; set: Props["set"] }) {
-  const onPress = (e: ThreeEvent<PointerEvent>) => {
-    e.stopPropagation();
-    set({ nitro: 1 });
-    if (settings.vibration && typeof navigator !== "undefined" && "vibrate" in navigator) {
-      navigator.vibrate(12);
-    }
-    const up = () => {
-      set({ nitro: 0 });
-      window.removeEventListener("pointerup", up);
-      window.removeEventListener("pointercancel", up);
-    };
-    window.addEventListener("pointerup", up);
-    window.addEventListener("pointercancel", up);
-  };
-
   return (
-    <group position={[4.1, -0.35, -1.05]}>
-      <RoundedBox
-        args={[1.35, 0.22, 0.65]}
-        radius={0.1}
-        smoothness={6}
-        castShadow
-        onPointerDown={onPress}
-      >
-        <meshStandardMaterial color="#321746" emissive="#9c4dcc" emissiveIntensity={0.5} metalness={0.45} roughness={0.3} />
-      </RoundedBox>
-      <Label position={[0, 0.16, 0]} size={9}>NITRO</Label>
+    <group position={[4.05, -1.05, -1.45]}>
+      <Pad3D
+        position={[0, 0, 0]}
+        size={[1.35, 0.22, 0.65]}
+        label="NITRO"
+        glow="#a855f7"
+        vibration={settings.vibration}
+        onPress={(down) => set({ nitro: down ? 1 : 0 })}
+      />
     </group>
   );
 }
 
 function Horn3D({ settings, press }: { settings: Settings; press: Props["press"] }) {
   return (
-    <group position={[0, 0.22, 0]}>
-      <mesh
-        castShadow
-        onPointerDown={(e) => {
-          e.stopPropagation();
-          press("horn", true);
-          if (settings.vibration && typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(10);
-        }}
-        onPointerUp={() => press("horn", false)}
-        onPointerCancel={() => press("horn", false)}
-      >
-        <cylinderGeometry args={[0.46, 0.46, 0.16, 48]} />
-        <meshStandardMaterial color="#1b2027" metalness={0.6} roughness={0.4} />
-      </mesh>
-      <Label position={[0, 0.12, 0]} size={8}>HORN</Label>
-    </group>
+    <mesh
+      rotation={[Math.PI / 2, 0, 0]}
+      position={[0, 0.2, 0.1]}
+      castShadow
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        press("horn", true);
+        if (settings.vibration && typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(10);
+      }}
+      onPointerUp={() => press("horn", false)}
+      onPointerCancel={() => press("horn", false)}
+    >
+      <cylinderGeometry args={[0.43, 0.43, 0.16, 48]} />
+      <meshStandardMaterial color="#20262d" metalness={0.62} roughness={0.4} />
+    </mesh>
   );
 }
 
@@ -219,7 +193,7 @@ export function WheelScene({ settings, set, press }: Props) {
     return () => window.removeEventListener("deviceorientation", listener);
   }, [settings.steerMode, settings.invertTilt, settings.maxTiltDeg, emit]);
 
-  const grabWheel = useCallback(
+  const onGrab = useCallback(
     (event: ThreeEvent<PointerEvent>) => {
       event.stopPropagation();
 
@@ -231,13 +205,13 @@ export function WheelScene({ settings, set, press }: Props) {
       const cx = rect.left + ((hub.x + 1) / 2) * size.width;
       const cy = rect.top + ((1 - hub.y) / 2) * size.height;
 
-      const angleOf = (x: number, y: number) => Math.atan2(y - cy, x - cx);
-      let last = angleOf(event.nativeEvent.clientX, event.nativeEvent.clientY);
+      const angleAt = (x: number, y: number) => Math.atan2(y - cy, x - cx);
+      let last = angleAt(event.nativeEvent.clientX, event.nativeEvent.clientY);
       let accumulated = steer.current * maxRadians;
       returning.current = false;
 
       const move = (ev: PointerEvent) => {
-        let delta = angleOf(ev.clientX, ev.clientY) - last;
+        let delta = angleAt(ev.clientX, ev.clientY) - last;
         while (delta > Math.PI) delta -= Math.PI * 2;
         while (delta < -Math.PI) delta += Math.PI * 2;
         last += delta;
@@ -269,85 +243,78 @@ export function WheelScene({ settings, set, press }: Props) {
       emit(0);
     }
 
-    const target = -steer.current * maxRadians;
-    wheel.current.rotation.z += (target - wheel.current.rotation.z) * Math.min(1, dt * 20);
+    wheel.current.rotation.z +=
+      (-steer.current * maxRadians - wheel.current.rotation.z) * Math.min(1, dt * 20);
   });
 
   return (
     <group position={[0, -0.6, 0]}>
-      {/* Wheel: all geometry is authored in the X/Z plane for the top-down camera. */}
-      <group ref={wheel} position={[-3.15, 0.7, 0]}>
-        <mesh castShadow onPointerDown={grabWheel}>
+      {/* Upright wheel, viewed from the driver's seat. */}
+      <group ref={wheel} position={[-2.0, 0.55, 1.15]} rotation={[0, 0, 0]} scale={1.12}>
+        <mesh castShadow onPointerDown={onGrab}>
           <torusGeometry args={[2.15, 0.29, 32, 96]} />
-          <meshStandardMaterial color="#14181d" metalness={0.18} roughness={0.9} />
+          <meshStandardMaterial color="#14181d" metalness={0.2} roughness={0.9} />
         </mesh>
 
-        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} castShadow>
-          <torusGeometry args={[1.86, 0.12, 20, 96]} />
-          <meshStandardMaterial color="#2c3239" metalness={0.32} roughness={0.68} />
+        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.02]} castShadow>
+          <torusGeometry args={[1.9, 0.1, 20, 96]} />
+          <meshStandardMaterial color="#2d3339" metalness={0.3} roughness={0.66} />
         </mesh>
 
-        {/* Three spokes matching the physical wheel silhouette. */}
+        {/* Three-spoke wheel face. */}
         <RoundedBox
-          args={[1.7, 0.22, 0.48]}
+          args={[1.75, 0.22, 0.48]}
           radius={0.09}
           smoothness={5}
           position={[-0.95, 0, 0]}
           rotation={[0, 0, -0.18]}
           castShadow
         >
-          <meshStandardMaterial color="#262c33" metalness={0.75} roughness={0.33} />
+          <meshStandardMaterial color="#262c33" metalness={0.76} roughness={0.32} />
         </RoundedBox>
         <RoundedBox
-          args={[1.7, 0.22, 0.48]}
+          args={[1.75, 0.22, 0.48]}
           radius={0.09}
           smoothness={5}
           position={[0.95, 0, 0]}
           rotation={[0, 0, 0.18]}
           castShadow
         >
-          <meshStandardMaterial color="#262c33" metalness={0.75} roughness={0.33} />
+          <meshStandardMaterial color="#262c33" metalness={0.76} roughness={0.32} />
         </RoundedBox>
         <RoundedBox
-          args={[0.52, 0.22, 1.65]}
+          args={[0.5, 0.22, 1.55]}
           radius={0.09}
           smoothness={5}
-          position={[0, 0, -0.82]}
+          position={[0, 0, -0.78]}
           castShadow
         >
-          <meshStandardMaterial color="#262c33" metalness={0.75} roughness={0.33} />
+          <meshStandardMaterial color="#262c33" metalness={0.76} roughness={0.32} />
         </RoundedBox>
 
-        <mesh position={[0, 0.12, 0]}>
-          <cylinderGeometry args={[0.82, 0.92, 0.25, 48]} />
-          <meshStandardMaterial color="#11161c" metalness={0.78} roughness={0.35} />
+        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0.14, 0]}>
+          <cylinderGeometry args={[0.8, 0.9, 0.24, 48]} />
+          <meshStandardMaterial color="#11161c" metalness={0.76} roughness={0.34} />
         </mesh>
 
         <Horn3D settings={settings} press={press} />
-
-        <mesh position={[0, 0.22, -2.02]}>
-          <boxGeometry args={[0.18, 0.18, 0.28]} />
-          <meshStandardMaterial color="#1db8ea" emissive="#1db8ea" emissiveIntensity={2.0} />
-        </mesh>
-
-        {/* Simple paddle shifter silhouettes, part of the wheel hardware. */}
-        <RoundedBox args={[0.38, 0.18, 0.95]} radius={0.08} smoothness={5} position={[-1.45, 0.02, -1.58]} castShadow>
-          <meshStandardMaterial color="#9aa1a8" metalness={0.88} roughness={0.28} />
-        </RoundedBox>
-        <RoundedBox args={[0.38, 0.18, 0.95]} radius={0.08} smoothness={5} position={[1.45, 0.02, -1.58]} castShadow>
-          <meshStandardMaterial color="#9aa1a8" metalness={0.88} roughness={0.28} />
-        </RoundedBox>
       </group>
 
-      {/* Separate pedals, handbrake and nitro: no controller controls. */}
-      <group position={[2.8, -0.05, 0.7]}>
-        <RoundedBox args={[4.35, 0.25, 3.25]} radius={0.16} smoothness={6} position={[0, -0.35, 0.15]} receiveShadow>
+      {/* Pedals are on the floor, below and in front of the driver. */}
+      <group position={[2.25, -1.1, -0.35]}>
+        <RoundedBox
+          args={[4.65, 0.22, 3.1]}
+          radius={0.15}
+          smoothness={6}
+          position={[0, -0.45, 0.15]}
+          receiveShadow
+        >
           <meshStandardMaterial color="#090d12" metalness={0.84} roughness={0.46} />
         </RoundedBox>
 
-        <Pedal3D position={[-1.3, 0.0, 0]} label="CLUTCH" accent="#60a5fa" onChange={(v) => set({ clutch: v })} />
-        <Pedal3D position={[0, 0.0, 0]} label="BRAKE" accent="#ef4444" onChange={(v) => set({ brake: v })} width={0.9} />
-        <Pedal3D position={[1.3, 0.0, 0]} label="GAS" accent="#22c55e" onChange={(v) => set({ throttle: v })} />
+        <Pedal3D position={[-1.35, 0, 0]} label="CLUTCH" accent="#60a5fa" onChange={(v) => set({ clutch: v })} />
+        <Pedal3D position={[0, 0, 0]} label="BRAKE" accent="#ef4444" onChange={(v) => set({ brake: v })} width={0.9} />
+        <Pedal3D position={[1.35, 0, 0]} label="GAS" accent="#22c55e" onChange={(v) => set({ throttle: v })} />
       </group>
 
       <Handbrake3D settings={settings} set={set} />

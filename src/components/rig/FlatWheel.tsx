@@ -263,7 +263,7 @@ export function FlatWheel({ settings, set }: Props) {
         return;
       }
 
-      if (typeof DeviceOrientation.requestPermission === "function")
+      if (typeof DeviceOrientation.requestPermission === "function") {
         const permission = await DeviceOrientation.requestPermission();
         if (permission !== "granted") {
           setGyroDenied(true);

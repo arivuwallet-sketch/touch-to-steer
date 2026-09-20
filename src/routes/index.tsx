@@ -5,9 +5,11 @@ import { Pedal } from "@/components/rig/Pedal";
 import { SteeringWheel } from "@/components/rig/SteeringWheel";
 import { ActionButton } from "@/components/rig/ActionButton";
 import { SettingsPanel } from "@/components/rig/SettingsPanel";
+import { DPad } from "@/components/rig/DPad";
+import { Trigger } from "@/components/rig/Trigger";
 import { useBridge } from "@/hooks/useBridge";
 import {
-  BUTTONS,
+  PRESETS,
   defaultSettings,
   emptyState,
   type Settings,
@@ -17,17 +19,17 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Mobile Rig — Virtual Joystick & Steering Wheel for PC Games" },
+      { title: "Mobile Rig — Virtual Gamepad & Steering Wheel for PC Games" },
       {
         name: "description",
         content:
-          "Turn your phone into a real gamepad: tilt steering wheel, analog pedals, dual thumbsticks and a full button deck streamed to your PC.",
+          "A real console-style gamepad and a full driving rig with clutch, brake, accelerator, handbrake, nitro and horn — streamed from your phone to any PC game.",
       },
-      { property: "og:title", content: "Mobile Rig — Virtual Wheel & Joystick" },
+      { property: "og:title", content: "Mobile Rig — Gamepad & Wheel for PC" },
       {
         property: "og:description",
         content:
-          "Tilt steering, analog pedals and dual sticks from your phone, mapped to a real virtual gamepad on your PC.",
+          "Console-grade thumbsticks, D-pad and triggers, plus a full pedal set with clutch, handbrake and nitro. Pro sensitivity presets for GTA V, Forza and shooters.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -41,10 +43,11 @@ const STORAGE_KEY = "mobile-rig-settings";
 function Rig() {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [showSettings, setShowSettings] = useState(false);
-  const [mode, setMode] = useState<"wheel" | "stick">("wheel");
-  const [hud, setHud] = useState({ steer: 0, throttle: 0, brake: 0 });
+  const [mode, setMode] = useState<"pad" | "wheel">("pad");
+  const [preset, setPreset] = useState<string>("gtav");
+  const [hud, setHud] = useState({ a: 0, b: 0, c: 0 });
   const stateRef = useRef<ControllerState>(emptyState());
-  const { status, latency, packets, connect, disconnect } = useBridge(stateRef, settings.sendRateHz);
+  const { status, latency, connect, disconnect } = useBridge(stateRef, settings.sendRateHz);
 
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -65,6 +68,11 @@ function Rig() {
     });
   }, []);
 
+  const applyPreset = (key: string) => {
+    setPreset(key);
+    patch(PRESETS[key].patch);
+  };
+
   const set = useCallback((p: Partial<ControllerState>) => {
     stateRef.current = { ...stateRef.current, ...p };
   }, []);
@@ -76,16 +84,19 @@ function Rig() {
     };
   }, []);
 
-  // Lightweight HUD refresh (10Hz) so the 60Hz input path stays render-free.
   useEffect(() => {
     const t = setInterval(() => {
       const s = stateRef.current;
-      setHud({ steer: s.steer, throttle: s.throttle, brake: s.brake });
-    }, 100);
+      setHud(
+        mode === "wheel"
+          ? { a: s.steer, b: s.throttle, c: s.brake }
+          : { a: s.lx, b: s.rx, c: Math.max(s.lt, s.rt) },
+      );
+    }, 120);
     return () => clearInterval(t);
-  }, []);
+  }, [mode]);
 
-  const statusTone =
+  const tone =
     status === "connected"
       ? "text-[var(--success)]"
       : status === "error"
@@ -93,29 +104,28 @@ function Rig() {
         : "text-muted-foreground";
 
   return (
-    <main className="min-h-screen px-3 pb-6 pt-3 sm:px-5">
-      {/* top bar */}
-      <header className="panel grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5">
-        <div className="flex min-w-0 items-center gap-3">
+    <main className="min-h-screen px-2 pb-4 pt-2 sm:px-4">
+      {/* ---------- top bar ---------- */}
+      <header className="panel grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2">
+        <div className="flex min-w-0 items-center gap-2.5">
           <div
-            className="grid size-9 shrink-0 place-items-center rounded-xl text-sm font-black text-primary-foreground"
+            className="grid size-8 shrink-0 place-items-center rounded-lg text-xs font-black text-primary-foreground"
             style={{ background: "var(--gradient-primary)" }}
           >
             MR
           </div>
           <div className="min-w-0">
-            <h1 className="truncate text-sm font-bold sm:text-base">Mobile Rig</h1>
-            <p className={`truncate text-[11px] font-semibold uppercase tracking-widest ${statusTone}`}>
+            <h1 className="truncate text-sm font-bold">Mobile Rig</h1>
+            <p className={`truncate text-[10px] font-semibold uppercase tracking-widest ${tone}`}>
               {status}
               {latency !== null && ` · ${latency} ms`}
-              {status === "connected" && ` · ${packets} pkt`}
             </p>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <button
             onClick={() => (status === "connected" ? disconnect() : connect(settings.bridgeUrl))}
-            className="rounded-xl px-3 py-2 text-xs font-bold uppercase tracking-widest"
+            className="rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest"
             style={
               status === "connected"
                 ? { border: "1px solid var(--border)" }
@@ -126,124 +136,264 @@ function Rig() {
           </button>
           <button
             onClick={() => setShowSettings(true)}
-            className="rounded-xl border border-border px-3 py-2 text-xs font-bold uppercase tracking-widest"
+            className="rounded-lg border border-border px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest"
           >
-            Setup
+            Tune
           </button>
         </div>
       </header>
 
-      {/* mode switch */}
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        {(["wheel", "stick"] as const).map((m) => (
-          <button
-            key={m}
-            onClick={() => setMode(m)}
-            className={`rounded-xl border px-3 py-2 text-xs font-bold uppercase tracking-widest ${
-              mode === m
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-card/60 text-muted-foreground"
-            }`}
-          >
-            {m === "wheel" ? "Wheel + pedals" : "Dual sticks"}
-          </button>
-        ))}
+      {/* ---------- mode + preset ---------- */}
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <div className="flex rounded-xl border border-border p-0.5">
+          {(["pad", "wheel"] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              className={`rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest ${
+                mode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+              }`}
+            >
+              {m === "pad" ? "Gamepad" : "Steering rig"}
+            </button>
+          ))}
+        </div>
+        <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto">
+          {Object.entries(PRESETS).map(([k, p]) => (
+            <button
+              key={k}
+              onClick={() => applyPreset(k)}
+              className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-widest ${
+                preset === k
+                  ? "border-accent text-accent"
+                  : "border-border text-muted-foreground"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* telemetry */}
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        {[
-          { k: "Steer", v: `${(hud.steer * 100).toFixed(0)}%` },
-          { k: "Throttle", v: `${(hud.throttle * 100).toFixed(0)}%` },
-          { k: "Brake", v: `${(hud.brake * 100).toFixed(0)}%` },
-        ].map((x) => (
-          <div key={x.k} className="panel px-3 py-2 text-center">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{x.k}</p>
-            <p className="text-lg font-bold tabular-nums">{x.v}</p>
-          </div>
-        ))}
-      </div>
+      {mode === "pad" ? (
+        <GamepadLayout settings={settings} set={set} press={press} hud={hud} />
+      ) : (
+        <WheelLayout settings={settings} set={set} press={press} hud={hud} />
+      )}
 
-      {/* main controls */}
-      <section className="mt-3 flex items-end justify-between gap-2">
-        {mode === "wheel" ? (
-          <>
-            <Pedal label="Brake" tone="stop" onChange={(v) => set({ brake: v })} />
-            <SteeringWheel settings={settings} onSteer={(v) => set({ steer: v })} />
-            <Pedal label="Gas" tone="go" onChange={(v) => set({ throttle: v })} />
-          </>
-        ) : (
-          <>
-            <Joystick
-              label="Left stick"
-              deadzone={settings.deadzone}
-              linearity={settings.linearity}
-              sensitivity={settings.sensitivity}
-              autoCentre={settings.autoCentre}
-              onMove={(x, y) => set({ lx: x, ly: y })}
-            />
-            <Joystick
-              label="Right stick"
-              deadzone={settings.deadzone}
-              linearity={settings.linearity}
-              sensitivity={settings.sensitivity}
-              autoCentre={settings.autoCentre}
-              onMove={(x, y) => set({ rx: x, ry: y })}
-            />
-          </>
-        )}
-      </section>
-
-      {/* gears + handbrake */}
-      <section className="mt-3 grid grid-cols-4 gap-2">
-        <ActionButton
-          label="Shift ↓"
-          vibration={settings.vibration}
-          onPress={(d) => set({ gear: d ? -1 : 0 })}
-        />
-        <ActionButton
-          label="Shift ↑"
-          vibration={settings.vibration}
-          onPress={(d) => set({ gear: d ? 1 : 0 })}
-        />
-        <ActionButton
-          label="Hand"
-          vibration={settings.vibration}
-          onPress={(d) => set({ handbrake: d ? 1 : 0 })}
-        />
-        <ActionButton
-          label="Clutch"
-          vibration={settings.vibration}
-          onPress={(d) => set({ clutch: d ? 1 : 0 })}
-        />
-      </section>
-
-      {/* button deck */}
-      <section className="mt-2 grid grid-cols-4 gap-2">
-        {BUTTONS.map((b) => (
-          <ActionButton
-            key={b.id}
-            label={b.label}
-            vibration={settings.vibration}
-            onPress={(d) => press(b.id, d)}
-          />
-        ))}
-      </section>
-
-      <p className="mt-4 text-center text-xs text-muted-foreground">
-        Not connected yet?{" "}
+      <p className="mt-3 text-center text-[11px] text-muted-foreground">
         <Link to="/setup" className="font-semibold text-primary underline">
-          Set up the PC side
+          PC setup guide
         </Link>
       </p>
 
       {showSettings && (
-        <SettingsPanel
-          settings={settings}
-          onChange={patch}
-          onClose={() => setShowSettings(false)}
-        />
+        <SettingsPanel settings={settings} onChange={patch} onClose={() => setShowSettings(false)} />
       )}
     </main>
+  );
+}
+
+type LayoutProps = {
+  settings: Settings;
+  set: (p: Partial<ControllerState>) => void;
+  press: (id: string, down: boolean) => void;
+  hud: { a: number; b: number; c: number };
+};
+
+/* ---------------- Gamepad: console layout, everything on one screen ------- */
+function GamepadLayout({ settings, set, press, hud }: LayoutProps) {
+  return (
+    <section className="mt-2 space-y-2">
+      {/* shoulders */}
+      <div className="flex items-start justify-between">
+        <div className="flex gap-2">
+          <ActionButton label="LB" vibration={settings.vibration} onPress={(d) => press("lb", d)} />
+          <Trigger label="LT" onChange={(v) => set({ lt: v })} />
+        </div>
+        <div className="flex gap-2">
+          <Trigger label="RT" onChange={(v) => set({ rt: v })} />
+          <ActionButton label="RB" vibration={settings.vibration} onPress={(d) => press("rb", d)} />
+        </div>
+      </div>
+
+      {/* main deck */}
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
+        {/* left cluster */}
+        <div className="flex flex-col items-center gap-2">
+          <Joystick
+            label="Move"
+            deadzone={settings.deadzone}
+            linearity={settings.linearity}
+            sensitivity={settings.sensitivity}
+            autoCentre={settings.autoCentre}
+            onMove={(x, y) => set({ lx: x, ly: y })}
+          />
+          <DPad vibration={settings.vibration} onPress={(d, down) => press(`dpad_${d}`, down)} />
+        </div>
+
+        {/* centre column */}
+        <div className="flex min-w-0 flex-col items-center gap-2">
+          <div className="grid w-full grid-cols-3 gap-1.5">
+            {[
+              { k: "L-X", v: hud.a },
+              { k: "R-X", v: hud.b },
+              { k: "TRIG", v: hud.c },
+            ].map((x) => (
+              <div key={x.k} className="panel px-1 py-1.5 text-center">
+                <p className="text-[9px] uppercase tracking-[0.15em] text-muted-foreground">{x.k}</p>
+                <p className="text-sm font-bold tabular-nums">{(x.v * 100).toFixed(0)}</p>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <ActionButton
+              label="Back"
+              vibration={settings.vibration}
+              onPress={(d) => press("back", d)}
+            />
+            <ActionButton
+              label="Start"
+              vibration={settings.vibration}
+              onPress={(d) => press("start", d)}
+            />
+          </div>
+          <div className="flex gap-2">
+            <ActionButton label="L3" vibration={settings.vibration} onPress={(d) => press("l3", d)} />
+            <ActionButton label="R3" vibration={settings.vibration} onPress={(d) => press("r3", d)} />
+          </div>
+        </div>
+
+        {/* right cluster */}
+        <div className="flex flex-col items-center gap-2">
+          <div className="grid size-28 grid-cols-3 grid-rows-3">
+            <div className="col-start-2 row-start-1">
+              <ActionButton
+                label="Y"
+                vibration={settings.vibration}
+                onPress={(d) => press("y", d)}
+                className="size-full rounded-full"
+              />
+            </div>
+            <div className="col-start-1 row-start-2">
+              <ActionButton
+                label="X"
+                vibration={settings.vibration}
+                onPress={(d) => press("x", d)}
+                className="size-full rounded-full"
+              />
+            </div>
+            <div className="col-start-3 row-start-2">
+              <ActionButton
+                label="B"
+                vibration={settings.vibration}
+                onPress={(d) => press("b", d)}
+                className="size-full rounded-full"
+              />
+            </div>
+            <div className="col-start-2 row-start-3">
+              <ActionButton
+                label="A"
+                vibration={settings.vibration}
+                onPress={(d) => press("a", d)}
+                className="size-full rounded-full"
+              />
+            </div>
+          </div>
+          <Joystick
+            label="Aim"
+            deadzone={settings.deadzone}
+            linearity={settings.linearity}
+            sensitivity={settings.sensitivity}
+            autoCentre={settings.autoCentre}
+            onMove={(x, y) => set({ rx: x, ry: settings.invertLookY ? -y : y })}
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ---------------- Steering rig: wheel + full pedal set -------------------- */
+function WheelLayout({ settings, set, press, hud }: LayoutProps) {
+  return (
+    <section className="mt-2 space-y-2">
+      <div className="grid grid-cols-3 gap-1.5">
+        {[
+          { k: "Steer", v: hud.a },
+          { k: "Gas", v: hud.b },
+          { k: "Brake", v: hud.c },
+        ].map((x) => (
+          <div key={x.k} className="panel px-2 py-1.5 text-center">
+            <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground">{x.k}</p>
+            <p className="text-base font-bold tabular-nums">{(x.v * 100).toFixed(0)}%</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-2">
+        {/* wheel + paddles */}
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex w-full justify-between gap-2">
+            <ActionButton
+              label="◀ Gear"
+              vibration={settings.vibration}
+              onPress={(d) => set({ gear: d ? -1 : 0 })}
+            />
+            <ActionButton
+              label="Gear ▶"
+              vibration={settings.vibration}
+              onPress={(d) => set({ gear: d ? 1 : 0 })}
+            />
+          </div>
+          <SteeringWheel settings={settings} onSteer={(v) => set({ steer: v })} />
+        </div>
+
+        {/* pedal box */}
+        <div className="flex items-end justify-end gap-1.5">
+          <Pedal label="Clutch" tone="neutral" onChange={(v) => set({ clutch: v })} />
+          <Pedal label="Brake" tone="stop" onChange={(v) => set({ brake: v })} />
+          <Pedal label="Gas" tone="go" onChange={(v) => set({ throttle: v })} />
+        </div>
+      </div>
+
+      {/* driving extras */}
+      <div className="grid grid-cols-4 gap-2">
+        <ActionButton
+          label="Handbrake"
+          vibration={settings.vibration}
+          onPress={(d) => set({ handbrake: d ? 1 : 0 })}
+        />
+        <ActionButton
+          label="Nitro"
+          vibration={settings.vibration}
+          onPress={(d) => set({ nitro: d ? 1 : 0 })}
+        />
+        <ActionButton label="Horn" vibration={settings.vibration} onPress={(d) => press("horn", d)} />
+        <ActionButton
+          label="Look"
+          vibration={settings.vibration}
+          onPress={(d) => press("look", d)}
+        />
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        <ActionButton
+          label="Lights"
+          vibration={settings.vibration}
+          onPress={(d) => press("lights", d)}
+        />
+        <ActionButton
+          label="Reset"
+          vibration={settings.vibration}
+          onPress={(d) => press("reset", d)}
+        />
+        <ActionButton label="Back" vibration={settings.vibration} onPress={(d) => press("back", d)} />
+        <ActionButton
+          label="Start"
+          vibration={settings.vibration}
+          onPress={(d) => press("start", d)}
+        />
+      </div>
+    </section>
   );
 }

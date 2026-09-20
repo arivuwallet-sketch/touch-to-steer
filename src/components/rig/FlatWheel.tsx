@@ -294,13 +294,17 @@ export function FlatWheel({ settings, set, press }: Props) {
       return;
     }
 
-    const duration = Math.min(280, 150 + Math.round(Math.abs(startAngle) * 0.18));
+    // Medium-smooth return: deliberate enough to feel like a real wheel
+    // settling back to center, without taking so long that it feels sluggish.
+    const duration = Math.min(760, 520 + Math.round(Math.abs(startAngle) * 0.32));
     const startedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
 
     const frame = (time: number) => {
       const elapsed = time - startedAt;
       const t = Math.min(1, elapsed / duration);
-      const eased = 1 - Math.pow(1 - t, 3);
+      const eased = t < 0.5
+        ? 4 * t * t * t
+        : 1 - Math.pow(-2 * t + 2, 3) / 2;
       const angle = startAngle * (1 - eased);
 
       paintWheel(angle);

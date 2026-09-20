@@ -62,8 +62,8 @@ export function Label({
 }: {
   children: React.ReactNode;
   position: [number, number, number];
-  size?: number;
-  dim?: boolean;
+  size?: number | undefined;
+  dim?: boolean | undefined;
 }) {
   return (
     <Html position={position} center transform={false} zIndexRange={[5, 0]} pointerEvents="none">
@@ -97,12 +97,12 @@ export function Button3D({
   onPress,
 }: {
   position: [number, number, number];
-  radius?: number;
-  color?: string;
-  glow?: string;
-  label?: string;
-  labelSize?: number;
-  vibration?: boolean;
+  radius?: number | undefined;
+  color?: string | undefined;
+  glow?: string | undefined;
+  label?: string | undefined;
+  labelSize?: number | undefined;
+  vibration?: boolean | undefined;
   onPress: (down: boolean) => void;
 }) {
   const g = useRef<Group>(null);
@@ -155,11 +155,11 @@ export function Pad3D({
   onPress,
 }: {
   position: [number, number, number];
-  size?: [number, number, number];
-  label?: string;
-  color?: string;
-  glow?: string;
-  vibration?: boolean;
+  size?: [number, number, number] | undefined;
+  label?: string | undefined;
+  color?: string | undefined;
+  glow?: string | undefined;
+  vibration?: boolean | undefined;
   onPress: (down: boolean) => void;
 }) {
   const g = useRef<Group>(null);
@@ -206,11 +206,11 @@ export function Stick3D({
   onClick3,
 }: {
   position: [number, number, number];
-  label?: string;
-  radius?: number;
-  vibration?: boolean;
+  label?: string | undefined;
+  radius?: number | undefined;
+  vibration?: boolean | undefined;
   onMove: (x: number, y: number) => void;
-  onClick3?: (down: boolean) => void;
+  onClick3?: ((down: boolean) => void) | undefined;
 }) {
   const stick = useRef<Group>(null);
   const target = useRef({ x: 0, y: 0 });

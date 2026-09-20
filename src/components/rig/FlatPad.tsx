@@ -146,7 +146,7 @@ function Stick({
           onClick3(true);
           window.setTimeout(() => onClick3(false), 90);
         }}
-        className="flat-pad-stick relative size-[clamp(5.25rem,23svh,10.5rem)] touch-none rounded-full border border-white/10 bg-[#0c1117] shadow-[inset_0_0_22px_rgba(0,0,0,.95),0_8px_20px_rgba(0,0,0,.45)]"
+        className="flat-pad-stick relative size-[clamp(5.25rem,23cqh,10.5rem)] touch-none rounded-full border border-white/10 bg-[#0c1117] shadow-[inset_0_0_22px_rgba(0,0,0,.95),0_8px_20px_rgba(0,0,0,.45)]"
       >
         <div className="absolute inset-[8%] rounded-full border border-[#2e3945] bg-[radial-gradient(circle_at_38%_28%,#202a35,#080c11_72%)]" />
         <div
@@ -175,12 +175,12 @@ function ApexDPad({ settings, press, turbo }: { settings: Settings; press: Props
       settings={settings}
       press={press}
       turbo={turbo}
-      className={`absolute ${position} size-[clamp(2.75rem,8svh,3rem)] rounded-xl text-[clamp(1.2rem,4svh,1.5rem)]`}
+      className={`absolute ${position} size-[clamp(2.75rem,8cqh,3rem)] rounded-xl text-[clamp(1.2rem,4cqh,1.5rem)]`}
     />
   );
 
   return (
-    <div className="flat-pad-dpad relative size-[clamp(6.75rem,22svh,10rem)]">
+    <div className="flat-pad-dpad relative size-[clamp(6.75rem,22cqh,10rem)]">
       <div className="absolute left-1/2 top-1/2 size-12 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#11171e] shadow-inner" />
       {cell("up", "↑", "left-1/2 top-0 -translate-x-1/2")}
       {cell("left", "←", "left-0 top-1/2 -translate-y-1/2")}
@@ -196,11 +196,11 @@ function ApexDPad({ settings, press, turbo }: { settings: Settings; press: Props
 
 function ApexFaceButtons({ settings, press, turbo }: { settings: Settings; press: Props["press"]; turbo: boolean }) {
   return (
-    <div className="flat-pad-face relative size-[clamp(7.5rem,24svh,11rem)]">
-      <SurfaceButton label="Y" id="y" settings={settings} press={press} turbo={turbo} className="absolute left-1/2 top-0 size-[clamp(2.75rem,8svh,3.5rem)] -translate-x-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#ffd43b]" />
-      <SurfaceButton label="X" id="x" settings={settings} press={press} turbo={turbo} className="absolute left-0 top-1/2 size-[clamp(2.75rem,8svh,3.5rem)] -translate-y-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#58b9ff]" />
-      <SurfaceButton label="B" id="b" settings={settings} press={press} turbo={turbo} className="absolute right-0 top-1/2 size-[clamp(2.75rem,8svh,3.5rem)] -translate-y-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#ff5b57]" />
-      <SurfaceButton label="A" id="a" settings={settings} press={press} turbo={turbo} className="absolute bottom-0 left-1/2 size-[clamp(2.75rem,8svh,3.5rem)] -translate-x-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#62df87]" />
+    <div className="flat-pad-face relative size-[clamp(7.5rem,24cqh,11rem)]">
+      <SurfaceButton label="Y" id="y" settings={settings} press={press} turbo={turbo} className="absolute left-1/2 top-0 size-[clamp(2.75rem,8cqh,3.5rem)] -translate-x-1/2 text-[clamp(1.25rem,4.5cqh,1.5rem)] text-[#ffd43b]" />
+      <SurfaceButton label="X" id="x" settings={settings} press={press} turbo={turbo} className="absolute left-0 top-1/2 size-[clamp(2.75rem,8cqh,3.5rem)] -translate-y-1/2 text-[clamp(1.25rem,4.5cqh,1.5rem)] text-[#58b9ff]" />
+      <SurfaceButton label="B" id="b" settings={settings} press={press} turbo={turbo} className="absolute right-0 top-1/2 size-[clamp(2.75rem,8cqh,3.5rem)] -translate-y-1/2 text-[clamp(1.25rem,4.5cqh,1.5rem)] text-[#ff5b57]" />
+      <SurfaceButton label="A" id="a" settings={settings} press={press} turbo={turbo} className="absolute bottom-0 left-1/2 size-[clamp(2.75rem,8cqh,3.5rem)] -translate-x-1/2 text-[clamp(1.25rem,4.5cqh,1.5rem)] text-[#62df87]" />
     </div>
   );
 }
@@ -257,7 +257,7 @@ function Trigger({
       onPointerMove={(e) => pointer.current === e.pointerId && move(e)}
       onPointerUp={release}
       onPointerCancel={release}
-      className="flat-pad-trigger grid h-[clamp(2.75rem,7.8svh,3.5rem)] w-[clamp(4.5rem,8vw,6rem)] touch-none place-items-center rounded-xl border border-white/10 bg-[linear-gradient(180deg,#303b47,#10151b)] text-[10px] font-black tracking-[0.25em] text-cyan-300 shadow-[inset_0_2px_2px_rgba(255,255,255,.08),0_6px_14px_rgba(0,0,0,.5)]"
+      className="flat-pad-trigger grid h-[clamp(2.75rem,7.8cqh,3.5rem)] w-[clamp(4.5rem,8cqw,6rem)] touch-none place-items-center rounded-xl border border-white/10 bg-[linear-gradient(180deg,#303b47,#10151b)] text-[10px] font-black tracking-[0.25em] text-cyan-300 shadow-[inset_0_2px_2px_rgba(255,255,255,.08),0_6px_14px_rgba(0,0,0,.5)]"
       style={{ boxShadow: value ? "0 0 20px rgba(34,211,238,.25), inset 0 0 12px rgba(0,0,0,.65)" : undefined }}
     >
       <span>{label}</span>
@@ -284,7 +284,7 @@ function MiniScreen({
   }, []);
 
   return (
-    <div className="flat-pad-screen flex h-[clamp(2.75rem,7.8svh,3.5rem)] w-[clamp(5rem,7vw,7rem)] flex-col items-center justify-center rounded-lg border border-cyan-300/25 bg-[#071018] shadow-[inset_0_0_14px_rgba(34,211,238,.12),0_0_12px_rgba(34,211,238,.1)]">
+    <div className="flat-pad-screen flex h-[clamp(2.75rem,7.8cqh,3.5rem)] w-[clamp(5rem,7cqw,7rem)] flex-col items-center justify-center rounded-lg border border-cyan-300/25 bg-[#071018] shadow-[inset_0_0_14px_rgba(34,211,238,.12),0_0_12px_rgba(34,211,238,.1)]">
       <span className="text-[7px] font-black tracking-[0.25em] text-cyan-400/70">APEX 5</span>
       <span className="mt-1 text-[10px] font-mono font-bold text-cyan-200">
         {tick === 0 ? `P${profile}` : tick === 1 ? triggerMode.toUpperCase() : tick === 2 ? (motion ? "GYRO ON" : "GYRO OFF") : (turbo ? "TURBO ON" : "READY")}
@@ -312,7 +312,7 @@ function ExtraButton({
       id={id}
       settings={settings}
       press={press}
-      className={`h-[clamp(2.25rem,6.5svh,2.75rem)] min-w-[clamp(4rem,7vw,4.5rem)] rounded-xl px-3 text-[9px] text-slate-300 ${className}`}
+      className={`h-[clamp(2.25rem,6.5cqh,2.75rem)] min-w-[clamp(4rem,7cqw,4.5rem)] rounded-xl px-3 text-[9px] text-slate-300 ${className}`}
     />
   );
 }
@@ -426,35 +426,35 @@ export function FlatPad({ settings, set, press }: Props) {
 
       <div className="pointer-events-none absolute inset-x-[7%] top-[12%] bottom-[8%] rounded-[34%_34%_42%_42%/18%_18%_44%_44%] border border-white/5 bg-[#0b1118]/70 shadow-[inset_0_0_50px_rgba(0,0,0,.7)]" />
 
-      <div className="flat-pad-left absolute bottom-[17%] left-[7%] flex items-center gap-[clamp(1rem,3vw,2.5rem)]">
+      <div className="flat-pad-left absolute bottom-[17%] left-[7%] flex items-center gap-[clamp(1rem,3cqw,2.5rem)]">
         <Stick side="left" settings={settings} onMove={(x, y) => set({ lx: x, ly: y })} onClick3={(d) => press("l3", d)} />
         <ApexDPad settings={settings} press={press} turbo={turbo} />
       </div>
 
       <div className="flat-pad-center absolute left-1/2 top-[27%] flex -translate-x-1/2 flex-col items-center gap-2">
-        <div className="flat-pad-center-box relative w-[clamp(14rem,27vw,20rem)] rounded-[2rem] bg-[linear-gradient(145deg,#39434f,#171d24)] px-5 py-4 shadow-[inset_0_2px_2px_rgba(255,255,255,.09),0_12px_24px_rgba(0,0,0,.48)]">
+        <div className="flat-pad-center-box relative w-[clamp(14rem,27cqw,20rem)] rounded-[2rem] bg-[linear-gradient(145deg,#39434f,#171d24)] px-5 py-4 shadow-[inset_0_2px_2px_rgba(255,255,255,.09),0_12px_24px_rgba(0,0,0,.48)]">
           <div className="flex items-center justify-center gap-3">
-            <SurfaceButton label="VIEW" id="back" settings={settings} press={press} className="h-[clamp(2rem,5.6svh,2.5rem)] min-w-[clamp(3.5rem,5vw,4rem)] rounded-lg text-[8px] text-slate-300" />
+            <SurfaceButton label="VIEW" id="back" settings={settings} press={press} className="h-[clamp(2rem,5.6cqh,2.5rem)] min-w-[clamp(3.5rem,5cqw,4rem)] rounded-lg text-[8px] text-slate-300" />
             <MiniScreen profile={profile} triggerMode={triggerMode} motion={gyroEnabled} turbo={turbo} />
-            <SurfaceButton label="MENU" id="start" settings={settings} press={press} className="h-[clamp(2rem,5.6svh,2.5rem)] min-w-[clamp(3.5rem,5vw,4rem)] rounded-lg text-[8px] text-slate-300" />
+            <SurfaceButton label="MENU" id="start" settings={settings} press={press} className="h-[clamp(2rem,5.6cqh,2.5rem)] min-w-[clamp(3.5rem,5cqw,4rem)] rounded-lg text-[8px] text-slate-300" />
           </div>
           <div className="mt-2 flex items-center justify-center gap-2">
-            <SurfaceButton label="PROFILE −" id="minus" settings={settings} press={press} onClick={() => cycleProfile(-1)} className="h-[clamp(2rem,5.4svh,2.25rem)] min-w-[clamp(4rem,5vw,5rem)] rounded-md text-[7px] leading-none" />
-            <SurfaceButton label="HOME" id="home" settings={settings} press={press} className="h-[clamp(2rem,5.4svh,2.25rem)] min-w-[clamp(4rem,5vw,5rem)] rounded-md text-[7px]" />
-            <SurfaceButton label="PROFILE +" id="plus" settings={settings} press={press} onClick={() => cycleProfile(1)} className="h-[clamp(2rem,5.4svh,2.25rem)] min-w-[clamp(4rem,5vw,5rem)] rounded-md text-[7px]" />
+            <SurfaceButton label="PROFILE −" id="minus" settings={settings} press={press} onClick={() => cycleProfile(-1)} className="h-[clamp(2rem,5.4cqh,2.25rem)] min-w-[clamp(4rem,5cqw,5rem)] rounded-md text-[7px] leading-none" />
+            <SurfaceButton label="HOME" id="home" settings={settings} press={press} className="h-[clamp(2rem,5.4cqh,2.25rem)] min-w-[clamp(4rem,5cqw,5rem)] rounded-md text-[7px]" />
+            <SurfaceButton label="PROFILE +" id="plus" settings={settings} press={press} onClick={() => cycleProfile(1)} className="h-[clamp(2rem,5.4cqh,2.25rem)] min-w-[clamp(4rem,5cqw,5rem)] rounded-md text-[7px]" />
           </div>
           <div className="mt-2 grid grid-cols-3 gap-2">
-            <SurfaceButton label="FN" id="fn" settings={settings} press={press} className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg text-[7px] text-slate-300" />
+            <SurfaceButton label="FN" id="fn" settings={settings} press={press} className="h-[clamp(1.8rem,4.8cqh,2rem)] min-w-0 w-full rounded-lg text-[7px] text-slate-300" />
             <SurfaceButton label="LOGO" id="logo" settings={settings} press={press} className="h-8 min-w-0 w-full rounded-lg text-[7px] text-slate-300" />
-            <button type="button" onClick={() => setTurbo((v) => !v)} className={`h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border px-2 text-[7px] font-black uppercase tracking-[0.14em] ${turbo ? "border-orange-300/50 bg-orange-300/10 text-orange-200" : "border-white/10 bg-black/20 text-slate-400"}`}>TURBO</button>
+            <button type="button" onClick={() => setTurbo((v) => !v)} className={`h-[clamp(1.8rem,4.8cqh,2rem)] min-w-0 w-full rounded-lg border px-2 text-[7px] font-black uppercase tracking-[0.14em] ${turbo ? "border-orange-300/50 bg-orange-300/10 text-orange-200" : "border-white/10 bg-black/20 text-slate-400"}`}>TURBO</button>
             <GyroControl enabled={gyroEnabled} denied={gyroDenied} onToggle={requestGyro} />
-            <button type="button" onClick={nextTriggerMode} className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border border-white/10 bg-black/20 px-2 text-[7px] font-black uppercase tracking-[0.14em] text-slate-400">TRIGGER</button>
-            <button type="button" onClick={() => setRgb((v) => !v)} className={`h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border px-2 text-[7px] font-black uppercase tracking-[0.14em] ${rgb ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-200" : "border-white/10 bg-black/20 text-slate-400"}`}>RGB</button>
+            <button type="button" onClick={nextTriggerMode} className="h-[clamp(1.8rem,4.8cqh,2rem)] min-w-0 w-full rounded-lg border border-white/10 bg-black/20 px-2 text-[7px] font-black uppercase tracking-[0.14em] text-slate-400">TRIGGER</button>
+            <button type="button" onClick={() => setRgb((v) => !v)} className={`h-[clamp(1.8rem,4.8cqh,2rem)] min-w-0 w-full rounded-lg border px-2 text-[7px] font-black uppercase tracking-[0.14em] ${rgb ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-200" : "border-white/10 bg-black/20 text-slate-400"}`}>RGB</button>
           </div>
         </div>
       </div>
 
-      <div className="flat-pad-right absolute bottom-[17%] right-[7%] flex items-center gap-[clamp(1rem,3vw,2.5rem)]">
+      <div className="flat-pad-right absolute bottom-[17%] right-[7%] flex items-center gap-[clamp(1rem,3cqw,2.5rem)]">
         <ApexFaceButtons settings={settings} press={press} turbo={turbo} />
         <Stick side="right" settings={settings} onMove={(x, y) => set({ rx: x, ry: settings.invertLookY ? -y : y })} onClick3={(d) => press("r3", d)} />
       </div>

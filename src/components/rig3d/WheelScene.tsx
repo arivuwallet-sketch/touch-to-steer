@@ -43,7 +43,7 @@ function Pedal3D({
   });
 
   return (
-    <group position={position}>
+    <group position={position} rotation={[-Math.PI / 2, 0, 0]}>
       <RoundedBox args={[1.1, 0.18, 1.8]} radius={0.08} smoothness={5} position={[0, -0.7, 0.25]} receiveShadow>
         <meshStandardMaterial color="#0b0f14" metalness={0.82} roughness={0.48} />
       </RoundedBox>

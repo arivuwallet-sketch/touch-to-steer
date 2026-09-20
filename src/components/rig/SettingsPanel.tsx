@@ -1,15 +1,9 @@
-import type { BridgeStatus } from "@/hooks/useBridge";
-import { PRESETS, type Settings } from "@/lib/controller-types";
+import type { Settings } from "@/lib/controller-types";
 
 type Props = {
   settings: Settings;
   onChange: (patch: Partial<Settings>) => void;
   onClose: () => void;
-  connectionStatus: BridgeStatus;
-  onConnect: () => void;
-  onDisconnect: () => void;
-  preset: string;
-  onPreset: (key: string) => void;
 };
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -21,27 +15,12 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-export function SettingsPanel({
-  settings,
-  onChange,
-  onClose,
-  connectionStatus,
-  onConnect,
-  onDisconnect,
-  preset,
-  onPreset,
-}: Props) {
-  const connected = connectionStatus === "connected";
-  const connecting = connectionStatus === "connecting";
-
+export function SettingsPanel({ settings, onChange, onClose }: Props) {
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/75 backdrop-blur-sm">
-      <div className="panel h-full w-full max-w-sm overflow-y-auto rounded-none border-l border-border bg-card/95 p-5">
+    <div className="fixed inset-0 z-50 flex justify-end bg-background/70 backdrop-blur-sm">
+      <div className="panel h-full w-full max-w-sm overflow-y-auto rounded-none p-5">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
-          <div className="min-w-0">
-            <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-primary">Mobile Rig</p>
-            <h2 className="mt-1 min-w-0 truncate text-lg font-bold">Rig setup</h2>
-          </div>
+          <h2 className="min-w-0 truncate text-lg font-bold">Rig setup</h2>
           <button
             onClick={onClose}
             className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold uppercase tracking-widest"
@@ -51,17 +30,6 @@ export function SettingsPanel({
         </div>
 
         <div className="mt-4 divide-y divide-border">
-          <Row label={`Bridge · ${connectionStatus}`}>
-            <button
-              type="button"
-              onClick={connected ? onDisconnect : onConnect}
-              disabled={connecting}
-              className="rounded-lg border border-border bg-background px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest disabled:opacity-50"
-            >
-              {connecting ? "Connecting…" : connected ? "Disconnect" : "Connect"}
-            </button>
-          </Row>
-
           <Row label="Bridge address">
             <input
               value={settings.bridgeUrl}
@@ -71,29 +39,6 @@ export function SettingsPanel({
               className="w-44 rounded-lg border border-input bg-background px-2 py-1.5 text-right text-xs"
             />
           </Row>
-
-          <div className="py-2.5">
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
-              <span className="text-sm text-muted-foreground">Game preset</span>
-              <div className="flex max-w-52 flex-wrap justify-end gap-1">
-                {Object.entries(PRESETS).map(([key, value]) => (
-                  <button
-                    type="button"
-                    key={key}
-                    onClick={() => onPreset(key)}
-                    className={`rounded-md border px-2 py-1 text-[9px] font-bold uppercase tracking-widest transition-colors ${
-                      preset === key
-                        ? "border-primary text-primary"
-                        : "border-border text-muted-foreground"
-                    }`}
-                  >
-                    {value.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
           <Row label="Steering input">
             <select
               value={settings.steerMode}
@@ -104,7 +49,6 @@ export function SettingsPanel({
               <option value="touch">Touch wheel</option>
             </select>
           </Row>
-
           <Row label={`Stick / aim sensitivity ${settings.sensitivity.toFixed(2)}`}>
             <input
               type="range"
@@ -116,7 +60,6 @@ export function SettingsPanel({
               className="w-40 accent-[var(--primary)]"
             />
           </Row>
-
           <Row label={`Steering sensitivity ${settings.steerSensitivity.toFixed(2)}`}>
             <input
               type="range"
@@ -128,7 +71,6 @@ export function SettingsPanel({
               className="w-40 accent-[var(--primary)]"
             />
           </Row>
-
           <Row label={`Wheel rotation ${settings.wheelRotationDeg}°`}>
             <input
               type="range"
@@ -140,7 +82,6 @@ export function SettingsPanel({
               className="w-40 accent-[var(--primary)]"
             />
           </Row>
-
           <Row label={`Stick tension ${(settings.stickTension * 100).toFixed(0)}%`}>
             <input
               type="range"
@@ -152,7 +93,6 @@ export function SettingsPanel({
               className="w-40 accent-[var(--primary)]"
             />
           </Row>
-
           <Row label="Invert aim Y">
             <input
               type="checkbox"
@@ -161,7 +101,6 @@ export function SettingsPanel({
               className="size-5 accent-[var(--primary)]"
             />
           </Row>
-
           <Row label={`Dead zone ${(settings.deadzone * 100).toFixed(0)}%`}>
             <input
               type="range"
@@ -173,7 +112,6 @@ export function SettingsPanel({
               className="w-40 accent-[var(--primary)]"
             />
           </Row>
-
           <Row label={`Linearity ${settings.linearity.toFixed(1)}`}>
             <input
               type="range"
@@ -185,7 +123,6 @@ export function SettingsPanel({
               className="w-40 accent-[var(--primary)]"
             />
           </Row>
-
           <Row label={`Max tilt ${settings.maxTiltDeg}°`}>
             <input
               type="range"
@@ -197,7 +134,6 @@ export function SettingsPanel({
               className="w-40 accent-[var(--primary)]"
             />
           </Row>
-
           <Row label={`Update rate ${settings.sendRateHz} Hz`}>
             <input
               type="range"
@@ -209,7 +145,6 @@ export function SettingsPanel({
               className="w-40 accent-[var(--primary)]"
             />
           </Row>
-
           <Row label="Invert tilt">
             <input
               type="checkbox"
@@ -218,7 +153,6 @@ export function SettingsPanel({
               className="size-5 accent-[var(--primary)]"
             />
           </Row>
-
           <Row label="Auto-centre on release">
             <input
               type="checkbox"
@@ -227,7 +161,6 @@ export function SettingsPanel({
               className="size-5 accent-[var(--primary)]"
             />
           </Row>
-
           <Row label="Haptics">
             <input
               type="checkbox"
@@ -239,11 +172,11 @@ export function SettingsPanel({
         </div>
 
         <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
-          Settings are saved on this phone. Open{" "}
+          Settings are saved on this phone. Need the PC side? Open{" "}
           <a href="/setup" className="font-semibold text-primary underline">
-            the PC setup guide
-          </a>{" "}
-          for the desktop bridge.
+            the setup guide
+          </a>
+          .
         </p>
       </div>
     </div>

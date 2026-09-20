@@ -194,6 +194,9 @@ function SteeringZone({
   vibration,
   maxRotationDeg,
   autoCentre,
+  deadzone,
+  linearity,
+  sensitivity,
   onSteer,
   requestTiltPermission,
 }: {
@@ -203,6 +206,9 @@ function SteeringZone({
   vibration: boolean;
   maxRotationDeg: number;
   autoCentre: boolean;
+  deadzone: number;
+  linearity: number;
+  sensitivity: number;
   onSteer: (value: number) => void;
   requestTiltPermission: () => void;
 }) {
@@ -212,11 +218,11 @@ function SteeringZone({
 
   const emit = useCallback(
     (raw: number) => {
-      const value = applyCurve(clamp(raw, -1, 1), 0.05, 1.2, 1);
+      const value = applyCurve(clamp(raw, -1, 1), deadzone, linearity, sensitivity);
       current.current = value;
       onSteer(value);
     },
-    [onSteer],
+    [deadzone, linearity, onSteer, sensitivity],
   );
 
   const angleAt = (event: React.PointerEvent) => {
@@ -460,6 +466,9 @@ export default function Rig3D({
               vibration={settings.vibration}
               maxRotationDeg={settings.wheelRotationDeg}
               autoCentre={settings.autoCentre}
+              deadzone={settings.deadzone}
+              linearity={settings.linearity}
+              sensitivity={settings.steerSensitivity}
               onSteer={setSteer}
               requestTiltPermission={requestTiltPermission}
             />

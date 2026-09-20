@@ -97,7 +97,7 @@ export const PRESETS: Record<string, { label: string; patch: Partial<Settings> }
   },
   arcade: {
     label: "Arcade racing",
-    patch: { sensitivity: 1.2, steerSensitivity: 1.35, deadzone: 0.08, linearity: 1.1, maxTiltDeg: 360 },
+    patch: { sensitivity: 1.2, steerSensitivity: 1.35, deadzone: 0.08, linearity: 1.1, maxTiltDeg: 25 },
   },
   fps: {
     label: "Shooter",

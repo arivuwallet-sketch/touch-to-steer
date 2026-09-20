@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type PointerEvent } from "react";
 import { applyCurve, type ControllerState, type Settings } from "@/lib/controller-types";
 
 type Props = {
@@ -26,10 +26,13 @@ function Pedal({
 }) {
   const [value, setValue] = useState(0);
   const active = useRef<number | null>(null);
-  const startY = useRef(0);
+  const pedalRef = useRef<HTMLButtonElement>(null);
 
   const update = (clientY: number) => {
-    const next = Math.max(0, Math.min(1, (startY.current - clientY) / 120));
+    const el = pedalRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const next = Math.max(0, Math.min(1, (rect.bottom - clientY) / rect.height));
     setValue(next);
     set({ [id]: next } as Partial<ControllerState>);
   };
@@ -42,14 +45,14 @@ function Pedal({
 
   return (
     <button
+      ref={pedalRef}
       type="button"
       aria-label={label}
       onPointerDown={(e) => {
         e.currentTarget.setPointerCapture(e.pointerId);
         active.current = e.pointerId;
-        startY.current = e.clientY;
         buzz(settings.vibration, 8);
-        update(e.clientY - 120);
+        update(e.clientY);
       }}
       onPointerMove={(e) => active.current === e.pointerId && update(e.clientY)}
       onPointerUp={release}
@@ -59,10 +62,13 @@ function Pedal({
       <span className="absolute inset-2 rounded-[1.05rem] border border-white/5 bg-[linear-gradient(180deg,#151b22,#0a0e13)]" />
       <span
         className="absolute inset-x-4 bottom-10 rounded-xl border border-white/10 bg-gradient-to-b from-[#edf1f4] via-[#b9c0c7] to-[#727a84] shadow-[0_6px_12px_rgba(0,0,0,.45),inset_0_1px_0_rgba(255,255,255,.6)] transition-all"
-        style={{ height: `calc(34% + ${value * 54}%)`, boxShadow: `0 0 14px ${accent}33, 0 6px 12px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.6)` }}
+        style={{
+          height: `calc(30% + ${value * 58}%)`,
+          boxShadow: `0 0 14px ${accent}33, 0 6px 12px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.6)`,
+        }}
       >
         <span className="absolute inset-x-2 top-3 grid gap-2">
-          {Array.from({ length: 4 }).map((_, row) => (
+          {Array.from({ length: 5 }).map((_, row) => (
             <span key={row} className="grid grid-cols-2 gap-2">
               <i className="size-2 rounded-full bg-[#323842]" />
               <i className="size-2 rounded-full bg-[#323842]" />
@@ -126,6 +132,7 @@ function Handbrake({ settings, set }: { settings: Settings; set: Props["set"] })
 
 function Nitro({ settings, set }: { settings: Settings; set: Props["set"] }) {
   const [down, setDown] = useState(false);
+
   return (
     <button
       type="button"
@@ -151,131 +158,264 @@ function Nitro({ settings, set }: { settings: Settings; set: Props["set"] }) {
   );
 }
 
-function Horn({ settings, press }: { settings: Settings; press: Props["press"] }) {
+function G29Wheel({
+  wheelVisualRef,
+  settings,
+}: {
+  wheelVisualRef: React.RefObject<HTMLDivElement | null>;
+  settings: Settings;
+}) {
   return (
-    <button
-      type="button"
-      aria-label="Horn"
-      onPointerDown={(e) => {
-        e.currentTarget.setPointerCapture(e.pointerId);
-        press("horn", true);
-        buzz(settings.vibration, 10);
-      }}
-      onPointerUp={() => press("horn", false)}
-      onPointerCancel={() => press("horn", false)}
-      className="absolute left-1/2 top-1/2 z-20 grid size-24 -translate-x-1/2 -translate-y-1/2 touch-none select-none place-items-center rounded-full border-[0.7rem] border-[#171d23] bg-[radial-gradient(circle_at_38%_32%,#3c4651,#12171d_68%)] text-[10px] font-black tracking-[0.18em] text-slate-200 shadow-[inset_0_6px_18px_rgba(0,0,0,.7),0_8px_18px_rgba(0,0,0,.52)] active:brightness-125"
-    >
-      HORN
-    </button>
+    <div className="absolute inset-0 pointer-events-none">
+      <div className="absolute inset-0 rounded-full bg-[#0b0d10] shadow-[0_30px_50px_rgba(0,0,0,.7),inset_0_0_0_1px_rgba(255,255,255,.08)]" />
+      <div className="absolute inset-[3.3%] rounded-full border-[clamp(.85rem,1.65vh,1.35rem)] border-[#090b0d] shadow-[inset_0_0_0_1px_rgba(255,255,255,.08),inset_0_-8px_16px_rgba(0,0,0,.55)]" />
+      <div className="absolute inset-[6.2%] rounded-full border-[clamp(.35rem,.8vh,.7rem)] border-[#25282c]" />
+      <div className="absolute inset-[7.1%] rounded-full border border-[#454a50]/70" />
+      <div className="absolute inset-[8.5%] rounded-full border-2 border-dashed border-[#6b7076]/25" />
+      
+      <div ref={wheelVisualRef} className="absolute inset-0 origin-center">
+        <div className="absolute left-1/2 top-[3.4%] h-[7%] w-[4.5%] -translate-x-1/2 rounded-b-md bg-[#e11d2e] shadow-[0_0_18px_rgba(225,29,46,.45)]" />
+
+        <div className="absolute left-1/2 top-1/2 h-[18%] w-[76%] -translate-x-1/2 -translate-y-1/2 rotate-[8deg] rounded-full bg-[linear-gradient(180deg,#9fa5ab,#4e555d)] shadow-[0_10px_15px_rgba(0,0,0,.55),inset_0_1px_0_rgba(255,255,255,.5)]" />
+        <div className="absolute left-1/2 top-1/2 h-[18%] w-[76%] -translate-x-1/2 -translate-y-1/2 -rotate-[8deg] rounded-full bg-[linear-gradient(180deg,#9fa5ab,#4e555d)] shadow-[0_10px_15px_rgba(0,0,0,.55),inset_0_1px_0_rgba(255,255,255,.5)]" />
+        <div className="absolute left-1/2 top-[57%] h-[54%] w-[18%] -translate-x-1/2 rounded-full bg-[linear-gradient(90deg,#5b626b,#a8adb3,#5b626b)] shadow-[0_10px_15px_rgba(0,0,0,.55),inset_0_1px_0_rgba(255,255,255,.5)]" />
+
+        <div className="absolute left-1/2 top-1/2 size-[30%] -translate-x-1/2 -translate-y-1/2 rounded-full border-[clamp(.4rem,1vh,.75rem)] border-[#20252b] bg-[radial-gradient(circle_at_38%_30%,#424850_0%,#1b1f24_58%,#0d1014_100%)] shadow-[inset_0_0_20px_rgba(0,0,0,.75),0_12px_18px_rgba(0,0,0,.45)]">
+          <div className="absolute inset-0 grid place-items-center">
+            <div className="text-center">
+              <div className="text-[clamp(1.05rem,2.3vw,1.8rem)] font-black tracking-[-0.05em] text-white">G</div>
+              <div className="mt-[-0.2rem] text-[clamp(.42rem,.8vw,.62rem)] font-black uppercase tracking-[0.2em] text-slate-300">G29</div>
+              <div className="mt-0.5 text-[6px] font-bold uppercase tracking-[0.2em] text-slate-500">DRIVING FORCE</div>
+            </div>
+          </div>
+        </div>
+
+        {[0, 1, 2, 3].map((i) => {
+          const angle = i * 90;
+          return (
+            <span
+              key={i}
+              className="absolute left-1/2 top-[14%] size-[2.1%] -translate-x-1/2 rounded-full border border-[#9da3aa]/50 bg-[#161a1f] shadow-inner"
+              style={{ transform: `translateX(-50%) rotate(${angle}deg) translateY(520%)` }}
+            />
+          );
+        })}
+      </div>
+
+      <div className="absolute left-1/2 top-[15%] -translate-x-1/2 rounded-full border border-white/10 bg-black/40 px-3 py-1 text-[7px] font-black uppercase tracking-[0.25em] text-slate-400 backdrop-blur-sm">
+        {settings.wheelRotationDeg}° LOCK
+      </div>
+    </div>
   );
 }
 
 export function FlatWheel({ settings, set, press }: Props) {
-  const wheelRef = useRef<HTMLDivElement>(null);
-  const steer = useRef(0);
-  const pointer = useRef<number | null>(null);
+  const wheelHitRef = useRef<HTMLDivElement>(null);
+  const wheelVisualRef = useRef<HTMLDivElement>(null);
+  const touchPointer = useRef<number | null>(null);
   const lastAngle = useRef(0);
-  const accumulated = useRef(0);
+  const wheelAngleDeg = useRef(0);
+  const [gyroReady, setGyroReady] = useState(false);
+  const [gyroDenied, setGyroDenied] = useState(false);
 
-  const emit = useCallback((raw: number) => {
-    const value = applyCurve(
-      Math.max(-1, Math.min(1, raw)),
-      settings.deadzone,
-      settings.linearity,
-      settings.steerSensitivity,
-    );
-    steer.current = value;
-    set({ steer: value });
-  }, [set, settings.deadzone, settings.linearity, settings.steerSensitivity]);
+  const maxLockDeg = Math.max(90, settings.wheelRotationDeg / 2);
+
+  const paintWheel = useCallback((angleDeg: number) => {
+    wheelAngleDeg.current = angleDeg;
+    if (wheelVisualRef.current) {
+      wheelVisualRef.current.style.transform = `rotate(${angleDeg}deg)`;
+    }
+  }, []);
+
+  const emitRaw = useCallback(
+    (raw: number) => {
+      const value = applyCurve(
+        Math.max(-1, Math.min(1, raw)),
+        settings.deadzone,
+        settings.linearity,
+        settings.steerSensitivity,
+      );
+      set({ steer: value });
+    },
+    [set, settings.deadzone, settings.linearity, settings.steerSensitivity],
+  );
+
+  const setWheelRaw = useCallback(
+    (raw: number) => {
+      const clamped = Math.max(-1, Math.min(1, raw));
+      paintWheel(clamped * maxLockDeg);
+      emitRaw(clamped);
+    },
+    [emitRaw, maxLockDeg, paintWheel],
+  );
+
+  const requestGyro = useCallback(async () => {
+    try {
+      const DeviceOrientation = window.DeviceOrientationEvent as typeof DeviceOrientationEvent & {
+        requestPermission?: () => Promise<"granted" | "denied">;
+      };
+
+      if (typeof DeviceOrientation.requestPermission === "function") {
+        const permission = await DeviceOrientation.requestPermission();
+        if (permission !== "granted") {
+          setGyroDenied(true);
+          setGyroReady(false);
+          return;
+        }
+      }
+
+      setGyroDenied(false);
+      setGyroReady(true);
+    } catch {
+      setGyroDenied(true);
+      setGyroReady(false);
+    }
+  }, []);
 
   useEffect(() => {
-    if (settings.steerMode !== "tilt") return;
-    const listener = (e: DeviceOrientationEvent) => {
-      const gamma = e.gamma ?? 0;
-      emit((settings.invertTilt ? -gamma : gamma) / settings.maxTiltDeg);
-    };
-    window.addEventListener("deviceorientation", listener);
-    return () => window.removeEventListener("deviceorientation", listener);
-  }, [settings.steerMode, settings.invertTilt, settings.maxTiltDeg, emit]);
+    if (settings.steerMode !== "tilt") {
+      setGyroReady(false);
+      setGyroDenied(false);
+      setWheelRaw(0);
+      return;
+    }
 
-  const grab = (e: React.PointerEvent<HTMLDivElement>) => {
-    const el = wheelRef.current;
+    const DeviceOrientation = window.DeviceOrientationEvent as typeof DeviceOrientationEvent & {
+      requestPermission?: () => Promise<"granted" | "denied">;
+    };
+
+    if (typeof DeviceOrientation.requestPermission !== "function") {
+      setGyroReady(true);
+    }
+  }, [settings.steerMode, setWheelRaw]);
+
+  useEffect(() => {
+    if (settings.steerMode !== "tilt" || !gyroReady) return;
+
+    const onOrientation = (event: DeviceOrientationEvent) => {
+      const beta = event.beta ?? 0;
+      const gamma = event.gamma ?? 0;
+      const screenAngle =
+        typeof window !== "undefined"
+          ? window.screen.orientation?.angle ?? (window as Window & { orientation?: number }).orientation ?? 0
+          : 0;
+
+      let tilt = gamma;
+      if (Math.abs(screenAngle) === 90) {
+        tilt = screenAngle === 90 ? beta : -beta;
+      }
+
+      const raw = Math.max(-1, Math.min(1, (settings.invertTilt ? -tilt : tilt) / Math.max(1, settings.maxTiltDeg)));
+      setWheelRaw(raw);
+    };
+
+    window.addEventListener("deviceorientation", onOrientation, true);
+    return () => window.removeEventListener("deviceorientation", onOrientation, true);
+  }, [gyroReady, settings.invertTilt, settings.maxTiltDeg, settings.steerMode, setWheelRaw]);
+
+  const grabWheel = (e: PointerEvent<HTMLDivElement>) => {
+    if (settings.steerMode !== "touch") return;
+    if (touchPointer.current !== null) return;
+
+    const el = wheelHitRef.current;
     if (!el) return;
+
+    e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
-    pointer.current = e.pointerId;
-    const r = el.getBoundingClientRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
+    touchPointer.current = e.pointerId;
+
+    const rect = el.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
     lastAngle.current = Math.atan2(e.clientY - cy, e.clientX - cx);
-    accumulated.current = steer.current * ((settings.wheelRotationDeg * Math.PI) / 360);
+    buzz(settings.vibration, 8);
   };
 
-  const drag = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (pointer.current !== e.pointerId) return;
-    const el = wheelRef.current;
+  const dragWheel = (e: PointerEvent<HTMLDivElement>) => {
+    if (settings.steerMode !== "touch") return;
+    if (touchPointer.current !== e.pointerId) return;
+
+    const el = wheelHitRef.current;
     if (!el) return;
-    const r = el.getBoundingClientRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
+
+    const rect = el.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
     const angle = Math.atan2(e.clientY - cy, e.clientX - cx);
+
     let delta = angle - lastAngle.current;
     while (delta > Math.PI) delta -= Math.PI * 2;
     while (delta < -Math.PI) delta += Math.PI * 2;
     lastAngle.current = angle;
-    const max = Math.max(180, settings.wheelRotationDeg) * Math.PI / 360;
-    accumulated.current = Math.max(-max, Math.min(max, accumulated.current + delta));
-    emit(accumulated.current / max);
+
+    const next = Math.max(
+      -maxLockDeg,
+      Math.min(maxLockDeg, wheelAngleDeg.current + (delta * 180) / Math.PI),
+    );
+
+    paintWheel(next);
+    emitRaw(next / maxLockDeg);
   };
 
-  const release = () => {
-    pointer.current = null;
-    if (settings.autoCentre) emit(0);
+  const releaseWheel = () => {
+    touchPointer.current = null;
+    if (settings.autoCentre && settings.steerMode === "touch") {
+      setWheelRaw(0);
+    }
   };
 
   return (
-    <div className="absolute inset-0 overflow-hidden bg-[#070a0e] text-slate-100">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(95%_80%_at_48%_18%,#16202a_0%,#070a0e_67%)]" />
-      <div className="pointer-events-none absolute inset-2 rounded-[1.7rem] border border-white/20" />
-      <div className="pointer-events-none absolute inset-4 rounded-[1.4rem] border border-cyan-400/10" />
+    <div className="absolute inset-0 overflow-hidden bg-[#080a0d] text-slate-100">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_95%_at_50%_6%,#1a222b_0%,#080a0d_55%,#030405_100%)]" />
+      <div className="pointer-events-none absolute inset-2 rounded-[1.7rem] border border-white/15" />
+      <div className="pointer-events-none absolute inset-4 rounded-[1.4rem] border border-[#e11d2e]/15" />
 
-      <div className="absolute inset-0 px-6 py-4">
+      <div className="absolute left-5 top-5 z-20 rounded-xl border border-white/10 bg-black/45 px-3 py-2 backdrop-blur-md">
+        <div className="text-[8px] font-black uppercase tracking-[0.25em] text-slate-500">STEERING MODE</div>
+        <div className="mt-1 text-sm font-black tracking-tight text-white">LOGITECH G29 STYLE</div>
+        <div className="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+          {settings.steerMode === "touch" ? "Touch rotation" : gyroReady ? "Gyro active" : "Gyro permission required"}
+        </div>
+      </div>
+
+      {settings.steerMode === "tilt" && !gyroReady && (
+        <div className="absolute left-1/2 top-5 z-30 -translate-x-1/2">
+          <button
+            type="button"
+            onClick={requestGyro}
+            className="rounded-xl border border-[#e11d2e]/40 bg-[#11151a]/90 px-5 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-white shadow-[0_10px_24px_rgba(0,0,0,.5)] backdrop-blur-md active:scale-[.98]"
+          >
+            {gyroDenied ? "ENABLE GYRO AGAIN" : "ENABLE GYRO"}
+          </button>
+        </div>
+      )}
+
+      <div className="absolute inset-0 px-5 pb-5 pt-20">
         <div className="relative h-full w-full">
-          {/* wheel */} 
-          <div className="absolute bottom-[9%] left-[5%]" ref={wheelRef}>
-            <div
-              className="relative size-[min(58vh,52vw)] min-h-56 min-w-56 touch-none select-none"
-              onPointerDown={grab}
-              onPointerMove={drag}
-              onPointerUp={release}
-              onPointerCancel={release}
-            >
-              <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,#1d2630_0%,#0d1117_68%)] shadow-[0_22px_40px_rgba(0,0,0,.65),inset_0_0_0_0.55rem_rgba(255,255,255,.02)]" />
-              <div className="absolute inset-[5%] rounded-full border-[clamp(.85rem,2vh,1.35rem)] border-[#080b0f]" />
-              <div className="absolute inset-[10%] rounded-full border-[clamp(.55rem,1.6vh,1rem)] border-[#2b323b]" />
-              <div className="absolute inset-[13%] rounded-full border-[clamp(.45rem,1.2vh,.75rem)] border-[#141a20]" />
-
-              <div className="absolute inset-[18%]">
-                <div className="absolute left-1/2 top-1/2 h-[18%] w-[78%] -translate-x-1/2 -translate-y-1/2 rotate-[12deg] rounded-full bg-[#232a32] shadow-[0_8px_14px_rgba(0,0,0,.45)]" />
-                <div className="absolute left-1/2 top-1/2 h-[18%] w-[78%] -translate-x-1/2 -translate-y-1/2 -rotate-[12deg] rounded-full bg-[#232a32] shadow-[0_8px_14px_rgba(0,0,0,.45)]" />
-                <div className="absolute left-1/2 top-[58%] h-[53%] w-[18%] -translate-x-1/2 rounded-full bg-[#232a32] shadow-[0_8px_14px_rgba(0,0,0,.45)]" />
-                <div className="absolute left-1/2 top-[48%] size-[28%] -translate-x-1/2 -translate-y-1/2 rounded-full border-[0.45rem] border-[#313944] bg-[#12171d] shadow-[inset_0_0_18px_rgba(0,0,0,.7),0_10px_15px_rgba(0,0,0,.45)]" />
-                <div className="absolute left-1/2 top-[7%] h-[7%] w-[5%] -translate-x-1/2 rounded-b-lg bg-cyan-400 shadow-[0_0_14px_rgba(34,211,238,.75)]" />
-                <Horn settings={settings} press={press} />
-              </div>
-            </div>
+          <div
+            ref={wheelHitRef}
+            className="absolute bottom-[7%] left-[4%] aspect-square w-[min(63vh,53vw)] min-h-60 min-w-60 touch-none select-none"
+            onPointerDown={grabWheel}
+            onPointerMove={dragWheel}
+            onPointerUp={releaseWheel}
+            onPointerCancel={releaseWheel}
+          >
+            <G29Wheel wheelVisualRef={wheelVisualRef} settings={settings} />
           </div>
 
-          {/* pedals */}
-          <div className="absolute bottom-[8%] right-[16%] flex items-end gap-[clamp(.7rem,1.5vw,1.25rem)]">
-            <Pedal id="clutch" label="CLUTCH" settings={settings} set={set} accent="#60a5fa" />
-            <Pedal id="brake" label="BRAKE" settings={settings} set={set} accent="#f59e0b" />
+          <div className="absolute bottom-[7%] right-[18%] flex items-end gap-[clamp(.75rem,1.5vw,1.3rem)]">
+            <Pedal id="clutch" label="CLUTCH" settings={settings} set={set} accent="#9ca3af" />
+            <Pedal id="brake" label="BRAKE" settings={settings} set={set} accent="#ef4444" />
             <Pedal id="throttle" label="GAS" settings={settings} set={set} accent="#22c55e" />
           </div>
 
-          {/* handbrake + nitro */}
-          <div className="absolute bottom-[14%] right-[4%] flex flex-col items-center gap-3">
+          <div className="absolute bottom-[12%] right-[4%] flex flex-col items-center gap-3">
             <Handbrake settings={settings} set={set} />
             <Nitro settings={settings} set={set} />
+          </div>
+
+          <div className="pointer-events-none absolute bottom-3 left-[5%] text-[8px] font-bold uppercase tracking-[0.2em] text-slate-500">
+            Touch the rim and rotate • {settings.wheelRotationDeg}° lock-to-lock
           </div>
         </div>
       </div>

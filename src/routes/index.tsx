@@ -17,17 +17,17 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Mobile Rig — 3D Virtual Gamepad & Steering Wheel for PC Games" },
+      { title: "Mobile Rig — Virtual Gamepad & Steering Wheel for PC Games" },
       {
         name: "description",
         content:
-          "A 3D console-style gamepad and a real driving rig with clutch, brake, accelerator, handbrake, horn and nitro — streamed from your phone to any PC game.",
+          "A full-screen mobile gamepad and flat steering-wheel controller with touch pedals and configurable PC controls.",
       },
-      { property: "og:title", content: "Mobile Rig — 3D Gamepad & Wheel for PC" },
+      { property: "og:title", content: "Mobile Rig — Gamepad & Wheel for PC" },
       {
         property: "og:description",
         content:
-          "Fully modelled thumbsticks, triggers, paddle shifters and a three-pedal box you can feather. Pro presets for GTA V, Forza and shooters.",
+          "Full-screen touch controls for gamepad and steering-wheel modes, designed for landscape phones.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

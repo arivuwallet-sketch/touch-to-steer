@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Gamepad2, Settings as SettingsIcon } from "lucide-react";
+import { Gamepad2, Gauge, Settings as SettingsIcon } from "lucide-react";
 import { SettingsPanel } from "@/components/rig/SettingsPanel";
 import { FlatPad } from "@/components/rig/FlatPad";
 import { FlatWheel } from "@/components/rig/FlatWheel";

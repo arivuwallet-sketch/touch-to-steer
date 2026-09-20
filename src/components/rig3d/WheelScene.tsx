@@ -249,8 +249,8 @@ export function WheelScene({ settings, set, press }: Props) {
 
   return (
     <group position={[0, -0.65, 0]}>
-      {/* Wheel is a real front-facing steering wheel. No gamepad controls live here. */}
-      <group ref={wheel} position={[-2.25, 0.75, 1.05]} scale={1.12}>
+      {/* Driver-seat view: wheel face is upright and directly in front of the driver. */}
+      <group ref={wheel} position={[-2.25, 1.0, 0.75]} scale={1.22}>
         <mesh castShadow onPointerDown={onGrab}>
           <torusGeometry args={[2.15, 0.3, 32, 96]} />
           <meshStandardMaterial color="#11151a" metalness={0.18} roughness={0.9} />
@@ -266,8 +266,8 @@ export function WheelScene({ settings, set, press }: Props) {
           args={[1.95, 0.22, 0.44]}
           radius={0.08}
           smoothness={5}
-          position={[-0.82, -0.48, 0.08]}
-          rotation={[0, 0, -0.43]}
+          position={[-0.72, -0.72, 0.08]}
+          rotation={[0, 0, -0.68]}
           castShadow
         >
           <meshStandardMaterial color="#252b32" metalness={0.78} roughness={0.32} />
@@ -277,25 +277,25 @@ export function WheelScene({ settings, set, press }: Props) {
           args={[1.95, 0.22, 0.44]}
           radius={0.08}
           smoothness={5}
-          position={[0.82, -0.48, 0.08]}
-          rotation={[0, 0, 0.43]}
+          position={[0.72, -0.72, 0.08]}
+          rotation={[0, 0, 0.68]}
           castShadow
         >
           <meshStandardMaterial color="#252b32" metalness={0.78} roughness={0.32} />
         </RoundedBox>
 
         <RoundedBox
-          args={[0.48, 0.22, 1.65]}
+          args={[0.46, 0.22, 1.2]}
           radius={0.08}
           smoothness={5}
-          position={[0, -0.82, 0.08]}
+          position={[0, -1.02, 0.08]}
           castShadow
         >
           <meshStandardMaterial color="#252b32" metalness={0.78} roughness={0.32} />
         </RoundedBox>
 
         {/* Center hub and horn. */}
-        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.18]} castShadow>
+        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.24]} castShadow>
           <cylinderGeometry args={[0.82, 0.92, 0.26, 48]} />
           <meshStandardMaterial color="#14191f" metalness={0.76} roughness={0.34} />
         </mesh>
@@ -318,7 +318,7 @@ export function WheelScene({ settings, set, press }: Props) {
       </group>
 
       {/* Separate floor-mounted pedal assembly. */}
-      <group position={[2.15, -1.25, -1.25]}>
+      <group position={[2.25, -2.15, -2.5]} rotation={[-0.28, 0, 0]}>
         <RoundedBox
           args={[4.7, 0.22, 3.15]}
           radius={0.14}
@@ -351,10 +351,10 @@ export function WheelScene({ settings, set, press }: Props) {
       </group>
 
       {/* Separate handbrake and nitro controls. */}
-      <group position={[4.1, -1.15, -0.25]}>
+      <group position={[4.45, -1.95, -1.55]}>
         <Handbrake3D settings={settings} set={set} />
       </group>
-      <group position={[4.1, -1.3, 1.25]}>
+      <group position={[4.45, -2.05, 0.25]}>
         <Nitro3D settings={settings} set={set} />
       </group>
     </group>

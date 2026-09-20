@@ -8,8 +8,8 @@ import type { ControllerState, Settings } from "@/lib/controller-types";
 function CameraRig({ mode }: { mode: "pad" | "wheel" }) {
   const camera = useThree((s) => s.camera);
   useEffect(() => {
-    if (mode === "pad") camera.position.set(0, 7.2, 5.6);
-    else camera.position.set(0, 6.2, 8.8);
+    if (mode === "pad") camera.position.set(0, 5.2, 5.0);
+    else camera.position.set(0, 4.4, 7.2);
     camera.lookAt(0, 0, 0);
     camera.updateProjectionMatrix();
   }, [mode, camera]);
@@ -52,7 +52,7 @@ export default function Rig3D({
       <pointLight position={[6, 3, 4]} intensity={55} color="#f97316" distance={20} />
       <spotLight position={[0, 10, 0]} angle={0.8} penumbra={1} intensity={110} color="#c7d9ff" />
 
-      <group scale={mode === "pad" ? 0.92 : 0.8} position={[0, mode === "pad" ? 0 : 0.5, 0]}>
+      <group scale={mode === "pad" ? 1.15 : 1.0} position={[0, mode === "pad" ? 0.1 : 0.4, 0]}>
         {mode === "pad" ? (
           <PadScene settings={settings} set={set} press={press} />
         ) : (

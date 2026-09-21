@@ -7,7 +7,7 @@ type Props = {
   press: (id: string, down: boolean) => void;
 };
 
-type TriggerMode = "regular" | "race" | "sniper" | "recoil" | "lock";
+type TriggerMode = "regular" | "race" | "sniper" | "recoil" | "vibration" | "lock";
 
 const buzz = (enabled: boolean, pattern: number | number[] = 10) => {
   if (enabled && typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(pattern);
@@ -237,19 +237,42 @@ function Trigger({
   id,
   settings,
   set,
+  press,
   mode,
 }: {
   label: string;
   id: "lt" | "rt";
   settings: Settings;
   set: Props["set"];
+  press: Props["press"];
   mode: TriggerMode;
 }) {
   const [value, setValue] = useState(0);
+  const [pulse3d, setPulse3d] = useState(false);
   const pointer = useRef<number | null>(null);
   const lastFeel = useRef(0);
   const lastBand = useRef(-1);
   const lastRecoil = useRef(0);
+  const pulseTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (pulseTimer.current !== null) {
+        window.clearTimeout(pulseTimer.current);
+      }
+    };
+  }, []);
+
+  const pulseFeedback = useCallback(
+    (pattern: number | number[]) => {
+      if (!settings.vibration) return;
+      buzz(true, pattern);
+      setPulse3d(true);
+      if (pulseTimer.current !== null) window.clearTimeout(pulseTimer.current);
+      pulseTimer.current = window.setTimeout(() => setPulse3d(false), 90);
+    },
+    [settings.vibration],
+  );
 
   const mapValue = (v: number) => {
     const p = Math.max(0, Math.min(1, v));
@@ -257,66 +280,118 @@ function Trigger({
     if (mode === "sniper") return Math.pow(p, 1.65);
     if (mode === "race") return Math.min(1, p * 1.2);
     if (mode === "recoil") return p < 0.18 ? p * 0.35 : Math.min(1, p * 1.12);
+    if (mode === "vibration") return Math.pow(p, 0.92);
     return p;
   };
 
+  const writeTrigger = useCallback(
+    (next: number) => {
+      const clamped = Math.max(0, Math.min(1, next));
+      setValue(clamped);
+      set({ [id]: clamped } as Partial<ControllerState>);
+      // Also expose a digital trigger alias so games/bindings that treat LT/RT
+      // as buttons still receive a clean press while the analog value is sent.
+      press(id === "lt" ? "l2" : "r2", clamped > 0.02);
+    },
+    [id, press, set],
+  );
+
   const move = (e: PointerEvent<HTMLButtonElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
-    const raw = Math.max(0, Math.min(1, (e.clientY - r.top) / r.height));
+    // Physical-style trigger travel: top = fully pulled, bottom = released.
+    const raw = Math.max(0, Math.min(1, (r.bottom - e.clientY) / r.height));
     const next = mapValue(raw);
     const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-    const band = Math.min(4, Math.floor(next * 5));
-    if (band !== lastBand.current && now - lastFeel.current > 55) {
+    const band = Math.min(5, Math.floor(next * 6));
+
+    if (band !== lastBand.current && now - lastFeel.current > 45) {
       lastBand.current = band;
       lastFeel.current = now;
-      feelBuzz(settings.vibration, 0.25 + band * 0.14);
-    }
-    if (mode === "recoil" && next > 0.62) {
-      const nowRecoil = typeof performance !== "undefined" ? performance.now() : Date.now();
-      if (nowRecoil - lastRecoil.current > 115) {
-        lastRecoil.current = nowRecoil;
-        buzz(settings.vibration, [3, 10, 3]);
+
+      if (mode === "race") {
+        pulseFeedback([2, 5 + band, 2]);
+      } else if (mode === "sniper") {
+        pulseFeedback(band >= 3 ? [4, 13] : 5);
+      } else if (mode === "recoil") {
+        pulseFeedback([3, 8 + band, 3]);
+      } else if (mode === "vibration") {
+        pulseFeedback([2, 5, 2, 5, 3]);
+      } else if (mode === "lock" && band === 0) {
+        pulseFeedback([4, 12, 4]);
+      } else {
+        pulseFeedback(Math.min(16, 4 + band * 2));
       }
     }
-    setValue(next);
-    set({ [id]: next } as Partial<ControllerState>);
+
+    if (mode === "recoil" && next > 0.58) {
+      const nowRecoil = typeof performance !== "undefined" ? performance.now() : Date.now();
+      if (nowRecoil - lastRecoil.current > 110) {
+        lastRecoil.current = nowRecoil;
+        pulseFeedback([3, 10, 3]);
+      }
+    }
+
+    writeTrigger(next);
   };
 
-  const release = () => {
+  const pressToFull = (e: PointerEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    pointer.current = e.pointerId;
+    lastBand.current = -1;
+    pulseFeedback([4, 9, 3]);
+    writeTrigger(1);
+  };
+
+  const release = (e?: PointerEvent<HTMLButtonElement>) => {
+    e?.preventDefault();
+    e?.stopPropagation();
     pointer.current = null;
     lastBand.current = -1;
     lastRecoil.current = 0;
-    setValue(0);
-    set({ [id]: 0 } as Partial<ControllerState>);
+    writeTrigger(0);
   };
 
   return (
     <button
       type="button"
-      aria-label={`${label} trigger — ${mode}`}
-      onPointerDown={(e) => {
-        e.currentTarget.setPointerCapture(e.pointerId);
-        pointer.current = e.pointerId;
-        buzz(settings.vibration, 8);
-        move(e);
-      }}
-      onPointerMove={(e) => pointer.current === e.pointerId && move(e)}
+      aria-label={`${label} ForceAdapt trigger — ${mode}`}
+      onPointerDown={pressToFull}
+      onPointerMove={(e) => pointer.current === e.pointerId && (e.preventDefault(), move(e))}
       onPointerUp={release}
       onPointerCancel={release}
-      className="flat-pad-trigger grid h-[clamp(2.75rem,7.8svh,3.5rem)] w-[clamp(4.5rem,8vw,6rem)] touch-none place-items-center rounded-xl border border-white/10 bg-[linear-gradient(180deg,#303b47,#10151b)] text-[10px] font-black tracking-[0.25em] text-cyan-300 shadow-[inset_0_2px_2px_rgba(255,255,255,.08),0_6px_14px_rgba(0,0,0,.5)]"
-      style={{
-        boxShadow: value
-          ? "0 0 20px rgba(34,211,238,.25), inset 0 0 12px rgba(0,0,0,.65)"
-          : undefined,
-        transform: `translateY(${value * 2}px)`,
-      }}
+      className="flat-pad-trigger group relative grid h-[clamp(2.75rem,7.8svh,3.5rem)] w-[clamp(4.5rem,8vw,6rem)] touch-none select-none place-items-center overflow-hidden rounded-[1rem] border border-white/10 bg-[linear-gradient(180deg,#394754,#11171e)] text-[10px] font-black tracking-[0.25em] text-cyan-200 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),inset_0_-7px_14px_rgba(0,0,0,.72),0_7px_0_#05080b,0_11px_18px_rgba(0,0,0,.58)]"
+      style={{ perspective: "700px" }}
     >
-      <span>{label}</span>
-      <span className="absolute bottom-1 text-[5px] tracking-[0.12em] text-slate-500">{mode}</span>
+      <span className="pointer-events-none absolute inset-[3px] rounded-[0.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,.06),rgba(0,0,0,.16))]" />
+      <span
+        className={`flat-pad-trigger-plate pointer-events-none absolute inset-[6px] overflow-hidden rounded-[0.72rem] border border-cyan-200/20 bg-[linear-gradient(180deg,#566572,#252f38_48%,#11161c)] shadow-[inset_0_2px_1px_rgba(255,255,255,.22),inset_0_-6px_10px_rgba(0,0,0,.58),0_5px_8px_rgba(0,0,0,.5)] transition-transform duration-75 ${pulse3d ? "trigger-3d-rattle" : ""}`}
+        style={{
+          transform: `translateY(${value * 4}px) rotateX(${value * 2.5}deg) translateZ(0)`,
+          boxShadow: value
+            ? `inset 0 2px 1px rgba(255,255,255,.24), inset 0 -8px 12px rgba(0,0,0,.62), 0 ${4 + value * 7}px ${8 + value * 8}px rgba(0,0,0,.55), 0 0 ${8 + value * 12}px rgba(34,211,238,.18)`
+            : undefined,
+        }}
+      >
+        <span className="absolute inset-x-2 top-2 h-[3px] rounded-full bg-white/15" />
+        <span className="absolute left-2 top-1/2 h-[62%] w-1 -translate-y-1/2 rounded-full bg-cyan-200/40 shadow-[0_0_8px_rgba(103,232,249,.25)]" />
+        <span className="absolute right-2 top-1/2 h-[62%] w-1 -translate-y-1/2 rounded-full bg-black/40" />
+        <span className="relative z-10 flex flex-col items-center gap-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,.75)]">
+          <span className="text-[10px] font-black tracking-[0.24em]">{label}</span>
+          <span className="text-[5px] tracking-[0.18em] text-cyan-100/60">FORCEADAPT</span>
+        </span>
+        <span
+          className="absolute bottom-1 left-1/2 h-1 -translate-x-1/2 rounded-full bg-cyan-300/70 shadow-[0_0_7px_rgba(34,211,238,.65)] transition-[width] duration-75"
+          style={{ width: `${Math.max(12, value * 86)}%` }}
+        />
+      </span>
+      <span className="pointer-events-none absolute bottom-0.5 text-[5px] font-black uppercase tracking-[0.12em] text-slate-500">
+        {mode === "vibration" ? "VIBRATE" : mode}
+      </span>
     </button>
   );
 }
-
 function MiniScreen({
   profile,
   triggerMode,
@@ -336,7 +411,7 @@ function MiniScreen({
 
   return (
     <div className="flat-pad-screen flex h-[clamp(2.75rem,7.8svh,3.5rem)] w-[clamp(5rem,7vw,7rem)] flex-col items-center justify-center rounded-lg border border-cyan-300/25 bg-[#071018] shadow-[inset_0_0_14px_rgba(34,211,238,.12),0_0_12px_rgba(34,211,238,.1)]">
-      <span className="text-[7px] font-black tracking-[0.25em] text-cyan-400/70">APEX 5</span>
+      <span className="text-[7px] font-black tracking-[0.25em] text-cyan-400/70">APEX 5 • FORCEADAPT</span>
       <span className="mt-1 text-[10px] font-mono font-bold text-cyan-200">
         {tick === 0 ? `P${profile}` : tick === 1 ? triggerMode.toUpperCase() : tick === 2 ? (motion ? "GYRO ON" : "GYRO OFF") : (turbo ? "TURBO ON" : "READY")}
       </span>
@@ -447,7 +522,7 @@ export function FlatPad({ settings, set, press }: Props) {
   }, [gyroEnabled, settings.deadzone, settings.linearity, settings.sensitivity, set]);
 
   const nextTriggerMode = () => {
-    const modes: TriggerMode[] = ["regular", "race", "sniper", "recoil", "lock"];
+    const modes: TriggerMode[] = ["regular", "race", "sniper", "recoil", "vibration", "lock"];
     const i = modes.indexOf(triggerMode);
     setTriggerMode(modes[(i + 1) % modes.length]);
   };
@@ -466,12 +541,12 @@ export function FlatPad({ settings, set, press }: Props) {
 
       <div className="flat-pad-top absolute inset-x-0 top-3 flex items-start justify-between px-[max(1rem,env(safe-area-inset-left))]">
         <div className="flex items-center gap-3">
-          <Trigger label="LT" id="lt" settings={settings} set={set} mode={triggerMode} />
+          <Trigger label="LT" id="lt" settings={settings} set={set} press={press} mode={triggerMode} />
           <ExtraButton label="LM" id="lm" settings={settings} press={press} />
         </div>
         <div className="flex items-center gap-3">
           <ExtraButton label="RM" id="rm" settings={settings} press={press} />
-          <Trigger label="RT" id="rt" settings={settings} set={set} mode={triggerMode} />
+          <Trigger label="RT" id="rt" settings={settings} set={set} press={press} mode={triggerMode} />
         </div>
       </div>
 
@@ -499,7 +574,7 @@ export function FlatPad({ settings, set, press }: Props) {
             <SurfaceButton label="LOGO" id="logo" settings={settings} press={press} className="h-8 min-w-0 w-full rounded-lg text-[7px] text-slate-300" />
             <button type="button" onClick={() => setTurbo((v) => !v)} className={`h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border px-2 text-[7px] font-black uppercase tracking-[0.14em] ${turbo ? "border-orange-300/50 bg-orange-300/10 text-orange-200" : "border-white/10 bg-black/20 text-slate-400"}`}>TURBO</button>
             <GyroControl enabled={gyroEnabled} denied={gyroDenied} onToggle={requestGyro} />
-            <button type="button" onClick={nextTriggerMode} className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border border-white/10 bg-black/20 px-2 text-[7px] font-black uppercase tracking-[0.14em] text-slate-400">TRIGGER</button>
+            <button type="button" onClick={nextTriggerMode} className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border border-white/10 bg-black/20 px-2 text-[7px] font-black uppercase tracking-[0.14em] text-slate-400">FORCEADAPT</button>
             <button type="button" onClick={() => setRgb((v) => !v)} className={`h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border px-2 text-[7px] font-black uppercase tracking-[0.14em] ${rgb ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-200" : "border-white/10 bg-black/20 text-slate-400"}`}>RGB</button>
           </div>
         </div>

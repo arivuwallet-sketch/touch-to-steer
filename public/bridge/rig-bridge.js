@@ -35,7 +35,95 @@ const OUTGAUGE_PORTS = String(process.env.RIG_OUTGAUGE_PORTS || "4444,30000,6339
 const WRECKFEST2_PORT = Number(process.env.RIG_WRECKFEST2_PORT || 23123);
 const OUTPUT = String(process.env.RIG_OUTPUT || "xinput").toLowerCase();
 const dgram = require("node:dgram");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+const { spawn, spawnSync } = require("node:child_process");
 const { WebSocketServer } = require("ws");
+
+const DRIVER_FILE = "ViGEmBus_1.22.0_x64_x86_arm64.exe";
+const DRIVER_URL =
+  "https://github.com/nefarius/ViGEmBus/releases/download/v1.22.0/ViGEmBus_1.22.0_x64_x86_arm64.exe";
+
+function isPackagedBridge() {
+  return typeof process.pkg !== "undefined";
+}
+
+function localIpv4Addresses() {
+  const result = [];
+  for (const entries of Object.values(os.networkInterfaces())) {
+    for (const entry of entries || []) {
+      if (entry.family === "IPv4" && !entry.internal) result.push(entry.address);
+    }
+  }
+  return [...new Set(result)];
+}
+
+function bundledDriverPath() {
+  const candidate = path.join(__dirname, "drivers", DRIVER_FILE);
+  return fs.existsSync(candidate) ? candidate : null;
+}
+
+function restartPackagedBridge() {
+  try {
+    const child = spawn(process.execPath, process.argv.slice(1), {
+      detached: true,
+      stdio: "ignore",
+      windowsHide: true,
+      env: process.env,
+    });
+    child.unref();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function installBundledDriverAndRestart() {
+  const source = bundledDriverPath();
+  if (!source) return false;
+
+  const installDir = path.join(os.tmpdir(), "TouchToSteer");
+  const installer = path.join(installDir, DRIVER_FILE);
+
+  try {
+    fs.mkdirSync(installDir, { recursive: true });
+    fs.copyFileSync(source, installer);
+  } catch (err) {
+    console.error("Could not unpack the bundled ViGEmBus installer:", err.message);
+    return false;
+  }
+
+  console.log("");
+  console.log("ViGEmBus is not installed or is unavailable.");
+  console.log("Launching the bundled official ViGEmBus installer.");
+  console.log("Approve the Windows administrator prompt. The bridge will restart after setup.");
+  console.log("");
+
+  const result = spawnSync(installer, [], {
+    stdio: "inherit",
+    windowsHide: false,
+  });
+
+  if (result.error) {
+    console.error("Could not launch ViGEmBus setup:", result.error.message);
+    return false;
+  }
+
+  const successCodes = new Set([0, 1641, 3010]);
+  if (!successCodes.has(result.status)) {
+    console.error(
+      `ViGEmBus setup exited with code ${String(result.status)}. Start TouchToSteer again after completing the driver installation.`,
+    );
+    return false;
+  }
+
+  console.log("ViGEmBus setup completed. Restarting TouchToSteer Bridge...");
+  if (!restartPackagedBridge()) {
+    console.log("Please start TouchToSteer-Bridge.exe again.");
+  }
+  return true;
+}
 
 let client = null;
 let pad = null;
@@ -68,14 +156,34 @@ function createPad(mode) {
   }
 }
 
+let vigemConnectionError = null;
+
 try {
   const ViGEmClient = require("vigemclient");
   client = new ViGEmClient();
-  client.connect();
+  vigemConnectionError = client.connect();
+  if (vigemConnectionError) throw vigemConnectionError;
   createPad(padMode);
+  if (!pad) throw new Error("Virtual controller creation failed");
 } catch (err) {
-  console.warn("ViGEm not available - running in echo-only mode:", err.message);
+  const message = err?.message || String(err);
+  console.warn("ViGEm unavailable - running in echo-only mode:", message);
+
+  if (isPackagedBridge() && vigemConnectionError && installBundledDriverAndRestart()) {
+    process.exit(0);
+  }
 }
+
+console.log("");
+console.log("TouchToSteer Bridge ready.");
+const addresses = localIpv4Addresses();
+if (addresses.length) {
+  console.log("Phone WebSocket address(es):");
+  for (const address of addresses) console.log(`  ws://${address}:${PORT}`);
+} else {
+  console.log(`Phone WebSocket address: ws://<PC-IP>:${PORT}`);
+}
+console.log(`Driver package source: ${isPackagedBridge() ? "bundled with this executable" : DRIVER_URL}`);
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, Number(v) || 0));
 

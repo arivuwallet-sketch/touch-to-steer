@@ -14,7 +14,8 @@ export function RotateGate({ mode = "pad" }: Props) {
   useEffect(() => {
     const check = () => {
       const portrait = window.innerHeight > window.innerWidth;
-      setWrongOrientation(mode === "mouse" ? !portrait : portrait);
+      const touchDevice = window.matchMedia("(pointer: coarse)").matches;
+      setWrongOrientation(touchDevice && (mode === "mouse" ? !portrait : portrait));
     };
     check();
     window.addEventListener("resize", check);

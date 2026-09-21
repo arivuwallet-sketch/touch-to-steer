@@ -16,6 +16,7 @@ type MouseMessage = {
 
 type Props = {
   settings: Settings;
+  onSettingsChange: (patch: Partial<Settings>) => void;
   sendMouse: (message: MouseMessage) => boolean;
 };
 
@@ -34,7 +35,7 @@ function gainFor(settings: Settings, distance: number) {
   return settings.mouseSensitivity * (1 + speed * (settings.mouseDynamicMaxMultiplier - 1));
 }
 
-export function FlatMouse({ settings, sendMouse }: Props) {
+export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
   const padRef = useRef<HTMLDivElement | null>(null);
   const activePointers = useRef(new Map<number, { x: number; y: number; button?: MouseButton }>());
   const pressedButtons = useRef(new Set<MouseButton>());
@@ -42,7 +43,6 @@ export function FlatMouse({ settings, sendMouse }: Props) {
   const gyroLast = useRef<{ alpha: number; beta: number } | null>(null);
   const [gyroOn, setGyroOn] = useState(settings.mouseGyroEnabled);
   const [gyroPermission, setGyroPermission] = useState<"unknown" | "granted" | "denied">("unknown");
-  const [dpi, setDpi] = useState(settings.mouseDpi);
   const [dpiFlash, setDpiFlash] = useState(false);
 
   const transmitMove = useCallback((dx: number, dy: number) => {
@@ -50,12 +50,12 @@ export function FlatMouse({ settings, sendMouse }: Props) {
 
     const rotated = rotateDelta(dx, dy, settings.mouseRotationDeg);
     const scaled = gainFor(settings, Math.hypot(rotated.x, rotated.y));
-    const x = rotated.x * scaled * (dpi / 1600);
-    const y = rotated.y * scaled * (dpi / 1600) * (settings.mouseInvertY ? -1 : 1);
+    const x = rotated.x * scaled * (settings.mouseDpi / 1600);
+    const y = rotated.y * scaled * (settings.mouseDpi / 1600) * (settings.mouseInvertY ? -1 : 1);
 
     if (Math.abs(x) < 0.01 && Math.abs(y) < 0.01) return;
     sendMouse({ action: "move", dx: Math.round(clamp(x, -32767, 32767)), dy: Math.round(clamp(y, -32767, 32767)) });
-  }, [dpi, sendMouse, settings.mouseDynamicMaxMultiplier, settings.mouseDynamicSensitivity, settings.mouseInvertY, settings.mouseRotationDeg, settings.mouseSensitivity]);
+  }, [sendMouse, settings.mouseDpi, settings.mouseDynamicMaxMultiplier, settings.mouseDynamicSensitivity, settings.mouseInvertY, settings.mouseRotationDeg, settings.mouseSensitivity]);
 
   const releaseButtons = useCallback(() => {
     for (const button of pressedButtons.current) {
@@ -141,12 +141,12 @@ export function FlatMouse({ settings, sendMouse }: Props) {
 
   const cycleDpi = useCallback(() => {
     const values = [400, 800, 1200, 1600, 2400, 3200, 6400, 12800, 25600, 50000];
-    const index = values.findIndex((value) => value >= dpi);
+    const index = values.findIndex((value) => value >= settings.mouseDpi);
     const next = values[(index >= 0 ? index + 1 : 0) % values.length];
-    setDpi(next);
+    onSettingsChange({ mouseDpi: next });
     setDpiFlash(true);
     window.setTimeout(() => setDpiFlash(false), 180);
-  }, [dpi]);
+  }, [onSettingsChange, settings.mouseDpi]);
 
   const requestGyro = useCallback(async () => {
     try {
@@ -326,7 +326,7 @@ export function FlatMouse({ settings, sendMouse }: Props) {
             onClick={cycleDpi}
           >
             <Gauge className="size-4" />
-            <strong>{dpi.toLocaleString()}</strong>
+            <strong>{settings.mouseDpi.toLocaleString()}</strong>
             <small>DPI</small>
           </button>
 

@@ -102,7 +102,7 @@ function Rig() {
 
   return (
     <main className="relative h-[100dvh] overflow-hidden bg-background">
-      <RotateGate />
+      <RotateGate mode={mode} />
 
       {/* ---------- rig fills the screen ---------- */}
       <div className="absolute inset-0">

@@ -34,12 +34,9 @@ jobs:
         working-directory: public/bridge
         run: npm install --omit=dev
 
-      - name: Verify Visual Studio 2022 and CMake
+      - name: Verify CMake
         shell: pwsh
         run: |
-          $vsPath = & "$env:ProgramFiles(x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -version "[17.0,18.0)" -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-          if (-not $vsPath) { throw "Visual Studio 2022 C++ build tools were not found on the runner." }
-          Write-Host "Visual Studio: $vsPath"
           cmake --version
 
       - name: Build native Windows mouse injector

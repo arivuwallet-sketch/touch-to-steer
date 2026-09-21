@@ -113,6 +113,7 @@ function Setup() {
           <p><strong className="text-foreground">BeamNG.drive / Live for Speed:</strong> OutGauge UDP on UDP 4444, 30000 or 63392. Speed, RPM and gear are native; OutGauge does not provide a native redline value.</p>
           <p><strong className="text-foreground">EA SPORTS WRC:</strong> native UDP telemetry is configurable by the game's packet-structure system. The bridge does not guess its schema, so it stays NO SIGNAL until a compatible structure/decoder is configured.</p>
           <p><strong className="text-foreground">Wreckfest 2:</strong> native UDP telemetry is available on port 23123, but its Pino packet is not decoded yet. No fake values are shown.</p>
+          <p><strong className="text-foreground">Mouse mode:</strong> the packaged Windows bridge injects real Windows mouse movement, left/right/middle/back/forward buttons and wheel input. The phone mouse surface also supports gyro aiming, DPI scaling, rotation, dynamic sensitivity and coalesced pointer events.</p>
         </div>
       </div>
 
@@ -120,9 +121,10 @@ function Setup() {
         <h2 className="text-base font-bold">Live telemetry</h2>
         <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
           The steering dashboard does not invent speed or RPM. The PC bridge parses the game's
-          telemetry packets and immediately forwards the newest values to the phone. Forza Data Out
-          and EA F1 UDP telemetry are supported by the bridge; other games need a compatible
-          telemetry adapter because every game exposes its data differently.
+          telemetry packets and immediately forwards the newest values to the phone. Mouse mode is
+          separate: it uses the Windows SendInput API through the packaged native helper, so the
+          phone controls the normal desktop cursor as a real OS mouse input path. Game-specific
+          anti-cheat or protected input paths can still reject injected input.
         </p>
         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
           Do not run another application on the same UDP port. Games that send UDP telemetry can

@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Gamepad2, Gauge, Settings as SettingsIcon } from "lucide-react";
+import { Gamepad2, Gauge, Mouse, Settings as SettingsIcon } from "lucide-react";
 import { SettingsPanel } from "@/components/rig/SettingsPanel";
 import { FlatPad } from "@/components/rig/FlatPad";
 import { FlatWheel } from "@/components/rig/FlatWheel";
+import { FlatMouse } from "@/components/rig/FlatMouse";
 import { RotateGate } from "@/components/rig/RotateGate";
 import { Button } from "@/components/ui/button";
 import { useBridge } from "@/hooks/useBridge";
@@ -23,11 +24,11 @@ export const Route = createFileRoute("/")({
         content:
           "A full-screen mobile gamepad and flat steering-wheel controller with touch pedals and configurable PC controls.",
       },
-      { property: "og:title", content: "Mobile Rig — Gamepad & Wheel for PC" },
+      { property: "og:title", content: "Mobile Rig — Gamepad, Wheel & Mouse for PC" },
       {
         property: "og:description",
         content:
-          "Full-screen touch controls for gamepad and steering-wheel modes, designed for landscape phones.",
+          "Full-screen touch controls for gamepad, steering-wheel and low-latency mouse modes, designed for landscape phones.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -41,9 +42,9 @@ const STORAGE_KEY = "mobile-rig-settings";
 function Rig() {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [showSettings, setShowSettings] = useState(false);
-  const [mode, setMode] = useState<"pad" | "wheel">("pad");
+  const [mode, setMode] = useState<"pad" | "wheel" | "mouse">("pad");
   const stateRef = useRef<ControllerState>(emptyState());
-  const { status, latency, telemetry, telemetryLive, connect, disconnect } = useBridge(stateRef, 240, settings.outputMode);
+  const { status, latency, telemetry, telemetryLive, connect, disconnect, sendMouse } = useBridge(stateRef, 240, settings.outputMode);
 
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -107,8 +108,10 @@ function Rig() {
       <div className="absolute inset-0">
         {mode === "pad" ? (
           <FlatPad settings={settings} set={set} press={press} />
-        ) : (
+        ) : mode === "wheel" ? (
           <FlatWheel settings={settings} set={set} press={press} telemetry={telemetry} telemetryLive={telemetryLive} />
+        ) : (
+          <FlatMouse settings={settings} set={set} sendMouse={sendMouse} />
         )}
       </div>
 
@@ -131,6 +134,15 @@ function Rig() {
             title="Steering wheel controller"
           >
             <Gauge />
+          </Button>
+          <Button
+            onClick={() => setMode("mouse")}
+            variant={mode === "mouse" ? "default" : "ghost"}
+            size="icon"
+            aria-label="Mouse controller"
+            title="Mouse controller"
+          >
+            <Mouse />
           </Button>
         </div>
         <Button

@@ -940,6 +940,65 @@
   align-items: center;
 }
 
+.flat-mouse-aim-center {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  width: 22px;
+  height: 22px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(130, 255, 160, .24);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.25), 0 0 14px rgba(90,255,126,.08);
+  pointer-events: none;
+}
+
+.flat-mouse-aim-center::before,
+.flat-mouse-aim-center::after {
+  content: "";
+  position: absolute;
+  background: rgba(160,255,180,.42);
+}
+
+.flat-mouse-aim-center::before {
+  left: 50%;
+  top: 2px;
+  bottom: 2px;
+  width: 1px;
+  transform: translateX(-50%);
+}
+
+.flat-mouse-aim-center::after {
+  top: 50%;
+  left: 2px;
+  right: 2px;
+  height: 1px;
+  transform: translateY(-50%);
+}
+
+.flat-mouse-aim-center span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: rgba(205,255,215,.92);
+  box-shadow: 0 0 8px rgba(100,255,140,.72);
+}
+
+.flat-mouse-aim-center i {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 4px);
+  transform: translateX(-50%);
+  font: 800 5px/1 var(--font-display);
+  letter-spacing: .08em;
+  font-style: normal;
+  color: rgba(220,255,225,.35);
+}
+
 .flat-mouse-status-light {
   width: 11px;
   height: 4px;

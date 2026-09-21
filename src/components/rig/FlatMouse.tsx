@@ -339,11 +339,11 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
         settings.mouseGyroSensitivity;
 
       // Phone gyro axes are opposite to the desired on-screen pointer axes.
-      // Invert both axes by default; mouseInvertY can intentionally flip Y back.
-      const invertY = settings.mouseInvertY ? 1 : -1;
+      // Keep both raw axes inverted; transmitMove applies the user's optional
+      // Y inversion setting and DPI scaling exactly once.
       transmitMove(
-        -gamma * dt * pixelsPerDegree * (settings.mouseDpi / 1600),
-        -beta * dt * pixelsPerDegree * (settings.mouseDpi / 1600) * invertY,
+        -gamma * dt * pixelsPerDegree,
+        -beta * dt * pixelsPerDegree,
       );
     };
 
@@ -374,11 +374,9 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
           ORIENTATION_BASE_PIXELS_PER_DEGREE,
           MOTION_MAX_PIXELS_PER_DEGREE,
         ) * settings.mouseGyroSensitivity;
-      const invertY = settings.mouseInvertY ? 1 : -1;
-
       transmitMove(
-        -dx * pixelsPerDegree * (settings.mouseDpi / 1600),
-        -dy * pixelsPerDegree * (settings.mouseDpi / 1600) * invertY,
+        -dx * pixelsPerDegree,
+        -dy * pixelsPerDegree,
       );
     };
 

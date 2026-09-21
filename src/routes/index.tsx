@@ -96,17 +96,28 @@ function Rig() {
     const next = { ...previous, ...p };
     stateRef.current = next;
 
-    // Steering mode exposes handbrake, nitro and gear as state fields rather
-    // than button-map entries. Treat their digital thresholds exactly like
-    // normal button edges so every tap/press reaches ViGEm immediately.
-    const digitalEdge = ["handbrake", "nitro", "gear"].some((key) => {
+    // Steering wheel pedals and momentary auxiliaries should get an
+    // immediate first/last report instead of waiting for the periodic sampler.
+    // The analog value itself continues through the normal 240 Hz state path.
+    const immediateControlEdge = [
+      "throttle",
+      "brake",
+      "handbrake",
+      "nitro",
+      "gear",
+    ].some((key) => {
       if (!(key in p)) return false;
-      if (key === "gear") return Number(previous.gear) !== Number(next.gear);
-      return (Number(previous[key as "handbrake" | "nitro"]) || 0) > 0.5 !==
-        (Number(next[key as "handbrake" | "nitro"]) || 0) > 0.5;
+
+      if (key === "gear") {
+        return Number(previous.gear) !== Number(next.gear);
+      }
+
+      const previousActive = (Number(previous[key as "throttle" | "brake" | "handbrake" | "nitro"]) || 0) > 0.02;
+      const nextActive = (Number(next[key as "throttle" | "brake" | "handbrake" | "nitro"]) || 0) > 0.02;
+      return previousActive !== nextActive;
     });
 
-    if (digitalEdge) sendControllerEdge();
+    if (immediateControlEdge) sendControllerEdge();
   }, [sendControllerEdge]);
 
   const press = useCallback((id: string, down: boolean) => {

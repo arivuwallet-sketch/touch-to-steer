@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent, type RefObject } from "react";
 import { applyCurve, type ControllerState, type Settings } from "@/lib/controller-types";
+import type { BridgeTelemetry } from "@/hooks/useBridge";
 
 type Props = {
   settings: Settings;
   set: (p: Partial<ControllerState>) => void;
   press: (id: string, down: boolean) => void;
+  telemetry: BridgeTelemetry;
+  telemetryLive: boolean;
 };
 
 const buzz = (enabled: boolean, ms: number | number[] = 10) => {
@@ -12,6 +15,128 @@ const buzz = (enabled: boolean, ms: number | number[] = 10) => {
     navigator.vibrate(ms);
   }
 };
+
+function TelemetryGauge({
+  label,
+  value,
+  max,
+  unit,
+  live,
+  accent,
+}: {
+  label: string;
+  value?: number;
+  max: number;
+  unit: string;
+  live: boolean;
+  accent: "cyan" | "red";
+}) {
+  const hasValue = live && typeof value === "number" && Number.isFinite(value);
+  const hasScale = hasValue && max > 0;
+  const ratio = hasScale ? Math.max(0, Math.min(1, value / max)) : 0;
+  const angle = -135 + ratio * 270;
+
+  return (
+    <div className="relative size-[clamp(7rem,13vw,9rem)] shrink-0 select-none">
+      <div className="absolute inset-0 rounded-full border border-white/10 bg-[radial-gradient(circle_at_36%_28%,#2b333b_0%,#0d1217_58%,#05070a_100%)] shadow-[inset_0_0_22px_rgba(0,0,0,.9),0_10px_24px_rgba(0,0,0,.55)]" />
+      <div
+        className={
+          "absolute inset-[7%] rounded-full border border-white/5 " +
+          (accent === "cyan"
+            ? "bg-[conic-gradient(from_225deg,rgba(34,211,238,.65),rgba(34,211,238,.06)_28%,rgba(255,255,255,.04)_75%,rgba(239,68,68,.4))]"
+            : "bg-[conic-gradient(from_225deg,rgba(239,68,68,.6),rgba(239,68,68,.08)_26%,rgba(255,255,255,.04)_75%,rgba(239,68,68,.5))]")
+        }
+      />
+      <div className="absolute inset-[13%] rounded-full bg-[#080c10] shadow-[inset_0_0_16px_rgba(0,0,0,.9)]" />
+
+      {Array.from({ length: 19 }).map((_, i) => {
+        const tickAngle = -135 + i * 15;
+        const major = i % 3 === 0;
+        return (
+          <span
+            key={i}
+            className="absolute left-1/2 top-1/2 origin-center"
+            style={{ transform: `translate(-50%,-50%) rotate(${tickAngle}deg) translateY(-${major ? 4.5 : 4}rem)` }}
+          >
+            <span
+              className={
+                "block w-px rounded-full " +
+                (major ? "h-3 bg-slate-200/70" : "h-1.5 bg-slate-500/70")
+              }
+            />
+          </span>
+        );
+      })}
+
+      <div
+        className="absolute left-1/2 top-1/2 h-[1px] w-[39%] origin-left rounded-full bg-white/90 shadow-[0_0_7px_rgba(255,255,255,.35)]"
+        style={{
+          transform: `rotate(${angle}deg)`,
+          opacity: hasScale ? 1 : 0,
+        }}
+      >
+        <span className="absolute right-0 top-1/2 size-2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,.8)]" />
+      </div>
+
+      <div className="absolute left-1/2 top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/30 bg-[#3a424a] shadow-[0_0_7px_rgba(255,255,255,.2)]" />
+
+      <div className="absolute inset-x-0 top-[28%] text-center">
+        <div className="text-[7px] font-black uppercase tracking-[0.24em] text-slate-500">{label}</div>
+        <div className="mt-0.5 font-mono text-[clamp(1rem,2.2vw,1.5rem)] font-black tracking-tight text-white">
+          {hasValue ? Math.round(value).toLocaleString() : "--"}
+        </div>
+        <div className="text-[6px] font-black uppercase tracking-[0.2em] text-slate-500">{unit}</div>
+      </div>
+
+      <div className="absolute inset-x-0 bottom-[12%] text-center text-[5px] font-bold uppercase tracking-[0.16em] text-slate-600">
+        {hasScale ? `0 — ${Math.round(max).toLocaleString()}` : "NO GAME DATA"}
+      </div>
+
+      <div
+        className={
+          "absolute right-[9%] top-[9%] rounded-full border px-1.5 py-0.5 text-[5px] font-black uppercase tracking-[0.12em] " +
+          (live
+            ? "border-emerald-300/30 bg-emerald-300/10 text-emerald-200"
+            : "border-white/10 bg-black/35 text-slate-600")
+        }
+      >
+        {live ? "LIVE" : "NO SIGNAL"}
+      </div>
+    </div>
+  );
+}
+
+function TelemetryCluster({
+  telemetry,
+  live,
+}: {
+  telemetry: BridgeTelemetry;
+  live: boolean;
+}) {
+  const rpmMax = telemetry.rpmMax && telemetry.rpmMax > 0 ? telemetry.rpmMax : 0;
+
+  return (
+    <div className="flat-wheel-telemetry pointer-events-none absolute left-1/2 top-[3%] z-20 flex -translate-x-1/2 items-center gap-2 rounded-[1.35rem] border border-white/10 bg-[#070b0f]/80 px-2 py-2 shadow-[0_14px_34px_rgba(0,0,0,.6)] backdrop-blur-md md:gap-3 md:px-3 md:py-3">
+      <TelemetryGauge label="SPEED" value={telemetry.speed} max={400} unit="KM/H" live={live} accent="cyan" />
+      <div className="grid size-[clamp(3rem,6vw,4.25rem)] place-items-center rounded-full border border-white/10 bg-[#0a0e12] shadow-[inset_0_0_16px_rgba(0,0,0,.9)]">
+        <div className="text-[6px] font-black uppercase tracking-[0.2em] text-slate-600">GEAR</div>
+        <div className="font-mono text-[clamp(1.1rem,2.5vw,1.8rem)] font-black text-white">
+          {!live || typeof telemetry.gear !== "number"
+            ? "--"
+            : telemetry.gear === 0
+              ? "N"
+              : telemetry.gear < 0
+                ? "R"
+                : telemetry.gear}
+        </div>
+        <div className="text-[5px] font-black uppercase tracking-[0.16em] text-slate-600">
+          {telemetry.source ?? "GAME"}
+        </div>
+      </div>
+      <TelemetryGauge label="RPM" value={telemetry.rpm} max={rpmMax} unit="RPM" live={live} accent="red" />
+    </div>
+  );
+}
 
 function stopWheelGesture(e: PointerEvent<HTMLElement>) {
   e.stopPropagation();
@@ -235,7 +360,7 @@ function G29Wheel({
   );
 }
 
-export function FlatWheel({ settings, set, press }: Props) {
+export function FlatWheel({ settings, set, press, telemetry, telemetryLive }: Props) {
   const wheelHitRef = useRef<HTMLDivElement>(null);
   const wheelVisualRef = useRef<HTMLDivElement>(null);
   const touchPointer = useRef<number | null>(null);
@@ -495,6 +620,8 @@ export function FlatWheel({ settings, set, press }: Props) {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_95%_at_50%_6%,#1a222b_0%,#080a0d_55%,#030405_100%)]" />
       <div className="pointer-events-none absolute inset-2 rounded-[1.7rem] border border-white/15" />
       <div className="pointer-events-none absolute inset-4 rounded-[1.4rem] border border-[#e11d2e]/15" />
+
+      <TelemetryCluster telemetry={telemetry} live={telemetryLive} />
 
       <div className="flat-wheel-root-title absolute left-2 top-2 z-20 rounded-xl border border-white/10 bg-black/45 px-2.5 py-1.5 backdrop-blur-md md:left-5 md:top-5 md:px-3 md:py-2">
         <div className="text-[6px] font-black uppercase tracking-[0.22em] text-slate-500 md:text-[8px] md:tracking-[0.25em]">

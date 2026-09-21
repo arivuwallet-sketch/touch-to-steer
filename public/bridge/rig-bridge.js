@@ -353,6 +353,12 @@ const ackState = new WeakMap();
 const socketState = new WeakMap();
 const controllerSessions = new Set();
 
+// Keep one XInput target alive while the bridge is running. This makes the
+// virtual Xbox controller visible in joy.cpl immediately instead of waiting
+// for a phone packet. The first phone session reuses this target when it asks
+// for XInput or Universal mode.
+let standbyXInputTarget = null;
+
 function queryViGEmBusService() {
   if (process.platform !== "win32") {
     return { installed: false, running: false, raw: "" };
@@ -397,9 +403,7 @@ function connectViGEmClient() {
   const service = queryViGEmBusService();
 
   if (service.installed && !service.running) {
-    console.log(
-      "ViGEmBus is installed but not running; attempting to start the service...",
-    );
+    console.log("ViGEmBus is installed but not running; attempting to start the service...");
     startViGEmBusService();
   }
 
@@ -420,12 +424,7 @@ function connectViGEmClient() {
       if (retryService.installed && !retryService.running) {
         startViGEmBusService();
       }
-      Atomics.wait(
-        new Int32Array(new SharedArrayBuffer(4)),
-        0,
-        0,
-        250,
-      );
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250);
     }
   }
 
@@ -444,7 +443,8 @@ function ensureViGEmClient() {
   try {
     const connection = connectViGEmClient();
     if (!connection.client) {
-      vigemConnectionError = connection.error || new Error("ViGEmBus connection failed");
+      vigemConnectionError =
+        connection.error || new Error("ViGEmBus connection failed");
       appendBridgeLog(
         "ViGEm recovery connect failed: " +
         (vigemConnectionError?.message || String(vigemConnectionError)),
@@ -506,7 +506,12 @@ function createTarget(type) {
     }
 
     target.resetInputs();
-    target.update();
+    const updateError = target.update();
+    if (updateError) {
+      appendBridgeLog(
+        `Initial ${type} controller update returned: ${updateError.message || updateError}`,
+      );
+    }
 
     let userIndex = "n/a";
     if (type === "xinput") {
@@ -518,7 +523,7 @@ function createTarget(type) {
     }
 
     const name =
-      type === "ds4" ? "DualShock 4 / HID" : "Xbox 360 / XInput";
+      type === "ds4" ? "DualShock 4 / HID" : "Controller (Xbox 360 For Windows)";
 
     console.log(
       `Virtual ${name} target added (attached=${attached}, userIndex=${userIndex}).`,
@@ -549,8 +554,12 @@ try {
 
   client = connection.client;
   vigemConnectionError = null;
+
+  // Default XInput target stays visible for Windows controller diagnostics.
+  // It is handed to the first phone session when XInput/Universal is selected.
+  standbyXInputTarget = createTarget("xinput");
   appendBridgeLog(
-    "ViGEm client connected; waiting for phone controller sessions.",
+    `ViGEm client connected; standby XInput target ready=${Boolean(standbyXInputTarget)}.`,
   );
 } catch (err) {
   const message = err?.message || String(err);
@@ -559,11 +568,11 @@ try {
   vigemConnectionError = err;
   appendBridgeLog(
     "ViGEm startup failure: " +
-    message +
-    " | serviceInstalled=" +
-    service.installed +
-    " | serviceRunning=" +
-    service.running,
+      message +
+      " | serviceInstalled=" +
+      service.installed +
+      " | serviceRunning=" +
+      service.running,
   );
   console.warn("ViGEm unavailable - running in echo-only mode:", message);
 
@@ -592,21 +601,17 @@ appendBridgeLog("TouchToSteer Bridge ready.");
 const addresses = localIpv4Addresses();
 if (addresses.length) {
   console.log("Phone WebSocket address(es):");
-  for (const address of addresses) {
-    console.log(`  ws://${address}:${PORT}`);
-  }
+  for (const address of addresses) console.log(`  ws://${address}:${PORT}`);
 } else {
   console.log(`Phone WebSocket address: ws://<PC-IP>:${PORT}`);
 }
 console.log(
-  `Default virtual controller target: ${DEFAULT_OUTPUT === "universal" ? "Universal (Xbox 360/XInput + DirectInput/HID)" : DEFAULT_OUTPUT === "ds4" ? "DualShock 4/HID" : "Xbox 360/XInput"}`,
+  `Default virtual controller target: ${DEFAULT_OUTPUT === "universal" ? "Universal (Xbox 360/XInput + DirectInput/HID)" : "DualShock 4/HID"}`,
 );
 console.log(
   `Virtual controller sessions: up to ${MAX_CONTROLLER_SESSIONS} independent players`,
 );
-console.log(
-  `Driver package source: ${isPackagedBridge() ? "bundled with this executable" : DRIVER_URL}`,
-);
+console.log(`Driver package source: ${isPackagedBridge() ? "bundled with this executable" : DRIVER_URL}`);
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, Number(v) || 0));
 
@@ -674,20 +679,20 @@ function applyToTarget(target, s, buttonMap) {
   target.axis.rightX.setValue(clamp(s.rx, -1, 1));
   target.axis.rightY.setValue(-clamp(s.ry, -1, 1));
 
+  const brake = clamp(s.brake, 0, 1);
+  const throttle = clamp(s.throttle, 0, 1);
+  const clutch = clamp(s.clutch, 0, 1);
+  const lt = clamp(s.lt, 0, 1);
+  const rt = clamp(s.rt, 0, 1);
+
+  // Always put steering pedals on the physical-style trigger axes. This is
+  // the common representation used by XInput, DS4/HID compatibility layers,
+  // and modern gamepad APIs. The aliases also keep LT/RT button bindings alive.
   target.axis.leftTrigger.setValue(
-    Math.max(
-      clamp(s.brake, 0, 1),
-      clamp(s.clutch, 0, 1) * 0.6,
-      clamp(s.lt, 0, 1),
-      s.buttons?.l2 ? 1 : 0,
-    ),
+    Math.max(brake, clutch * 0.6, lt, buttons.l2 ? 1 : 0),
   );
   target.axis.rightTrigger.setValue(
-    Math.max(
-      clamp(s.throttle, 0, 1),
-      clamp(s.rt, 0, 1),
-      s.buttons?.r2 ? 1 : 0,
-    ),
+    Math.max(throttle, rt, buttons.r2 ? 1 : 0),
   );
 
   for (const [id, name] of Object.entries(buttonMap)) {
@@ -743,7 +748,8 @@ function applySessionState(session, s) {
   }
 
   session.lastAppliedSignature = signature;
-}const wss = new WebSocketServer({
+}
+const wss = new WebSocketServer({
   port: PORT,
   perMessageDeflate: false,
 });
@@ -1028,8 +1034,10 @@ wss.on("connection", (ws) => {
 
   function flushApply() {
     session.applyScheduled = false;
+
     const state = session.latestState;
     session.latestState = null;
+
     if (!state || !session.targets.length) return;
 
     try {
@@ -1061,13 +1069,13 @@ wss.on("connection", (ws) => {
       return true;
     }
 
-    if (!session.targets.length && controllerSessions.size >= MAX_CONTROLLER_SESSIONS) {
-      return false;
-    }
-
     disconnectSessionTargets();
 
     if (!ensureViGEmClient()) return false;
+
+    if (controllerSessions.size >= MAX_CONTROLLER_SESSIONS) {
+      return false;
+    }
 
     const requestedTypes =
       requestedMode === "universal"
@@ -1075,28 +1083,46 @@ wss.on("connection", (ws) => {
         : [requestedMode];
 
     const created = [];
-    for (const type of requestedTypes) {
-      const target = createTarget(type);
-      if (target) {
-        created.push({
-          target,
-          type,
-          map: type === "ds4" ? DSBTN : XBTN,
-        });
-      }
+
+    // Reuse the always-visible XInput target for player 1. This both fixes
+    // joy.cpl visibility and prevents unnecessary controller churn.
+    if (
+      requestedTypes.includes("xinput") &&
+      standbyXInputTarget &&
+      controllerSessions.size === 0
+    ) {
+      created.push({
+        target: standbyXInputTarget,
+        type: "xinput",
+        map: XBTN,
+      });
+      standbyXInputTarget = null;
     }
 
-    // Never leave a half-created compatibility session behind. If one side of
-    // Universal mode failed, clean up the successful side and report failure.
-    if (created.length !== requestedTypes.length) {
-      for (const entry of created) disconnectTarget(entry.target);
-      return false;
+    for (const type of requestedTypes) {
+      if (created.some((entry) => entry.type === type)) continue;
+
+      const target = createTarget(type);
+      if (!target) {
+        for (const entry of created) disconnectTarget(entry.target);
+        created.length = 0;
+        return false;
+      }
+
+      created.push({
+        target,
+        type,
+        map: type === "ds4" ? DSBTN : XBTN,
+      });
     }
 
     session.mode = requestedMode;
     session.targets = created;
     session.lastAppliedSignature = "";
     controllerSessions.add(session);
+    appendBridgeLog(
+      `Controller session ready: mode=${requestedMode}, targets=${created.map((entry) => entry.type).join("+")}, players=${controllerSessions.size}`,
+    );
     return true;
   }
 
@@ -1106,7 +1132,9 @@ wss.on("connection", (ws) => {
 
     try {
       const index = Number(xinput.target.userIndex);
-      return Number.isInteger(index) && index >= 0 && index < MAX_CONTROLLER_SESSIONS
+      return Number.isInteger(index) &&
+        index >= 0 &&
+        index < MAX_CONTROLLER_SESSIONS
         ? index + 1
         : null;
     } catch {
@@ -1116,7 +1144,7 @@ wss.on("connection", (ws) => {
 
   console.log("Phone connected.");
   appendBridgeLog(
-    `Phone connected; active players=${controllerSessions.size + 1}`,
+    `Phone connected; active players=${controllerSessions.size}`,
   );
 
   ws.on("message", (raw) => {
@@ -1143,11 +1171,15 @@ wss.on("connection", (ws) => {
       const xinputTarget = session.targets.find(
         (entry) => entry.type === "xinput",
       );
-      const hasDs4 = session.targets.some((entry) => entry.type === "ds4");
+      const ds4Target = session.targets.find(
+        (entry) => entry.type === "ds4",
+      );
 
       const names = [];
-      if (xinputTarget) names.push("Controller (Xbox 360 For Windows)");
-      if (hasDs4) names.push("Wireless Controller");
+      if (xinputTarget) {
+        names.push("Controller (Xbox 360 For Windows)");
+      }
+      if (ds4Target) names.push("Wireless Controller");
 
       try {
         ws.send(JSON.stringify({
@@ -1166,14 +1198,13 @@ wss.on("connection", (ws) => {
             type: session.mode,
             name: connected ? names.join(" + ") : null,
             xinput: Boolean(xinputTarget),
-            directInputFallback: hasDs4,
+            directInputFallback: Boolean(ds4Target),
             player: playerIndex(),
             maxPlayers: MAX_CONTROLLER_SESSIONS,
             activePlayers: controllerSessions.size,
             error: connected
               ? null
-              : controllerSessions.size >= MAX_CONTROLLER_SESSIONS &&
-                  session.targets.length === 0
+              : controllerSessions.size >= MAX_CONTROLLER_SESSIONS
                 ? `Maximum of ${MAX_CONTROLLER_SESSIONS} simultaneous controller players reached.`
                 : "ViGEmBus virtual controller could not be created.",
           },
@@ -1216,8 +1247,8 @@ wss.on("connection", (ws) => {
 
       if (msg.priority === "edge") {
         try {
-          // Keep digital edges outside Claude's analog mailbox so a very short
-          // press/release is applied immediately to every target for this player.
+          // Digital edges bypass Claude's mailbox and update every target for
+          // this player immediately.
           applySessionState(session, msg);
         } catch (err) {
           console.warn(
@@ -1227,8 +1258,8 @@ wss.on("connection", (ws) => {
           appendBridgeLog("EDGE APPLY ERROR: " + (err?.stack || err));
         }
       } else {
-        // Claude's latency fix, per player: only the newest continuous state
-        // survives until the native driver update gets its turn.
+        // Claude's latency fix, now per player: a single latest-value mailbox
+        // means stale continuous states can never queue ahead of fresh input.
         session.latestState = msg;
         scheduleApply();
       }

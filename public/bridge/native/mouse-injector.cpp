@@ -3,7 +3,19 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <cctype>
+
+static bool inject(INPUT& input) {
+    const UINT sent = SendInput(1, &input, sizeof(INPUT));
+    if (sent == 1) return true;
+
+    // Legacy fallback for Windows configurations that reject SendInput.
+    SetLastError(ERROR_SUCCESS);
+    if (input.type == INPUT_MOUSE) {
+        mouse_event(input.mi.dwFlags, input.mi.mouseData, 0, static_cast<DWORD>(input.mi.dy), 0);
+        return GetLastError() == ERROR_SUCCESS;
+    }
+    return false;
+}
 
 static void moveMouse(LONG dx, LONG dy) {
     INPUT input{};
@@ -11,7 +23,7 @@ static void moveMouse(LONG dx, LONG dy) {
     input.mi.dx = dx;
     input.mi.dy = dy;
     input.mi.dwFlags = MOUSEEVENTF_MOVE;
-    SendInput(1, &input, sizeof(INPUT));
+    inject(input);
 }
 
 static void buttonMouse(const std::string& name, bool down) {
@@ -19,8 +31,7 @@ static void buttonMouse(const std::string& name, bool down) {
     if (name == "left") flag = down ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP;
     else if (name == "right") flag = down ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_RIGHTUP;
     else if (name == "middle") flag = down ? MOUSEEVENTF_MIDDLEDOWN : MOUSEEVENTF_MIDDLEUP;
-    else if (name == "back") flag = down ? MOUSEEVENTF_XDOWN : MOUSEEVENTF_XUP;
-    else if (name == "forward") flag = down ? MOUSEEVENTF_XDOWN : MOUSEEVENTF_XUP;
+    else if (name == "back" || name == "forward") flag = down ? MOUSEEVENTF_XDOWN : MOUSEEVENTF_XUP;
     else return;
 
     INPUT input{};
@@ -28,7 +39,7 @@ static void buttonMouse(const std::string& name, bool down) {
     input.mi.dwFlags = flag;
     if (name == "back") input.mi.mouseData = XBUTTON1;
     if (name == "forward") input.mi.mouseData = XBUTTON2;
-    SendInput(1, &input, sizeof(INPUT));
+    inject(input);
 }
 
 static void wheelMouse(LONG delta) {
@@ -36,29 +47,32 @@ static void wheelMouse(LONG delta) {
     input.type = INPUT_MOUSE;
     input.mi.dwFlags = MOUSEEVENTF_WHEEL;
     input.mi.mouseData = static_cast<DWORD>(delta);
-    SendInput(1, &input, sizeof(INPUT));
+    inject(input);
 }
 
 int main() {
     std::ios::sync_with_stdio(false);
     std::cin.tie(nullptr);
-    std::cout << "READY\n" << std::flush;
 
+    std::cout << "READY\n" << std::flush;
     std::string line;
+
     while (std::getline(std::cin, line)) {
         std::istringstream in(line);
         std::string command;
         in >> command;
 
         if (command == "MOVE") {
-            LONG dx = 0, dy = 0;
+            LONG dx = 0;
+            LONG dy = 0;
             in >> dx >> dy;
             moveMouse(dx, dy);
             continue;
         }
 
         if (command == "BUTTON") {
-            std::string name, state;
+            std::string name;
+            std::string state;
             in >> name >> state;
             buttonMouse(name, state == "DOWN");
             continue;

@@ -346,29 +346,22 @@ function installBundledDriverAndRestart() {
 }
 
 let client = null;
-let pad = null;
-let padMode = OUTPUT === "ds4" ? "ds4" : "xinput";
+let pad = null;       // Xbox 360 / XInput target
+let ds4Pad = null;    // DualShock 4 / HID-compatible fallback target
+let padMode =
+  OUTPUT === "ds4" ? "ds4" :
+  OUTPUT === "universal" ? "universal" :
+  "xinput";
 let lastAppliedSignature = "";
 const ackState = new WeakMap();
 
 // The phone can send controller state up to 240 times/sec, but applying a
 // report to the driver (pad.update(), a synchronous native call) is not
 // guaranteed to be faster than that under real-world driver/OS scheduling.
-// Calling apply() directly from ws.on("message") would process every queued
-// packet in strict arrival order with no way to skip ahead -- if the driver
-// ever falls behind for a moment, a backlog of now-stale packets builds up
-// and every button press is delayed by however much backlog is ahead of it,
-// growing for as long as input keeps coming in.
 //
-// Instead, incoming messages only update a single-slot "latest state"
-// mailbox (cheap, never blocks), and a separate loop applies whatever is
-// currently in that slot on setImmediate. Because a newer state always
-// overwrites an older, not-yet-applied one, there is nothing to queue --
-// the bridge is always working from the freshest input, and the worst-case
-// added latency is one driver update, not an accumulating backlog.
-// Keep Claude's latency fix: continuous controller states use a
-// single-slot latest-value mailbox so stale 240 Hz snapshots can never build
-// an unbounded backlog.
+// Keep Claude's latency fix for continuous analog state: a single-slot
+// latest-value mailbox prevents stale 240 Hz snapshots from building a queue.
+// Digital edges bypass that mailbox and are applied immediately below.
 let latestState = null;
 let applyScheduled = false;
 
@@ -394,40 +387,38 @@ function scheduleApply() {
   setImmediate(flushState);
 }
 
-function createPad(mode) {
-  if (!client) return false;
-
-  if (pad) {
-    try {
-      pad.resetInputs();
-      pad.update();
-      pad.disconnect();
-    } catch {
-      /* ignore a stale target */
-    }
-    pad = null;
+function disconnectTarget(target) {
+  if (!target) return;
+  try {
+    target.resetInputs();
+    target.update();
+  } catch {
+    /* ignore a stale target */
   }
+  try {
+    target.disconnect();
+  } catch {
+    /* ignore a stale target */
+  }
+}
+
+function createTarget(type) {
+  if (!client) return null;
 
   try {
-    const target = mode === "ds4"
+    const target = type === "ds4"
       ? client.createDS4Controller()
       : client.createX360Controller();
 
     target.updateMode = "manual";
 
-    // This is the actual ViGEm plug-in operation. A null return means the
-    // target was accepted by the ViGEmBus driver.
     const connectError = target.connect();
     if (connectError) {
       throw new Error(
-        `ViGEm target connect failed: ${connectError?.message || String(connectError)}`,
+        `ViGEm ${type === "ds4" ? "DualShock 4" : "Xbox 360"} target connect failed: ${connectError?.message || String(connectError)}`,
       );
     }
 
-    // Do NOT require userIndex to be 0..3 before accepting the target.
-    // Windows can enumerate the XInput slot asynchronously. Disconnecting
-    // here can race PnP and prevent a perfectly valid target from appearing
-    // in joy.cpl. The target's attached state is the more direct signal.
     let attached = false;
     try {
       attached = Boolean(target.attached);
@@ -435,40 +426,73 @@ function createPad(mode) {
       attached = true;
     }
 
-    pad = target;
-    lastAppliedSignature = "";
-    pad.resetInputs();
-    const updateError = pad.update();
+    target.resetInputs();
+    const updateError = target.update();
     if (updateError) {
       appendBridgeLog(
-        `Initial ${mode} controller report update returned: ${updateError.message || updateError}`,
+        `Initial ${type} controller report update returned: ${updateError.message || updateError}`,
       );
     }
 
-    let userIndex = "pending";
-    if (mode === "xinput") {
+    let userIndex = "n/a";
+    if (type === "xinput") {
       try {
         userIndex = String(target.userIndex);
       } catch {
-        /* Windows may not have assigned the XInput slot yet */
+        /* Windows may assign the XInput slot asynchronously */
       }
     }
 
-    const controllerName = mode === "ds4" ? "DualShock 4" : "Xbox 360";
+    const name = type === "ds4" ? "DualShock 4 / HID" : "Xbox 360 / XInput";
     console.log(
-      `Virtual ${controllerName} target added to ViGEmBus (attached=${attached}, userIndex=${userIndex}).`,
+      `Virtual ${name} target added to ViGEmBus (attached=${attached}, userIndex=${userIndex}).`,
     );
     appendBridgeLog(
-      `Virtual ${controllerName} target added to ViGEmBus (attached=${attached}, userIndex=${userIndex}).`,
+      `Virtual ${name} target added to ViGEmBus (attached=${attached}, userIndex=${userIndex}).`,
     );
-    return true;
+    return target;
   } catch (err) {
-    pad = null;
     const message = err?.message || String(err);
-    console.warn(`Unable to connect ${mode} virtual controller:`, message);
-    appendBridgeLog(`Unable to connect ${mode} virtual controller: ${message}`);
-    return false;
+    console.warn(
+      `Unable to connect ${type === "ds4" ? "DualShock 4 / HID" : "Xbox 360 / XInput"} virtual controller:`,
+      message,
+    );
+    appendBridgeLog(
+      `Unable to connect ${type === "ds4" ? "DualShock 4 / HID" : "Xbox 360 / XInput"} virtual controller: ${message}`,
+    );
+    return null;
   }
+}
+
+function createPad(mode) {
+  if (!client) return false;
+
+  // Recreate targets when switching compatibility modes so Windows receives
+  // a clean PnP device lifecycle instead of a stale controller class.
+  disconnectTarget(pad);
+  disconnectTarget(ds4Pad);
+  pad = null;
+  ds4Pad = null;
+  lastAppliedSignature = "";
+
+  if (mode === "xinput" || mode === "universal") {
+    pad = createTarget("xinput");
+  }
+
+  if (mode === "ds4" || mode === "universal") {
+    ds4Pad = createTarget("ds4");
+  }
+
+  const connected = Boolean(pad || ds4Pad);
+  if (mode === "universal") {
+    console.log(
+      `Universal controller mode: XInput=${Boolean(pad)} + DirectInput/HID fallback=${Boolean(ds4Pad)}.`,
+    );
+    appendBridgeLog(
+      `Universal controller mode: XInput=${Boolean(pad)} + DirectInput/HID fallback=${Boolean(ds4Pad)}.`,
+    );
+  }
+  return connected;
 }
 
 function queryViGEmBusService() {
@@ -547,7 +571,7 @@ try {
   client = connection.client;
   vigemConnectionError = null;
   createPad(padMode);
-  if (!pad) throw new Error("Virtual controller creation failed");
+  if (!pad && !ds4Pad) throw new Error("Virtual controller creation failed");
 } catch (err) {
   const message = err?.message || String(err);
   const service = queryViGEmBusService();
@@ -569,7 +593,7 @@ try {
     console.warn(
       "The bridge will NOT relaunch the ViGEmBus installer because an installation was detected.",
     );
-  } else if (!SKIP_DRIVER_INSTALL && isPackagedBridge() && !pad && installBundledDriverAndRestart()) {
+  } else if (!SKIP_DRIVER_INSTALL && isPackagedBridge() && !pad && !ds4Pad && installBundledDriverAndRestart()) {
     process.exit(0);
   }
 }
@@ -577,7 +601,7 @@ try {
 let controllerRecoveryTimer = null;
 
 function ensureVirtualController() {
-  if (pad) return true;
+  if (pad || ds4Pad) return true;
 
   try {
     if (!client) {
@@ -598,9 +622,9 @@ function ensureVirtualController() {
   }
 }
 
-if (!pad) {
+if (!pad && !ds4Pad) {
   controllerRecoveryTimer = setInterval(() => {
-    if (pad) {
+    if (pad || ds4Pad) {
       if (controllerRecoveryTimer) {
         clearInterval(controllerRecoveryTimer);
         controllerRecoveryTimer = null;
@@ -640,7 +664,10 @@ const XBTN = {
   start: "START", back: "BACK", home: "GUIDE",
   lb: "LEFT_SHOULDER", rb: "RIGHT_SHOULDER",
   select: "BACK", m1: "LEFT_SHOULDER", m2: "RIGHT_SHOULDER",
-  m3: "LEFT_THUMB", m4: "RIGHT_THUMB", m5: "BACK", m6: "START",
+  m3: "LEFT_THUMB", m4: "BACK", m5: "BACK", m6: "START",
+  __horn: "LEFT_THUMB", __look: "RIGHT_THUMB", __reset: "Y",
+  __handbrake: "A", __nitro: "LEFT_SHOULDER",
+  __gearUp: "RIGHT_SHOULDER", __gearDown: "LEFT_SHOULDER",
 };
 
 const DSBTN = {
@@ -654,10 +681,13 @@ const DSBTN = {
   start: "OPTIONS", back: "SHARE", home: "SPECIAL_PS", select: "SHARE",
   m1: "SHOULDER_LEFT", m2: "SHOULDER_RIGHT",
   m3: "THUMB_LEFT", m4: "THUMB_RIGHT", m5: "SHARE", m6: "OPTIONS",
+  __horn: "THUMB_LEFT", __look: "THUMB_RIGHT", __reset: "TRIANGLE",
+  __handbrake: "CROSS", __nitro: "SHOULDER_LEFT",
+  __gearUp: "SHOULDER_RIGHT", __gearDown: "SHOULDER_LEFT",
 };
 
-function setDpad(s) {
-  if (!pad) return;
+function setDpad(target, s) {
+  if (!target) return;
   const buttons = s.buttons || {};
   let h = 0;
   let v = 0;
@@ -666,12 +696,74 @@ function setDpad(s) {
   if (buttons.dpad_up) v += 1;
   if (buttons.dpad_down) v -= 1;
 
-  pad.axis.dpadHorz.setValue(h);
-  pad.axis.dpadVert.setValue(v);
+  target.axis.dpadHorz.setValue(h);
+  target.axis.dpadVert.setValue(v);
+}
+
+function applyToTarget(target, s, buttonMap) {
+  if (!target) return;
+
+  const buttons = s.buttons || {};
+  const held = {};
+  const mark = (name) => {
+    if (target.button[name]) held[name] = true;
+  };
+
+  const steer = clamp(s.steer, -1, 1);
+  target.axis.leftX.setValue(Math.abs(steer) > 0.0005 ? steer : clamp(s.lx, -1, 1));
+  target.axis.leftY.setValue(-clamp(s.ly, -1, 1));
+  target.axis.rightX.setValue(clamp(s.rx, -1, 1));
+  target.axis.rightY.setValue(-clamp(s.ry, -1, 1));
+
+  target.axis.leftTrigger.setValue(
+    Math.max(
+      clamp(s.brake, 0, 1),
+      clamp(s.clutch, 0, 1) * 0.6,
+      clamp(s.lt, 0, 1),
+      s.buttons?.l2 ? 1 : 0,
+    ),
+  );
+  target.axis.rightTrigger.setValue(
+    Math.max(
+      clamp(s.throttle, 0, 1),
+      clamp(s.rt, 0, 1),
+      s.buttons?.r2 ? 1 : 0,
+    ),
+  );
+
+  for (const [id, name] of Object.entries(buttonMap)) {
+    if (buttons[id]) mark(name);
+  }
+
+  setDpad(target, s);
+
+  // Driving aliases. These retain compatibility with common game bindings.
+  if (buttons.horn) mark(buttonMap.__horn);
+  if (buttons.look) mark(buttonMap.__look);
+  if (buttons.reset) mark(buttonMap.__reset);
+
+  if (clamp(s.handbrake, 0, 1) > 0.5) mark(buttonMap.__handbrake);
+  if (clamp(s.nitro, 0, 1) > 0.5) mark(buttonMap.__nitro);
+  if (s.gear === 1) mark(buttonMap.__gearUp);
+  if (s.gear === -1) mark(buttonMap.__gearDown);
+
+  for (const name of Object.keys(target.button)) {
+    target.button[name].setValue(!!held[name]);
+  }
+
+  target.update();
 }
 
 function apply(s) {
-  if (!pad) return;
+  const targets = [];
+
+  if (pad) {
+    targets.push({ target: pad, map: XBTN });
+  }
+  if (ds4Pad) {
+    targets.push({ target: ds4Pad, map: DSBTN });
+  }
+  if (!targets.length) return;
 
   const buttons = s.buttons || {};
   const signature = [
@@ -692,72 +784,15 @@ function apply(s) {
     Object.keys(buttons).filter((id) => buttons[id]).sort().join(","),
   ].join("|");
 
-  // The phone sends at 240 Hz, but the same state may arrive repeatedly.
-  // Do not submit duplicate ViGEm reports: Windows' controller-properties
-  // UI and input stack get unnecessary work when identical reports are
-  // continuously pushed.
+  // The same phone state may be received repeatedly at 240 Hz. Keep the
+  // latest-state optimization, but send each changed state to every active
+  // compatibility target.
   if (signature === lastAppliedSignature) return;
 
-  const held = {};
-  const mark = (name) => {
-    if (pad.button[name]) held[name] = true;
-  };
-
-  const steer = clamp(s.steer, -1, 1);
-  pad.axis.leftX.setValue(Math.abs(steer) > 0.0005 ? steer : clamp(s.lx, -1, 1));
-  pad.axis.leftY.setValue(-clamp(s.ly, -1, 1));
-  pad.axis.rightX.setValue(clamp(s.rx, -1, 1));
-  pad.axis.rightY.setValue(-clamp(s.ry, -1, 1));
-
-  pad.axis.leftTrigger.setValue(
-    Math.max(
-      clamp(s.brake, 0, 1),
-      clamp(s.clutch, 0, 1) * 0.6,
-      clamp(s.lt, 0, 1),
-      s.buttons?.l2 ? 1 : 0,
-    ),
-  );
-  pad.axis.rightTrigger.setValue(
-    Math.max(
-      clamp(s.throttle, 0, 1),
-      clamp(s.rt, 0, 1),
-      s.buttons?.r2 ? 1 : 0,
-    ),
-  );
-
-  const map = padMode === "ds4" ? DSBTN : XBTN;
-  for (const [id, name] of Object.entries(map)) if (buttons[id]) mark(name);
-
-  setDpad(s);
-
-  // Driving aliases. These retain compatibility with common game bindings.
-  if (buttons.horn) mark(padMode === "ds4" ? "THUMB_LEFT" : "LEFT_THUMB");
-  if (buttons.look) mark(padMode === "ds4" ? "THUMB_RIGHT" : "RIGHT_THUMB");
-  if (buttons.reset) mark(padMode === "ds4" ? "TRIANGLE" : "Y");
-
-  if (clamp(s.handbrake, 0, 1) > 0.5) {
-    mark(padMode === "ds4" ? "CROSS" : "A");
-  }
-  if (clamp(s.nitro, 0, 1) > 0.5) {
-    mark(padMode === "ds4" ? "SHOULDER_LEFT" : "LEFT_SHOULDER");
-  }
-  if (s.gear === 1) {
-    mark(padMode === "ds4" ? "SHOULDER_RIGHT" : "RIGHT_SHOULDER");
-  }
-  if (s.gear === -1) {
-    mark(padMode === "ds4" ? "SHOULDER_LEFT" : "LEFT_SHOULDER");
+  for (const entry of targets) {
+    applyToTarget(entry.target, s, entry.map);
   }
 
-  for (const name of Object.keys(pad.button)) {
-    pad.button[name].setValue(!!held[name]);
-  }
-
-  // Exactly one driver report per packet. Only remember this state as
-  // "applied" once the report has actually gone out -- if vigem_target_x360_update
-  // throws (a transient driver hiccup), the caller's catch logs it and this
-  // same signature is retried on the next tick instead of being silently
-  // treated as already delivered forever.
-  pad.update();
   lastAppliedSignature = signature;
 }
 
@@ -1014,7 +1049,7 @@ bindTelemetrySocket(PCARS_PORT, "Project CARS 2 / AMS2", parseProjectCars);
 bindMany(OUTGAUGE_PORTS, "OutGauge", parseOutGauge);
 
 console.log(`Rig bridge listening on ws://0.0.0.0:${PORT}`);
-console.log(`Output target: ${padMode === "ds4" ? "DualShock 4" : "Xbox 360/XInput"}`);
+console.log(`Output target: ${padMode === "universal" ? "Universal (Xbox 360/XInput + DirectInput/HID)" : padMode === "ds4" ? "DualShock 4/HID" : "Xbox 360/XInput"}`);
 console.log(`Native telemetry listeners: Forza [${FORZA_PORTS.join(", ")}], F1/Codemasters [${F1_PORT}], DiRT [${DIRT_PORT}], PCARS/AMS2 [${PCARS_PORT}], OutGauge [${OUTGAUGE_PORTS.join(", ")}]`);
 console.log(`EA WRC is not guessed: its native packet structure is configurable. Default documented port is ${WRC_PORT}; use the included WRC structure/config instructions for its exact packet schema.`);
 console.log(`Wreckfest 2 native telemetry is supported by the game on UDP ${WRECKFEST2_PORT}, but its Pino packet is not decoded by this bridge yet rather than showing fabricated values.`);
@@ -1039,10 +1074,10 @@ wss.on("connection", (ws) => {
 
     if (msg.type === "hello") {
       const requested = String(msg.output || msg.controller || padMode).toLowerCase();
-      if (requested === "xinput" || requested === "ds4") {
+      if (requested === "xinput" || requested === "ds4" || requested === "universal") {
         const modeChanged = requested !== padMode;
         padMode = requested;
-        if (modeChanged || !pad) {
+        if (modeChanged || (!pad && !ds4Pad)) {
           createPad(padMode);
         } else {
           ensureVirtualController();
@@ -1060,8 +1095,10 @@ wss.on("connection", (ws) => {
         },
         controller: {
           supported: process.platform === "win32",
-          connected: Boolean(pad),
+          connected: Boolean(pad || ds4Pad),
           type: padMode,
+          xinput: Boolean(pad),
+          directInputFallback: Boolean(ds4Pad),
         },
         telemetry: {
           forzaPorts: FORZA_PORTS,
@@ -1133,10 +1170,10 @@ wss.on("connection", (ws) => {
     sendMouseNative({ action: "reset" });
     latestState = null;
     lastAppliedSignature = "";
-    if (pad) {
+    for (const target of [pad, ds4Pad]) {
       try {
-        pad.resetInputs();
-        pad.update();
+        target?.resetInputs();
+        target?.update();
       } catch {
         /* ignore */
       }

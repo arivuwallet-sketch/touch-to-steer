@@ -58,6 +58,7 @@ function createPad(mode) {
 
   try {
     pad = mode === "ds4" ? client.createDS4Controller() : client.createX360Controller();
+    lastAppliedSignature = "";
     pad.updateMode = "manual";
     pad.connect();
     console.log(`Virtual ${mode === "ds4" ? "DualShock 4" : "Xbox 360"} controller created (manual updates).`);
@@ -470,6 +471,7 @@ wss.on("connection", (ws) => {
   if (socket?.setKeepAlive) socket.setKeepAlive(true, 1000);
 
   console.log("Phone connected.");
+  lastAppliedSignature = "";
 
   ws.on("message", (raw) => {
     let msg;

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { PointerEvent, WheelEvent } from "react";
 import { Crosshair, Gauge, Mouse as MouseIcon, RotateCcw, Wifi, Zap } from "lucide-react";
 import type { Settings } from "@/lib/controller-types";
 
@@ -15,7 +16,6 @@ type MouseMessage = {
 
 type Props = {
   settings: Settings;
-  set: (patch: Partial<Record<string, never>>) => void;
   sendMouse: (message: MouseMessage) => boolean;
 };
 
@@ -79,7 +79,7 @@ export function FlatMouse({ settings, sendMouse }: Props) {
     return undefined;
   }, []);
 
-  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+  const handlePointerDown = useCallback((e: PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.currentTarget.setPointerCapture?.(e.pointerId);
 
@@ -96,7 +96,7 @@ export function FlatMouse({ settings, sendMouse }: Props) {
     }
   }, [buttonForPoint, sendMouse]);
 
-  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+  const handlePointerMove = useCallback((e: PointerEvent<HTMLDivElement>) => {
     const prev = activePointers.current.get(e.pointerId);
     if (!prev) return;
     e.preventDefault();
@@ -123,7 +123,7 @@ export function FlatMouse({ settings, sendMouse }: Props) {
     prev.y = e.clientY;
   }, [settings.mouseSmartTracking, transmitMove]);
 
-  const handlePointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+  const handlePointerUp = useCallback((e: PointerEvent<HTMLDivElement>) => {
     const entry = activePointers.current.get(e.pointerId);
     activePointers.current.delete(e.pointerId);
     if (entry?.button) {
@@ -133,7 +133,7 @@ export function FlatMouse({ settings, sendMouse }: Props) {
     e.currentTarget.releasePointerCapture?.(e.pointerId);
   }, [sendMouse]);
 
-  const handleWheel = useCallback((e: React.WheelEvent<HTMLButtonElement>) => {
+  const handleWheel = useCallback((e: WheelEvent<HTMLButtonElement>) => {
     e.preventDefault();
     if (Math.abs(e.deltaY) < 0.5) return;
     sendMouse({ action: "wheel", delta: Math.sign(e.deltaY) * -120 });

@@ -20,8 +20,19 @@
  */
 
 const PORT = Number(process.env.RIG_PORT || 8787);
-const FORZA_PORT = Number(process.env.RIG_FORZA_PORT || 5300);
+const FORZA_PORTS = String(process.env.RIG_FORZA_PORTS || "5300,5301,9876")
+  .split(",")
+  .map((v) => Number(v.trim()))
+  .filter((v) => Number.isInteger(v) && v > 0 && v < 65536);
 const F1_PORT = Number(process.env.RIG_F1_PORT || 20777);
+const DIRT_PORT = Number(process.env.RIG_DIRT_PORT || 20778);
+const WRC_PORT = Number(process.env.RIG_WRC_PORT || 20789);
+const PCARS_PORT = Number(process.env.RIG_PCARS_PORT || 5606);
+const OUTGAUGE_PORTS = String(process.env.RIG_OUTGAUGE_PORTS || "4444,30000,63392")
+  .split(",")
+  .map((v) => Number(v.trim()))
+  .filter((v) => Number.isInteger(v) && v > 0 && v < 65536);
+const WRECKFEST2_PORT = Number(process.env.RIG_WRECKFEST2_PORT || 23123);
 const OUTPUT = String(process.env.RIG_OUTPUT || "xinput").toLowerCase();
 const dgram = require("node:dgram");
 const { WebSocketServer } = require("ws");
@@ -202,32 +213,130 @@ function broadcastTelemetry(data) {
   }
 }
 
-function parseForza(packet) {
-  // Forza Data Out: the stable Sled block exposes max RPM, current RPM
-  // and world velocity. Speed is the magnitude of the velocity vector.
-  if (packet.length < 44) return null;
+function validNumber(value, min = -Infinity, max = Infinity) {
+  return Number.isFinite(value) && value >= min && value <= max;
+}
 
-  const isRaceOn = packet.readInt32LE(0);
-  if (isRaceOn !== 1) return null;
+function parseForza(packet) {
+  const sizes = new Set([232, 311, 324, 331]);
+  if (!sizes.has(packet.length) || packet.readInt32LE(0) !== 1) return null;
 
   const rpmMax = packet.readFloatLE(8);
   const rpm = packet.readFloatLE(16);
+
+  if (!validNumber(rpmMax, 500, 30000) || !validNumber(rpm, 0, 30000)) return null;
+
   const vx = packet.readFloatLE(32);
   const vy = packet.readFloatLE(36);
   const vz = packet.readFloatLE(40);
-  const speed = Math.sqrt(vx * vx + vy * vy + vz * vz) * 3.6;
-  const gear = packet.length > 319 ? packet.readUInt8(319) - 1 : undefined;
+  let speed = Math.sqrt(vx * vx + vy * vy + vz * vz) * 3.6;
 
-  if (!Number.isFinite(speed) || !Number.isFinite(rpm) || !Number.isFinite(rpmMax)) return null;
+  let gear;
+  let source = "Forza Data Out";
+
+  if (packet.length === 311) {
+    source = "Forza Motorsport 7 / legacy Dash";
+    speed = packet.readFloatLE(244) * 3.6;
+    gear = packet.readInt8(307);
+  } else if (packet.length === 324) {
+    source = "Forza Horizon 4 / 5 / 6";
+    speed = packet.readFloatLE(256) * 3.6;
+    gear = packet.readInt8(319);
+  } else if (packet.length === 331) {
+    source = "Forza Motorsport 2023";
+    speed = packet.readFloatLE(244) * 3.6;
+    gear = packet.readInt8(307);
+  } else {
+    source = "Forza Sled";
+  }
+
+  if (!validNumber(speed, 0, 600)) return null;
 
   return {
-    source: "Forza",
+    source,
+    speed,
+    rpm,
+    rpmMax,
+    gear: typeof gear === "number" ? Math.max(-1, Math.min(20, gear)) : undefined,
+  };
+}
+
+function parseProjectCars(packet) {
+  if (packet.length < 568 || packet.readUInt8(10) !== 0) return null;
+
+  const speed = packet.readFloatLE(48) * 3.6;
+  const rpm = packet.readUInt16LE(52);
+  const rpmMax = packet.readUInt16LE(54);
+  const packedGear = packet.readUInt8(57);
+  const rawGear = packedGear & 0x0f;
+  const numGears = (packedGear >> 4) & 0x0f;
+  const gear = rawGear === 0 ? -1 : rawGear === 1 ? 0 : rawGear - 1;
+
+  if (
+    !validNumber(speed, 0, 600) ||
+    !validNumber(rpm, 0, 30000) ||
+    !validNumber(rpmMax, 500, 30000)
+  ) {
+    return null;
+  }
+
+  return {
+    source: numGears > 0 ? "Project CARS 2 / Automobilista 2 / KartKraft" : "Project CARS 2 compatible UDP",
     speed,
     rpm,
     rpmMax,
     gear,
   };
 }
+
+function parseOutGauge(packet) {
+  if (packet.length !== 96 && packet.length !== 100) return null;
+
+  const gearRaw = packet.readUInt8(10);
+  const speed = packet.readFloatLE(12) * 3.6;
+  const rpm = packet.readFloatLE(16);
+
+  if (!validNumber(speed, 0, 600) || !validNumber(rpm, 0, 30000)) return null;
+
+  const gear = gearRaw === 0 ? -1 : gearRaw === 1 ? 0 : gearRaw - 1;
+  const car = packet.subarray(4, 8).toString("ascii").replace(/\0/g, "").trim();
+
+  return {
+    source: car ? "OutGauge • " + car : "OutGauge",
+    speed,
+    rpm,
+    rpmMax: 10000,
+    gear,
+  };
+}
+
+function parseDirtRally(packet) {
+  if (packet.length < 264) return null;
+
+  const speed = packet.readFloatLE(28) * 3.6;
+  const gearRaw = Math.round(packet.readFloatLE(132));
+  const rpm = packet.readFloatLE(148) * 10;
+  const rpmMax = packet.readFloatLE(252) * 10;
+
+  if (
+    !validNumber(speed, 0, 600) ||
+    !validNumber(rpm, 0, 30000) ||
+    !validNumber(rpmMax, 500, 30000) ||
+    gearRaw < 0 ||
+    gearRaw > 12
+  ) {
+    return null;
+  }
+
+  return {
+    source: "DiRT Rally / DiRT Rally 2.0 / DiRT 4",
+    speed,
+    rpm,
+    rpmMax,
+    gear: gearRaw === 10 ? -1 : gearRaw,
+  };
+}
+
 
 function parseF1(packet) {
   // F1 25 / 2026 Season Pack uses a 29-byte packed little-endian header.
@@ -237,8 +346,7 @@ function parseF1(packet) {
   const packetId = packet.readUInt8(6);
   const playerIndex = packet.readUInt8(27);
 
-  // CarTelemetry is packet 6. The 2025 layout uses 22 cars x 60 bytes;
-  // the 2026 Season Pack uses 24 cars x 59 bytes.
+  // EA F1 telemetry packet 6 is CarTelemetry.
   if (packetId === 6) {
     const carSize = packet.length >= 1448 ? 59 : 60;
     const carOffset = 29 + playerIndex * carSize;
@@ -251,7 +359,7 @@ function parseF1(packet) {
     if (!Number.isFinite(speed) || !Number.isFinite(rpm)) return null;
 
     return {
-      source: packetFormat >= 2025 ? "F1 25 / 2026" : "F1",
+      source: packetFormat >= 2025 ? "EA F1 25 / 2026" : `EA F1 ${packetFormat}`,
       speed,
       rpm,
       rpmMax: f1RpmMax,
@@ -283,6 +391,14 @@ function parseF1(packet) {
   return null;
 }
 
+function bindMany(ports, name, parser) {
+  const sockets = [];
+  for (const port of [...new Set(ports)]) {
+    sockets.push(bindTelemetrySocket(port, name, parser));
+  }
+  return sockets;
+}
+
 function bindTelemetrySocket(port, name, parser) {
   const socket = dgram.createSocket("udp4");
 
@@ -306,12 +422,22 @@ function bindTelemetrySocket(port, name, parser) {
   return socket;
 }
 
-const forzaTelemetrySocket = bindTelemetrySocket(FORZA_PORT, "Forza", parseForza);
-const f1TelemetrySocket = bindTelemetrySocket(F1_PORT, "F1", parseF1);
+const telemetrySockets = [
+  ...bindMany(FORZA_PORTS, "Forza", parseForza),
+  bindTelemetrySocket(F1_PORT, "F1 / Codemasters", (packet) => {
+    return parseF1(packet) || parseDirtRally(packet);
+  }),
+  bindTelemetrySocket(DIRT_PORT, "DiRT Rally", parseDirtRally),
+  bindTelemetrySocket(PCARS_PORT, "Project CARS 2 / AMS2", parseProjectCars),
+  ...bindMany(OUTGAUGE_PORTS, "OutGauge", parseOutGauge),
+];
 
 console.log(`Rig bridge listening on ws://0.0.0.0:${PORT}`);
 console.log(`Output target: ${padMode === "ds4" ? "DualShock 4" : "Xbox 360/XInput"}`);
-console.log("Live gauges use game telemetry only; there is no simulated speed/RPM.");
+console.log(`Native telemetry listeners: Forza [${FORZA_PORTS.join(", ")}], F1/Codemasters [${F1_PORT}], DiRT [${DIRT_PORT}], PCARS/AMS2 [${PCARS_PORT}], OutGauge [${OUTGAUGE_PORTS.join(", ")}]`);
+console.log(`EA WRC is not guessed: its native packet structure is configurable. Default documented port is ${WRC_PORT}; use the included WRC structure/config instructions for its exact packet schema.`);
+console.log(`Wreckfest 2 native telemetry is supported by the game on UDP ${WRECKFEST2_PORT}, but its Pino packet is not decoded by this bridge yet rather than showing fabricated values.`);
+console.log("Live gauges use game telemetry only; no speed/RPM simulation is generated.");
 
 wss.on("connection", (ws) => {
   const socket = ws._socket;
@@ -341,8 +467,13 @@ wss.on("connection", (ws) => {
         output: padMode,
         rateHz: Number(msg.rateHz) || 240,
         telemetry: {
-          forzaPort: FORZA_PORT,
+          forzaPorts: FORZA_PORTS,
           f1Port: F1_PORT,
+          dirtPort: DIRT_PORT,
+          pcarsPort: PCARS_PORT,
+          outGaugePorts: OUTGAUGE_PORTS,
+          wrcPort: WRC_PORT,
+          wreckfest2Port: WRECKFEST2_PORT,
           live: Boolean(latestTelemetry),
         },
       }));

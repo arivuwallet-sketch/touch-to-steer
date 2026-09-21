@@ -92,17 +92,39 @@ function loadPackagedNativeViGEmAddon() {
     "Release",
     "vigemclient.node",
   );
+  const clientDllSource = path.join(
+    __dirname,
+    "node_modules",
+    "vigemclient",
+    "build",
+    "Release",
+    "ViGEmClient.dll",
+  );
+
   if (!fs.existsSync(nativeSource)) {
     throw new Error("Bundled vigemclient.node was not found inside the packaged bridge.");
   }
+  if (!fs.existsSync(clientDllSource)) {
+    throw new Error(
+      "Bundled ViGEmClient.dll was not found inside the packaged bridge.",
+    );
+  }
 
-  const outDir = path.join(os.tmpdir(), "TouchToSteer");
+  // Windows resolves a native addon's dependent DLLs from its filesystem
+  // location. pkg extracts the .node addon for dlopen(), so place the matching
+  // ViGEmClient.dll beside it before loading the addon.
+  const outDir = path.join(os.tmpdir(), "TouchToSteer", "vigem");
   const outFile = path.join(outDir, "vigemclient.node");
+  const clientDllFile = path.join(outDir, "ViGEmClient.dll");
   fs.mkdirSync(outDir, { recursive: true });
 
-  if (!fs.existsSync(outFile)) {
-    fs.writeFileSync(outFile, fs.readFileSync(nativeSource));
-  }
+  fs.writeFileSync(outFile, fs.readFileSync(nativeSource));
+  fs.writeFileSync(clientDllFile, fs.readFileSync(clientDllSource));
+
+  appendBridgeLog(
+    "Extracting packaged ViGEm native addon and dependent ViGEmClient.dll to " +
+    outDir,
+  );
 
   const parent = module;
   const nativeModule = new Module(outFile, parent);

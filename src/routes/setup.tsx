@@ -76,7 +76,7 @@ function Setup() {
 
       <div className="mt-4 flex flex-wrap gap-3">
         <a
-          href="https://github.com/arivuwallet-sketch/touch-to-steer/releases/download/bridge-latest/TouchToSteer-Bridge.exe"
+          href="https://github.com/arivuwallet-sketch/touch-to-steer/releases/latest/download/TouchToSteer-Bridge.exe"
           target="_blank"
           rel="noreferrer"
           className="inline-flex rounded-xl px-5 py-3 text-sm font-bold uppercase tracking-widest text-primary-foreground glow"

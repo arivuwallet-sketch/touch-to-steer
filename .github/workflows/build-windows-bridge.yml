@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build-windows-bridge:
-    runs-on: windows-2025-vs2026
+    runs-on: windows-2022
 
     steps:
       - name: Checkout
@@ -28,23 +28,28 @@ jobs:
           New-Item -ItemType Directory -Force -Path public/bridge/drivers | Out-Null
           Invoke-WebRequest -Uri "https://github.com/nefarius/ViGEmBus/releases/download/v1.22.0/ViGEmBus_1.22.0_x64_x86_arm64.exe" -OutFile "public/bridge/drivers/ViGEmBus_1.22.0_x64_x86_arm64.exe"
 
+      - name: Configure node-gyp for Visual Studio 2022
+        shell: pwsh
+        run: |
+          npm config set msvs_version 2022
+          echo "GYP_MSVS_VERSION=2022" >> $env:GITHUB_ENV
+
       - name: Install bridge dependencies
         working-directory: public/bridge
         run: npm install --omit=dev
 
-      - name: Verify CMake and Visual Studio generator
+      - name: Verify Visual Studio 2022 and CMake
         shell: pwsh
         run: |
-          $vsPath = & "$env:ProgramFiles(x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-          if (-not $vsPath) { throw "Visual Studio C++ build tools were not found on the runner." }
+          $vsPath = & "$env:ProgramFiles(x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -version "[17.0,18.0)" -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vsPath) { throw "Visual Studio 2022 C++ build tools were not found on the runner." }
           Write-Host "Visual Studio: $vsPath"
           cmake --version
-          cmake --help | Select-String "Visual Studio 18 2026"
 
       - name: Build native Windows mouse injector
         shell: pwsh
         run: |
-          cmake -S public/bridge/native -B public/bridge/native/build -G "Visual Studio 18 2026" -A x64
+          cmake -S public/bridge/native -B public/bridge/native/build -G "Visual Studio 17 2022" -A x64
           cmake --build public/bridge/native/build --config Release
           Copy-Item "public/bridge/native/build/Release/mouse-injector.exe" "public/bridge/native/mouse-injector.exe"
 

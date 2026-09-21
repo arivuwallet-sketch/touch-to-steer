@@ -52,6 +52,7 @@ function Rig() {
     connect,
     disconnect,
     sendMouse,
+    sendControllerStateNow,
     sendControllerEdge,
   } = useBridge(stateRef, 240, settings.outputMode);
 
@@ -97,29 +98,45 @@ function Rig() {
     const next = { ...previous, ...p };
     stateRef.current = next;
 
-    // Steering wheel pedals and momentary auxiliaries should get an
-    // immediate first/last report instead of waiting for the periodic sampler.
-    // The analog value itself continues through the normal 240 Hz state path.
-    const immediateControlEdge = [
+    // Send analog changes immediately from the input event instead of waiting
+    // for the 240 Hz watchdog. The watchdog remains as a safety/refresh lane.
+    const analogChanged = [
+      "steer",
       "throttle",
       "brake",
+      "clutch",
+      "lx",
+      "ly",
+      "rx",
+      "ry",
+      "lt",
+      "rt",
       "handbrake",
       "nitro",
-      "gear",
-    ].some((key) => {
-      if (!(key in p)) return false;
+      "dial",
+    ].some((key) => key in p);
 
+    if (analogChanged) {
+      sendControllerStateNow();
+    }
+
+    // Momentary/digital steering controls get an edge-priority report as well.
+    // This guarantees a lightning-fast press/release cannot be overwritten by
+    // an older continuous state still waiting in the bridge mailbox.
+    const digitalEdge = ["handbrake", "nitro", "gear"].some((key) => {
+      if (!(key in p)) return false;
       if (key === "gear") {
         return Number(previous.gear) !== Number(next.gear);
       }
-
-      const previousActive = (Number(previous[key as "throttle" | "brake" | "handbrake" | "nitro"]) || 0) > 0.02;
-      const nextActive = (Number(next[key as "throttle" | "brake" | "handbrake" | "nitro"]) || 0) > 0.02;
+      const previousActive =
+        (Number(previous[key as "handbrake" | "nitro"]) || 0) > 0.02;
+      const nextActive =
+        (Number(next[key as "handbrake" | "nitro"]) || 0) > 0.02;
       return previousActive !== nextActive;
     });
 
-    if (immediateControlEdge) sendControllerEdge();
-  }, [sendControllerEdge]);
+    if (digitalEdge) sendControllerEdge();
+  }, [sendControllerEdge, sendControllerStateNow]);
 
   const press = useCallback((id: string, down: boolean) => {
     const previous = Boolean(stateRef.current.buttons?.[id]);

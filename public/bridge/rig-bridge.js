@@ -366,9 +366,6 @@ const ackState = new WeakMap();
 // overwrites an older, not-yet-applied one, there is nothing to queue --
 // the bridge is always working from the freshest input, and the worst-case
 // added latency is one driver update, not an accumulating backlog.
-let latestState = null;
-let applyScheduled = false;
-
 // Keep Claude's latency fix: continuous controller states use a
 // single-slot latest-value mailbox so stale 240 Hz snapshots can never build
 // an unbounded backlog.

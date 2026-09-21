@@ -87,7 +87,7 @@ export type Settings = {
 
 export const defaultSettings: Settings = {
   bridgeUrl: "ws://192.168.1.10:8787",
-  outputMode: "universal",
+  outputMode: "xinput",
   steerMode: "touch",
   sensitivity: 1,
   steerSensitivity: 1,

@@ -8,6 +8,7 @@ export type BridgeTelemetry = {
   rpmMax?: number;
   gear?: number;
   speed?: number;
+  source?: string;
   /** -1..1 force-feedback request from a compatible PC/game bridge. */
   ffb?: number;
 };
@@ -31,7 +32,9 @@ export function useBridge(
   const [latency, setLatency] = useState<number | null>(null);
   const [packets, setPackets] = useState(0);
   const [telemetry, setTelemetry] = useState<BridgeTelemetry>({});
+  const [telemetryLive, setTelemetryLive] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
+  const telemetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const packetCounterRef = useRef(0);
   const lastStatsPaintRef = useRef(0);
@@ -40,6 +43,11 @@ export function useBridge(
   const clearLoop = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = null;
+  }, []);
+
+  const clearTelemetryTimer = useCallback(() => {
+    if (telemetryTimerRef.current) clearTimeout(telemetryTimerRef.current);
+    telemetryTimerRef.current = null;
   }, []);
 
   const disconnect = useCallback(() => {
@@ -56,7 +64,9 @@ export function useBridge(
     setStatus("idle");
     setLatency(null);
     setTelemetry({});
-  }, [clearLoop]);
+    setTelemetryLive(false);
+    clearTelemetryTimer();
+  }, [clearLoop, clearTelemetryTimer]);
 
   const connect = useCallback(
     (url: string) => {
@@ -147,8 +157,14 @@ export function useBridge(
               rpmMax: typeof msg.rpmMax === "number" ? msg.rpmMax : undefined,
               gear: typeof msg.gear === "number" ? msg.gear : undefined,
               speed: typeof msg.speed === "number" ? msg.speed : undefined,
+              source: typeof msg.source === "string" ? msg.source : undefined,
               ffb: typeof msg.ffb === "number" ? Math.max(-1, Math.min(1, msg.ffb)) : undefined,
             });
+            setTelemetryLive(true);
+            clearTelemetryTimer();
+            telemetryTimerRef.current = setTimeout(() => {
+              setTelemetryLive(false);
+            }, 500);
             return;
           }
 
@@ -172,10 +188,13 @@ export function useBridge(
         }
       };
     },
-    [clearLoop, disconnect, outputMode, rateHz, stateRef],
+    [clearLoop, clearTelemetryTimer, disconnect, outputMode, rateHz, stateRef],
   );
 
-  useEffect(() => () => disconnect(), [disconnect]);
+  useEffect(() => () => {
+    disconnect();
+    clearTelemetryTimer();
+  }, [clearTelemetryTimer, disconnect]);
 
-  return { status, latency, packets, telemetry, connect, disconnect };
+  return { status, latency, packets, telemetry, telemetryLive, connect, disconnect };
 }

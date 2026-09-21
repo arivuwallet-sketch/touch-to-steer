@@ -452,7 +452,7 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
       // Absolute target offset from the calibrated center — cursor position
       // follows where the phone is currently pointing, not how it got there.
       const targetX = yawDeg * pixelsPerDegree;
-      const targetY = -pitchDeg * pixelsPerDegree;
+      const targetY = pitchDeg * pixelsPerDegree;
 
       const offset = pointerOffsetRef.current;
       const dx = targetX - offset.x;

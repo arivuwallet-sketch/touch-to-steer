@@ -259,7 +259,8 @@ try {
   const message = err?.message || String(err);
   console.warn("ViGEm unavailable - running in echo-only mode:", message);
 
-  if (isPackagedBridge() && vigemConnectionError && installBundledDriverAndRestart()) {
+  // In the packaged Windows build, a missing virtual-controller driver is a first-run condition.
+  if (isPackagedBridge() && !pad && installBundledDriverAndRestart()) {
     process.exit(0);
   }
 }

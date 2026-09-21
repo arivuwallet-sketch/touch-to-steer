@@ -170,10 +170,10 @@ function Pedal({
     const band = Math.min(5, Math.floor(next * 6));
     const now = typeof performance !== "undefined" ? performance.now() : Date.now();
 
-    if (settings.vibration && band !== lastBand.current && now - lastHapticAt.current > 50) {
+    if (settings.vibration && band !== lastBand.current && now - lastHapticAt.current > 45) {
       lastBand.current = band;
       lastHapticAt.current = now;
-      buzz(true, Math.min(14, 3 + band * 2));
+      buzz(true, Math.min(15, 3 + band * 2));
     }
 
     setValue(next);
@@ -185,9 +185,7 @@ function Pedal({
     lastBand.current = -1;
     setValue(0);
     set({ [id]: 0 } as Partial<ControllerState>);
-    if (settings.vibration) {
-      buzz(true, id === "brake" ? [5, 12, 4] : 5);
-    }
+    if (settings.vibration) buzz(true, id === "brake" ? [5, 11, 4] : 4);
   };
 
   return (
@@ -198,46 +196,61 @@ function Pedal({
       onPointerDown={(e) => {
         e.currentTarget.setPointerCapture(e.pointerId);
         active.current = e.pointerId;
-        buzz(settings.vibration, 8);
+        buzz(settings.vibration, 7);
         update(e.clientY);
       }}
       onPointerMove={(e) => active.current === e.pointerId && update(e.clientY)}
       onPointerUp={release}
       onPointerCancel={release}
-      className="group relative h-[62svh] min-h-0 w-[clamp(3.8rem,8vw,5.4rem)] touch-none select-none overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#090d12]/95 p-2 shadow-[0_12px_28px_rgba(0,0,0,.55)] md:h-[42vh] md:min-h-44 md:w-[clamp(4.2rem,7vw,6.2rem)]"
+      className="group relative h-[62svh] min-h-0 w-[clamp(4.25rem,8.4vw,6rem)] touch-none select-none overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#080b0f]/95 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_14px_28px_rgba(0,0,0,.6)] active:brightness-110 md:h-[42vh] md:min-h-44 md:w-[clamp(4.6rem,7vw,6.4rem)]"
     >
-      <span className="absolute inset-2 rounded-[1.05rem] border border-white/5 bg-[linear-gradient(180deg,#151b22,#0a0e13)]" />
+      <span className="absolute inset-1.5 rounded-[1.15rem] border border-white/5 bg-[linear-gradient(180deg,#1a2027,#090c10)] shadow-[inset_0_0_20px_rgba(0,0,0,.85)]" />
+      <span className="absolute left-1/2 top-3 h-2 w-1/2 -translate-x-1/2 rounded-full bg-[#20262c] shadow-[inset_0_1px_1px_rgba(255,255,255,.14)]" />
+
       <span
-        className="absolute inset-x-4 bottom-10 rounded-xl border border-white/10 bg-[linear-gradient(180deg,#edf1f4,#727a84)] shadow-[0_6px_12px_rgba(0,0,0,.45),inset_0_1px_0_rgba(255,255,255,.6)] transition-all"
+        className="absolute inset-x-[13%] bottom-10 rounded-[1.05rem] border border-white/15 bg-[linear-gradient(155deg,#eef1f3_0%,#aab1b8_24%,#59616a_68%,#2b3239_100%)] shadow-[0_10px_16px_rgba(0,0,0,.58),inset_0_2px_0_rgba(255,255,255,.55),inset_0_-7px_10px_rgba(0,0,0,.42)] transition-transform duration-75"
         style={{
-          height: "calc(30% + " + value * 58 + "%)",
-          boxShadow: "0 0 " + (8 + value * 12) + "px " + accent + "33, 0 6px 12px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.6)",
-          transform: "scaleY(" + (1 + value * 0.035) + ")",
+          height: "calc(28% + " + value * 58 + "%)",
+          transform: "translateY(" + value * 3 + "px) rotateX(" + value * 2 + "deg)",
+          transformOrigin: "bottom center",
+          boxShadow:
+            "0 0 " + (8 + value * 12) + "px " + accent + "44, 0 10px 16px rgba(0,0,0,.58), inset 0 2px 0 rgba(255,255,255,.55), inset 0 -7px 10px rgba(0,0,0,.42)",
         }}
       >
-        <span className="absolute inset-x-2 top-3 grid gap-2">
-          {Array.from({ length: 5 }).map((_, row) => (
-            <span key={row} className="grid grid-cols-2 gap-2">
-              <i className="size-2 rounded-full bg-[#323842]" />
-              <i className="size-2 rounded-full bg-[#323842]" />
+        <span className="absolute inset-x-[12%] top-2 h-[2px] rounded-full bg-white/30" />
+        <span className="absolute inset-x-[11%] top-[13%] bottom-[13%] rounded-[0.7rem] border border-black/15 bg-[linear-gradient(90deg,rgba(255,255,255,.14),rgba(0,0,0,.06),rgba(255,255,255,.08))]" />
+        <span className="absolute inset-x-[19%] top-[16%] bottom-[16%] grid grid-rows-6 gap-[7%] opacity-80">
+          {Array.from({ length: 6 }).map((_, row) => (
+            <span key={row} className="grid grid-cols-3 gap-[14%]">
+              <i className="rounded-full bg-[#303841] shadow-[inset_0_1px_1px_rgba(255,255,255,.18)]" />
+              <i className="rounded-full bg-[#303841] shadow-[inset_0_1px_1px_rgba(255,255,255,.18)]" />
+              <i className="rounded-full bg-[#303841] shadow-[inset_0_1px_1px_rgba(255,255,255,.18)]" />
             </span>
           ))}
         </span>
+        <span className="absolute bottom-2 left-1/2 h-1.5 w-[50%] -translate-x-1/2 rounded-full bg-black/45" />
+        <span
+          className="absolute bottom-1.5 left-1/2 h-1 rounded-full -translate-x-1/2 transition-all"
+          style={{ width: Math.max(15, value * 80) + "%", background: accent, boxShadow: "0 0 8px " + accent + "88" }}
+        />
       </span>
-      <span className="absolute inset-x-0 bottom-2 text-[9px] font-black uppercase tracking-[0.24em] text-slate-300">
+
+      <span className="absolute left-1/2 bottom-7 -translate-x-1/2 rounded-md border border-black/20 bg-[#c7ccd1] px-2 py-0.5 text-[6px] font-black uppercase tracking-[0.18em] text-[#22272c] shadow-[0_2px_4px_rgba(0,0,0,.35)]">
+        RACING
+      </span>
+      <span className="absolute inset-x-0 bottom-2 text-[8px] font-black uppercase tracking-[0.24em] text-slate-200">
         {label}
       </span>
     </button>
   );
 }
-
 function Handbrake({ settings, set }: { settings: Settings; set: Props["set"] }) {
   const [value, setValue] = useState(0);
   const active = useRef(false);
   const startY = useRef(0);
 
   const move = (y: number) => {
-    const next = Math.max(0, Math.min(1, (startY.current - y) / 110));
+    const next = Math.max(0, Math.min(1, (startY.current - y) / 125));
     setValue(next);
     set({ handbrake: next });
   };
@@ -246,7 +259,7 @@ function Handbrake({ settings, set }: { settings: Settings; set: Props["set"] })
     active.current = false;
     setValue(0);
     set({ handbrake: 0 });
-    if (settings.vibration) buzz(true, 6);
+    if (settings.vibration) buzz(true, [5, 12, 4]);
   };
 
   return (
@@ -264,21 +277,26 @@ function Handbrake({ settings, set }: { settings: Settings; set: Props["set"] })
       onPointerMove={(e) => active.current && move(e.clientY)}
       onPointerUp={release}
       onPointerCancel={release}
-      className="relative h-[38svh] w-[clamp(4rem,9vw,5.5rem)] touch-none select-none rounded-[1.25rem] border border-white/10 bg-[#0b0f14] shadow-[0_10px_24px_rgba(0,0,0,.5)] active:brightness-125 md:h-40 md:w-24"
+      className="relative h-[38svh] w-[clamp(4.25rem,9vw,6rem)] touch-none select-none overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#080b0f] shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_12px_24px_rgba(0,0,0,.58)] active:brightness-125 md:h-40 md:w-24"
     >
-      <span className="absolute inset-2 rounded-[1rem] bg-gradient-to-b from-[#171d24] to-[#080b10]" />
+      <span className="absolute inset-2 rounded-[1.05rem] border border-white/5 bg-[linear-gradient(180deg,#1a2027,#07090d)] shadow-[inset_0_0_18px_rgba(0,0,0,.9)]" />
+      <span className="absolute bottom-4 left-1/2 h-4 w-[72%] -translate-x-1/2 rounded-xl border border-white/10 bg-[linear-gradient(180deg,#3c444d,#171c22)] shadow-[inset_0_2px_2px_rgba(255,255,255,.1),0_5px_10px_rgba(0,0,0,.5)]" />
+      <span className="absolute bottom-8 left-1/2 h-5 w-8 -translate-x-1/2 rounded-md bg-[#6e7780] shadow-[inset_0_2px_2px_rgba(255,255,255,.3),0_3px_6px_rgba(0,0,0,.45)]" />
       <span
-        className="absolute bottom-8 left-1/2 h-[78%] w-4 origin-bottom -translate-x-1/2 rounded-full bg-gradient-to-b from-[#cfd5db] to-[#6e7780] shadow-[0_5px_10px_rgba(0,0,0,.55)]"
-        style={{ transform: "translateX(-50%) rotate(" + (-10 - value * 38) + "deg)" }}
-      />
-      <span className="absolute bottom-24 left-1/2 size-7 -translate-x-1/2 rounded-full bg-[#171b21] shadow-inner" />
-      <span className="absolute inset-x-0 bottom-2 text-[8px] font-black uppercase tracking-[0.18em] text-slate-300">
+        className="absolute bottom-7 left-1/2 h-[74%] w-3.5 origin-bottom -translate-x-1/2 rounded-full bg-[linear-gradient(90deg,#4a525b,#d7dbe0_46%,#6f7881)] shadow-[0_8px_12px_rgba(0,0,0,.6),inset_0_1px_1px_rgba(255,255,255,.5)] transition-transform duration-75"
+        style={{ transform: "translateX(-50%) rotate(" + (-10 - value * 42) + "deg)" }}
+      >
+        <span className="absolute -bottom-2 left-1/2 size-7 -translate-x-1/2 rounded-full border border-white/10 bg-[radial-gradient(circle_at_35%_28%,#454c54,#171b20)] shadow-[0_5px_8px_rgba(0,0,0,.65)]" />
+      </span>
+      <span className="absolute top-4 left-1/2 -translate-x-1/2 rounded-md border border-[#e11d2e]/25 bg-[#12090b] px-2 py-1 text-[5px] font-black uppercase tracking-[0.14em] text-red-200">
+        RACE HANDBRAKE
+      </span>
+      <span className="absolute bottom-1.5 inset-x-0 text-[7px] font-black uppercase tracking-[0.18em] text-slate-300">
         HANDBRAKE
       </span>
     </button>
   );
 }
-
 function Nitro({ settings, set }: { settings: Settings; set: Props["set"] }) {
   const [down, setDown] = useState(false);
 
@@ -299,13 +317,48 @@ function Nitro({ settings, set }: { settings: Settings; set: Props["set"] }) {
       }}
       onPointerUp={release}
       onPointerCancel={release}
-      className={"grid h-12 w-[clamp(4rem,9vw,5.5rem)] touch-none select-none place-items-center rounded-xl border border-cyan-300/25 bg-[linear-gradient(180deg,#27313b,#10151b)] text-[9px] font-black uppercase tracking-[0.22em] text-cyan-200 shadow-[0_7px_16px_rgba(0,0,0,.46),inset_0_1px_0_rgba(255,255,255,.08)] active:translate-y-0.5 md:h-14 md:w-24 " + (down ? "brightness-150 ring-2 ring-fuchsia-400/40" : "")}
+      className={
+        "relative h-[clamp(6.5rem,18svh,8.25rem)] w-[clamp(4.4rem,7.5vw,5.6rem)] touch-none select-none overflow-hidden rounded-[1.15rem] border border-cyan-200/15 bg-[#070a0e] shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_12px_26px_rgba(0,0,0,.58)] active:translate-y-0.5 " +
+        (down ? "brightness-125 ring-2 ring-cyan-300/30" : "")
+      }
     >
-      NITRO
+      <span className="absolute inset-1.5 rounded-[0.95rem] border border-white/5 bg-[linear-gradient(180deg,#161e26,#080b0f)]" />
+
+      {/* bottle neck + valve */}
+      <span className="absolute left-1/2 top-2 h-5 w-7 -translate-x-1/2 rounded-t-md border border-white/10 bg-[linear-gradient(90deg,#4d5963,#dce1e5_48%,#5d6871)] shadow-[0_3px_5px_rgba(0,0,0,.5)]" />
+      <span className="absolute left-1/2 top-0 h-3.5 w-6 -translate-x-1/2 rounded-md border border-black/20 bg-[linear-gradient(180deg,#e5e9ec,#69727a)] shadow-[0_3px_5px_rgba(0,0,0,.55)]" />
+      <span className="absolute left-1/2 top-1 size-1.5 -translate-x-1/2 rounded-full bg-[#15191d]" />
+
+      {/* cylinder */}
+      <span
+        className="absolute left-1/2 top-[18%] h-[56%] w-[72%] -translate-x-1/2 rounded-[35%] border border-white/15 bg-[linear-gradient(90deg,#151a20,#dce2e7_12%,#767f87_34%,#dfe4e8_52%,#5f6870_78%,#171c21)] shadow-[inset_0_3px_3px_rgba(255,255,255,.36),inset_0_-8px_10px_rgba(0,0,0,.5),0_8px_14px_rgba(0,0,0,.55)] transition-transform duration-100"
+        style={{ transform: "translateX(-50%) translateY(" + (down ? 3 : 0) + "px) rotate(" + (down ? -1.5 : 0) + "deg)" }}
+      >
+        <span className="absolute inset-y-[8%] left-[11%] w-2 rounded-full bg-white/20" />
+        <span className="absolute inset-x-[12%] top-[48%] -translate-y-1/2 rounded-md border border-black/20 bg-[#10151a]/80 px-1 py-1 text-[7px] font-black tracking-[0.12em] text-cyan-200 shadow-[inset_0_2px_4px_rgba(0,0,0,.7)]">
+          NITRO
+        </span>
+        <span className="absolute inset-x-[16%] top-[66%] text-center text-[4px] font-black uppercase tracking-[0.16em] text-slate-500">
+          10 lb • HIGH PRESSURE
+        </span>
+      </span>
+
+      {/* pressure gauge */}
+      <span className="absolute right-[7%] top-[31%] grid size-5 place-items-center rounded-full border border-white/20 bg-[#080b0e] shadow-[inset_0_0_5px_rgba(0,0,0,.8),0_2px_4px_rgba(0,0,0,.5)]">
+        <span className="absolute left-1/2 top-1/2 h-px w-1.5 origin-left bg-cyan-200" style={{ transform: "rotate(" + (down ? 18 : -22) + "deg)" }} />
+        <span className="size-1 rounded-full bg-slate-300" />
+      </span>
+
+      {/* hose / outlet */}
+      <span className="absolute right-[14%] top-[57%] h-1.5 w-5 rotate-[20deg] rounded-full bg-[#0f151b] shadow-[0_2px_3px_rgba(0,0,0,.55)]" />
+      <span className="absolute right-[7%] top-[55%] size-2 rounded-full border border-cyan-300/40 bg-cyan-300/10" />
+
+      <span className="absolute inset-x-0 bottom-1 text-[6px] font-black uppercase tracking-[0.16em] text-cyan-100/75">
+        {down ? "NITRO ARMED" : "NITRO"}
+      </span>
     </button>
   );
 }
-
 function G29Wheel({
   wheelVisualRef,
   settings,

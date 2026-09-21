@@ -330,9 +330,8 @@ function createPad(mode) {
 
     target.updateMode = "manual";
 
-    // Plug the virtual target into ViGEm. node-ViGEmClient returns null on
-    // success and an Error on failure; some driver-level failures can also
-    // surface through property access, so verify the target after connect.
+    // This is the actual ViGEm plug-in operation. A null return means the
+    // target was accepted by the ViGEmBus driver.
     const connectError = target.connect();
     if (connectError) {
       throw new Error(
@@ -340,48 +339,43 @@ function createPad(mode) {
       );
     }
 
-    if (mode === "xinput") {
-      // Accessing userIndex forces a round-trip through the ViGEm bus and
-      // confirms Windows has actually enumerated the XInput target.
-      let userIndex = null;
-      for (let attempt = 0; attempt < 8; attempt += 1) {
-        try {
-          userIndex = Number(target.userIndex);
-          if (Number.isInteger(userIndex) && userIndex >= 0 && userIndex <= 3) break;
-        } catch {
-          /* PnP/XInput enumeration may take a few hundred ms. */
-        }
-        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 125);
-      }
-
-      if (!Number.isInteger(userIndex) || userIndex < 0 || userIndex > 3) {
-        try {
-          target.disconnect();
-        } catch {
-          /* ignore */
-        }
-        throw new Error("XInput target connected to ViGEmBus but Windows did not assign a user index");
-      }
-
-      pad = target;
-      lastAppliedSignature = "";
-      pad.resetInputs();
-      pad.update();
-
-      console.log(`Virtual Xbox 360 controller connected and enumerated (userIndex=${userIndex}).`);
-      appendBridgeLog(
-        `Virtual Xbox 360 controller connected and enumerated (userIndex=${userIndex}).`,
-      );
-      return true;
+    // Do NOT require userIndex to be 0..3 before accepting the target.
+    // Windows can enumerate the XInput slot asynchronously. Disconnecting
+    // here can race PnP and prevent a perfectly valid target from appearing
+    // in joy.cpl. The target's attached state is the more direct signal.
+    let attached = false;
+    try {
+      attached = Boolean(target.attached);
+    } catch {
+      attached = true;
     }
 
     pad = target;
     lastAppliedSignature = "";
     pad.resetInputs();
-    pad.update();
+    const updateError = pad.update();
+    if (updateError) {
+      appendBridgeLog(
+        `Initial ${mode} controller report update returned: ${updateError.message || updateError}`,
+      );
+    }
 
-    console.log("Virtual DualShock 4 controller connected and enumerated.");
-    appendBridgeLog("Virtual DualShock 4 controller connected and enumerated.");
+    let userIndex = "pending";
+    if (mode === "xinput") {
+      try {
+        userIndex = String(target.userIndex);
+      } catch {
+        /* Windows may not have assigned the XInput slot yet */
+      }
+    }
+
+    const controllerName = mode === "ds4" ? "DualShock 4" : "Xbox 360";
+    console.log(
+      `Virtual ${controllerName} target added to ViGEmBus (attached=${attached}, userIndex=${userIndex}).`,
+    );
+    appendBridgeLog(
+      `Virtual ${controllerName} target added to ViGEmBus (attached=${attached}, userIndex=${userIndex}).`,
+    );
     return true;
   } catch (err) {
     pad = null;
@@ -473,6 +467,11 @@ try {
   const message = err?.message || String(err);
   const service = queryViGEmBusService();
 
+  appendBridgeLog(
+    "ViGEm startup failure: " + message +
+    " | serviceInstalled=" + service.installed +
+    " | serviceRunning=" + service.running,
+  );
   console.warn("ViGEm unavailable - running in echo-only mode:", message);
 
   if (service.installed) {

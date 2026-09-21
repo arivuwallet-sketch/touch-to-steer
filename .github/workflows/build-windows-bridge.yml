@@ -12,6 +12,8 @@ permissions:
 jobs:
   build-windows-bridge:
     runs-on: windows-2022
+    env:
+      GYP_MSVS_VERSION: "2022"
 
     steps:
       - name: Checkout
@@ -27,12 +29,6 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path public/bridge/drivers | Out-Null
           Invoke-WebRequest -Uri "https://github.com/nefarius/ViGEmBus/releases/download/v1.22.0/ViGEmBus_1.22.0_x64_x86_arm64.exe" -OutFile "public/bridge/drivers/ViGEmBus_1.22.0_x64_x86_arm64.exe"
-
-      - name: Configure node-gyp for Visual Studio 2022
-        shell: pwsh
-        run: |
-          npm config set msvs_version 2022
-          echo "GYP_MSVS_VERSION=2022" >> $env:GITHUB_ENV
 
       - name: Install bridge dependencies
         working-directory: public/bridge

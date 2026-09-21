@@ -347,154 +347,11 @@ function installBundledDriverAndRestart() {
 }
 
 let client = null;
-let pad = null;       // Xbox 360 / XInput target
-let ds4Pad = null;    // DualShock 4 / HID-compatible fallback target
-let padMode =
-  OUTPUT === "ds4" ? "ds4" :
-  OUTPUT === "universal" ? "universal" :
-  "xinput";
-let lastAppliedSignature = "";
+const DEFAULT_OUTPUT = OUTPUT === "ds4" ? "ds4" : "universal";
+const MAX_CONTROLLER_SESSIONS = 4;
 const ackState = new WeakMap();
-
-// The phone can send controller state up to 240 times/sec, but applying a
-// report to the driver (pad.update(), a synchronous native call) is not
-// guaranteed to be faster than that under real-world driver/OS scheduling.
-//
-// Keep Claude's latency fix for continuous analog state: a single-slot
-// latest-value mailbox prevents stale 240 Hz snapshots from building a queue.
-// Digital edges bypass that mailbox and are applied immediately below.
-let latestState = null;
-let applyScheduled = false;
-
-function flushState() {
-  applyScheduled = false;
-  const state = latestState;
-  latestState = null;
-  if (!state) return;
-
-  try {
-    apply(state);
-  } catch (err) {
-    console.warn("Failed to apply controller state:", err?.message || err);
-    appendBridgeLog("APPLY ERROR: " + (err?.stack || err));
-  }
-
-  if (latestState) scheduleApply();
-}
-
-function scheduleApply() {
-  if (applyScheduled) return;
-  applyScheduled = true;
-  setImmediate(flushState);
-}
-
-function disconnectTarget(target) {
-  if (!target) return;
-  try {
-    target.resetInputs();
-    target.update();
-  } catch {
-    /* ignore a stale target */
-  }
-  try {
-    target.disconnect();
-  } catch {
-    /* ignore a stale target */
-  }
-}
-
-function createTarget(type) {
-  if (!client) return null;
-
-  try {
-    const target = type === "ds4"
-      ? client.createDS4Controller()
-      : client.createX360Controller();
-
-    target.updateMode = "manual";
-
-    const connectError = target.connect();
-    if (connectError) {
-      throw new Error(
-        `ViGEm ${type === "ds4" ? "DualShock 4" : "Xbox 360"} target connect failed: ${connectError?.message || String(connectError)}`,
-      );
-    }
-
-    let attached = false;
-    try {
-      attached = Boolean(target.attached);
-    } catch {
-      attached = true;
-    }
-
-    target.resetInputs();
-    const updateError = target.update();
-    if (updateError) {
-      appendBridgeLog(
-        `Initial ${type} controller report update returned: ${updateError.message || updateError}`,
-      );
-    }
-
-    let userIndex = "n/a";
-    if (type === "xinput") {
-      try {
-        userIndex = String(target.userIndex);
-      } catch {
-        /* Windows may assign the XInput slot asynchronously */
-      }
-    }
-
-    const name = type === "ds4" ? "DualShock 4 / HID" : "Xbox 360 / XInput";
-    console.log(
-      `Virtual ${name} target added to ViGEmBus (attached=${attached}, userIndex=${userIndex}).`,
-    );
-    appendBridgeLog(
-      `Virtual ${name} target added to ViGEmBus (attached=${attached}, userIndex=${userIndex}).`,
-    );
-    return target;
-  } catch (err) {
-    const message = err?.message || String(err);
-    console.warn(
-      `Unable to connect ${type === "ds4" ? "DualShock 4 / HID" : "Xbox 360 / XInput"} virtual controller:`,
-      message,
-    );
-    appendBridgeLog(
-      `Unable to connect ${type === "ds4" ? "DualShock 4 / HID" : "Xbox 360 / XInput"} virtual controller: ${message}`,
-    );
-    return null;
-  }
-}
-
-function createPad(mode) {
-  if (!client) return false;
-
-  // Recreate targets when switching compatibility modes so Windows receives
-  // a clean PnP device lifecycle instead of a stale controller class.
-  disconnectTarget(pad);
-  disconnectTarget(ds4Pad);
-  pad = null;
-  ds4Pad = null;
-  lastAppliedSignature = "";
-
-  if (mode === "xinput" || mode === "universal") {
-    pad = createTarget("xinput");
-  }
-
-  if (mode === "ds4" || mode === "universal") {
-    ds4Pad = createTarget("ds4");
-  }
-
-  const connected = Boolean(pad || ds4Pad);
-  if (mode === "universal") {
-    console.log(
-      `Universal controller mode: XInput=${Boolean(pad)} + DirectInput/HID fallback=${Boolean(ds4Pad)}.`,
-    );
-    appendBridgeLog(
-      `Universal controller mode: XInput=${Boolean(pad)} + DirectInput/HID fallback=${Boolean(ds4Pad)}.`,
-    );
-  }
-  return connected;
-}
+const socketState = new WeakMap();
+const controllerSessions = new Set();
 
 function queryViGEmBusService() {
   if (process.platform !== "win32") {
@@ -507,7 +364,8 @@ function queryViGEmBusService() {
       windowsHide: true,
     });
     const raw = `${result.stdout || ""}\n${result.stderr || ""}`;
-    const installed = result.status === 0 || /SERVICE_NAME:\s*ViGEmBus/i.test(raw);
+    const installed =
+      result.status === 0 || /SERVICE_NAME:\s*ViGEmBus/i.test(raw);
     const running = /STATE\s*:\s*\d+\s+RUNNING/i.test(raw);
     return { installed, running, raw };
   } catch {
@@ -517,13 +375,17 @@ function queryViGEmBusService() {
 
 function startViGEmBusService() {
   if (process.platform !== "win32") return false;
+
   try {
     const result = spawnSync("sc.exe", ["start", "ViGEmBus"], {
       encoding: "utf8",
       windowsHide: true,
     });
-    return result.status === 0 || /START_PENDING|RUNNING|already been started/i.test(
-      `${result.stdout || ""}\n${result.stderr || ""}`,
+    return (
+      result.status === 0 ||
+      /START_PENDING|RUNNING|already been started/i.test(
+        `${result.stdout || ""}\n${result.stderr || ""}`,
+      )
     );
   } catch {
     return false;
@@ -535,7 +397,9 @@ function connectViGEmClient() {
   const service = queryViGEmBusService();
 
   if (service.installed && !service.running) {
-    console.log("ViGEmBus is installed but not running; attempting to start the service...");
+    console.log(
+      "ViGEmBus is installed but not running; attempting to start the service...",
+    );
     startViGEmBusService();
   }
 
@@ -545,7 +409,7 @@ function connectViGEmClient() {
     try {
       const candidate = new ViGEmClient();
       const error = candidate.connect();
-      if (!error) return { client: candidate, error: null, service };
+      if (!error) return { client: candidate, error: null };
       lastError = error;
     } catch (error) {
       lastError = error;
@@ -556,31 +420,150 @@ function connectViGEmClient() {
       if (retryService.installed && !retryService.running) {
         startViGEmBusService();
       }
-      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250);
+      Atomics.wait(
+        new Int32Array(new SharedArrayBuffer(4)),
+        0,
+        0,
+        250,
+      );
     }
   }
 
-  return { client: null, error: lastError, service: queryViGEmBusService() };
+  return {
+    client: null,
+    error: lastError,
+    service: queryViGEmBusService(),
+  };
 }
 
 let vigemConnectionError = null;
 
+function ensureViGEmClient() {
+  if (client) return true;
+
+  try {
+    const connection = connectViGEmClient();
+    if (!connection.client) {
+      vigemConnectionError = connection.error || new Error("ViGEmBus connection failed");
+      appendBridgeLog(
+        "ViGEm recovery connect failed: " +
+        (vigemConnectionError?.message || String(vigemConnectionError)),
+      );
+      return false;
+    }
+
+    client = connection.client;
+    vigemConnectionError = null;
+    appendBridgeLog("ViGEm client recovered.");
+    return true;
+  } catch (error) {
+    vigemConnectionError = error;
+    appendBridgeLog("ViGEm recovery exception: " + (error?.stack || error));
+    return false;
+  }
+}
+
+function disconnectTarget(target) {
+  if (!target) return;
+
+  try {
+    target.resetInputs();
+    target.update();
+  } catch {
+    /* ignore */
+  }
+
+  try {
+    target.disconnect();
+  } catch {
+    /* ignore */
+  }
+}
+
+function createTarget(type) {
+  if (!client) return null;
+
+  try {
+    const target =
+      type === "ds4"
+        ? client.createDS4Controller()
+        : client.createX360Controller();
+
+    target.updateMode = "manual";
+
+    const connectError = target.connect();
+    if (connectError) {
+      throw new Error(
+        `ViGEm ${type === "ds4" ? "DualShock 4 / HID" : "Xbox 360 / XInput"} target connect failed: ${connectError?.message || String(connectError)}`,
+      );
+    }
+
+    let attached = false;
+    try {
+      attached = Boolean(target.attached);
+    } catch {
+      attached = true;
+    }
+
+    target.resetInputs();
+    target.update();
+
+    let userIndex = "n/a";
+    if (type === "xinput") {
+      try {
+        userIndex = String(target.userIndex);
+      } catch {
+        userIndex = "pending";
+      }
+    }
+
+    const name =
+      type === "ds4" ? "DualShock 4 / HID" : "Xbox 360 / XInput";
+
+    console.log(
+      `Virtual ${name} target added (attached=${attached}, userIndex=${userIndex}).`,
+    );
+    appendBridgeLog(
+      `Virtual ${name} target added (attached=${attached}, userIndex=${userIndex}).`,
+    );
+
+    return target;
+  } catch (err) {
+    const message = err?.message || String(err);
+    console.warn(
+      `Unable to create ${type === "ds4" ? "DualShock 4 / HID" : "Xbox 360 / XInput"} virtual controller:`,
+      message,
+    );
+    appendBridgeLog(
+      `Unable to create ${type === "ds4" ? "DualShock 4 / HID" : "Xbox 360 / XInput"} virtual controller: ${message}`,
+    );
+    return null;
+  }
+}
+
 try {
   const connection = connectViGEmClient();
-  if (!connection.client) throw connection.error || new Error("ViGEmBus connection failed");
+  if (!connection.client) {
+    throw connection.error || new Error("ViGEmBus connection failed");
+  }
 
   client = connection.client;
   vigemConnectionError = null;
-  createPad(padMode);
-  if (!pad && !ds4Pad) throw new Error("Virtual controller creation failed");
+  appendBridgeLog(
+    "ViGEm client connected; waiting for phone controller sessions.",
+  );
 } catch (err) {
   const message = err?.message || String(err);
   const service = queryViGEmBusService();
 
+  vigemConnectionError = err;
   appendBridgeLog(
-    "ViGEm startup failure: " + message +
-    " | serviceInstalled=" + service.installed +
-    " | serviceRunning=" + service.running,
+    "ViGEm startup failure: " +
+    message +
+    " | serviceInstalled=" +
+    service.installed +
+    " | serviceRunning=" +
+    service.running,
   );
   console.warn("ViGEm unavailable - running in echo-only mode:", message);
 
@@ -592,53 +575,15 @@ try {
       "Open Windows Device Manager and verify 'Nefarius Virtual Gamepad Emulation Bus'.",
     );
     console.warn(
-      "The bridge will NOT relaunch the ViGEmBus installer because an installation was detected.",
+      "The bridge will not reinstall ViGEmBus because an installation was detected.",
     );
-  } else if (!SKIP_DRIVER_INSTALL && isPackagedBridge() && !pad && !ds4Pad && installBundledDriverAndRestart()) {
+  } else if (
+    !SKIP_DRIVER_INSTALL &&
+    isPackagedBridge() &&
+    installBundledDriverAndRestart()
+  ) {
     process.exit(0);
   }
-}
-
-let controllerRecoveryTimer = null;
-
-function ensureVirtualController() {
-  if (pad || ds4Pad) return true;
-
-  try {
-    if (!client) {
-      const connection = connectViGEmClient();
-      if (!connection.client) {
-        appendBridgeLog(
-          "ViGEm recovery connect failed: " +
-          (connection.error?.message || String(connection.error || "unknown")),
-        );
-        return false;
-      }
-      client = connection.client;
-    }
-    return createPad(padMode);
-  } catch (error) {
-    appendBridgeLog("ViGEm recovery exception: " + (error?.stack || error));
-    return false;
-  }
-}
-
-if (!pad && !ds4Pad) {
-  controllerRecoveryTimer = setInterval(() => {
-    if (pad || ds4Pad) {
-      if (controllerRecoveryTimer) {
-        clearInterval(controllerRecoveryTimer);
-        controllerRecoveryTimer = null;
-      }
-      return;
-    }
-
-    const recovered = ensureVirtualController();
-    if (recovered && controllerRecoveryTimer) {
-      clearInterval(controllerRecoveryTimer);
-      controllerRecoveryTimer = null;
-    }
-  }, 1500);
 }
 
 console.log("");
@@ -647,11 +592,21 @@ appendBridgeLog("TouchToSteer Bridge ready.");
 const addresses = localIpv4Addresses();
 if (addresses.length) {
   console.log("Phone WebSocket address(es):");
-  for (const address of addresses) console.log(`  ws://${address}:${PORT}`);
+  for (const address of addresses) {
+    console.log(`  ws://${address}:${PORT}`);
+  }
 } else {
   console.log(`Phone WebSocket address: ws://<PC-IP>:${PORT}`);
 }
-console.log(`Driver package source: ${isPackagedBridge() ? "bundled with this executable" : DRIVER_URL}`);
+console.log(
+  `Default virtual controller target: ${DEFAULT_OUTPUT === "universal" ? "Universal (Xbox 360/XInput + DirectInput/HID)" : DEFAULT_OUTPUT === "ds4" ? "DualShock 4/HID" : "Xbox 360/XInput"}`,
+);
+console.log(
+  `Virtual controller sessions: up to ${MAX_CONTROLLER_SESSIONS} independent players`,
+);
+console.log(
+  `Driver package source: ${isPackagedBridge() ? "bundled with this executable" : DRIVER_URL}`,
+);
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, Number(v) || 0));
 
@@ -689,6 +644,7 @@ const DSBTN = {
 
 function setDpad(target, s) {
   if (!target) return;
+
   const buttons = s.buttons || {};
   let h = 0;
   let v = 0;
@@ -711,7 +667,9 @@ function applyToTarget(target, s, buttonMap) {
   };
 
   const steer = clamp(s.steer, -1, 1);
-  target.axis.leftX.setValue(Math.abs(steer) > 0.0005 ? steer : clamp(s.lx, -1, 1));
+  target.axis.leftX.setValue(
+    Math.abs(steer) > 0.0005 ? steer : clamp(s.lx, -1, 1),
+  );
   target.axis.leftY.setValue(-clamp(s.ly, -1, 1));
   target.axis.rightX.setValue(clamp(s.rx, -1, 1));
   target.axis.rightY.setValue(-clamp(s.ry, -1, 1));
@@ -738,11 +696,9 @@ function applyToTarget(target, s, buttonMap) {
 
   setDpad(target, s);
 
-  // Driving aliases. These retain compatibility with common game bindings.
   if (buttons.horn) mark(buttonMap.__horn);
   if (buttons.look) mark(buttonMap.__look);
   if (buttons.reset) mark(buttonMap.__reset);
-
   if (clamp(s.handbrake, 0, 1) > 0.5) mark(buttonMap.__handbrake);
   if (clamp(s.nitro, 0, 1) > 0.5) mark(buttonMap.__nitro);
   if (s.gear === 1) mark(buttonMap.__gearUp);
@@ -755,19 +711,9 @@ function applyToTarget(target, s, buttonMap) {
   target.update();
 }
 
-function apply(s) {
-  const targets = [];
-
-  if (pad) {
-    targets.push({ target: pad, map: XBTN });
-  }
-  if (ds4Pad) {
-    targets.push({ target: ds4Pad, map: DSBTN });
-  }
-  if (!targets.length) return;
-
+function stateSignature(s) {
   const buttons = s.buttons || {};
-  const signature = [
+  return [
     clamp(s.steer, -1, 1),
     clamp(s.lx, -1, 1),
     clamp(s.ly, -1, 1),
@@ -784,20 +730,20 @@ function apply(s) {
     Number(s.dial) || 0,
     Object.keys(buttons).filter((id) => buttons[id]).sort().join(","),
   ].join("|");
+}
 
-  // The same phone state may be received repeatedly at 240 Hz. Keep the
-  // latest-state optimization, but send each changed state to every active
-  // compatibility target.
-  if (signature === lastAppliedSignature) return;
+function applySessionState(session, s) {
+  if (!session || !session.targets.length) return;
 
-  for (const entry of targets) {
+  const signature = stateSignature(s);
+  if (signature === session.lastAppliedSignature) return;
+
+  for (const entry of session.targets) {
     applyToTarget(entry.target, s, entry.map);
   }
 
-  lastAppliedSignature = signature;
-}
-
-const wss = new WebSocketServer({
+  session.lastAppliedSignature = signature;
+}const wss = new WebSocketServer({
   port: PORT,
   perMessageDeflate: false,
 });
@@ -1061,9 +1007,115 @@ wss.on("connection", (ws) => {
   if (socket?.setNoDelay) socket.setNoDelay(true);
   if (socket?.setKeepAlive) socket.setKeepAlive(true, 1000);
 
+  const session = {
+    ws,
+    mode: DEFAULT_OUTPUT,
+    targets: [],
+    latestState: null,
+    applyScheduled: false,
+    lastAppliedSignature: "",
+  };
+
+  socketState.set(ws, session);
+
+  function scheduleApply() {
+    if (session.applyScheduled) return;
+    session.applyScheduled = true;
+    setImmediate(flushApply);
+  }
+
+  function flushApply() {
+    session.applyScheduled = false;
+    const state = session.latestState;
+    session.latestState = null;
+    if (!state || !session.targets.length) return;
+
+    try {
+      applySessionState(session, state);
+    } catch (err) {
+      console.warn(
+        "Failed to apply controller state:",
+        err?.message || err,
+      );
+      appendBridgeLog("APPLY ERROR: " + (err?.stack || err));
+    }
+
+    if (session.latestState) scheduleApply();
+  }
+
+  function disconnectSessionTargets() {
+    for (const entry of session.targets) {
+      disconnectTarget(entry.target);
+    }
+    session.targets = [];
+    session.latestState = null;
+    session.applyScheduled = false;
+    session.lastAppliedSignature = "";
+    controllerSessions.delete(session);
+  }
+
+  function createSessionTargets(requestedMode) {
+    if (session.targets.length && session.mode === requestedMode) {
+      return true;
+    }
+
+    if (!session.targets.length && controllerSessions.size >= MAX_CONTROLLER_SESSIONS) {
+      return false;
+    }
+
+    disconnectSessionTargets();
+
+    if (!ensureViGEmClient()) return false;
+
+    const requestedTypes =
+      requestedMode === "universal"
+        ? ["xinput", "ds4"]
+        : [requestedMode];
+
+    const created = [];
+    for (const type of requestedTypes) {
+      const target = createTarget(type);
+      if (target) {
+        created.push({
+          target,
+          type,
+          map: type === "ds4" ? DSBTN : XBTN,
+        });
+      }
+    }
+
+    // Never leave a half-created compatibility session behind. If one side of
+    // Universal mode failed, clean up the successful side and report failure.
+    if (created.length !== requestedTypes.length) {
+      for (const entry of created) disconnectTarget(entry.target);
+      return false;
+    }
+
+    session.mode = requestedMode;
+    session.targets = created;
+    session.lastAppliedSignature = "";
+    controllerSessions.add(session);
+    return true;
+  }
+
+  function playerIndex() {
+    const xinput = session.targets.find((entry) => entry.type === "xinput");
+    if (!xinput) return null;
+
+    try {
+      const index = Number(xinput.target.userIndex);
+      return Number.isInteger(index) && index >= 0 && index < MAX_CONTROLLER_SESSIONS
+        ? index + 1
+        : null;
+    } catch {
+      return null;
+    }
+  }
+
   console.log("Phone connected.");
-  lastAppliedSignature = "";
-  latestState = null;
+  appendBridgeLog(
+    `Phone connected; active players=${controllerSessions.size + 1}`,
+  );
 
   ws.on("message", (raw) => {
     let msg;
@@ -1074,51 +1126,70 @@ wss.on("connection", (ws) => {
     }
 
     if (msg.type === "hello") {
-      const requested = String(msg.output || msg.controller || padMode).toLowerCase();
-      if (requested === "xinput" || requested === "ds4" || requested === "universal") {
-        const modeChanged = requested !== padMode;
-        padMode = requested;
-        if (modeChanged || (!pad && !ds4Pad)) {
-          createPad(padMode);
-        } else {
-          ensureVirtualController();
-        }
+      const requestedRaw = String(
+        msg.output || msg.controller || session.mode || DEFAULT_OUTPUT,
+      ).toLowerCase();
+
+      const requested =
+        requestedRaw === "ds4"
+          ? "ds4"
+          : requestedRaw === "xinput"
+            ? "xinput"
+            : "universal";
+
+      const connected = createSessionTargets(requested);
+      const xinputTarget = session.targets.find(
+        (entry) => entry.type === "xinput",
+      );
+      const hasDs4 = session.targets.some((entry) => entry.type === "ds4");
+
+      const names = [];
+      if (xinputTarget) names.push("Controller (Xbox 360 For Windows)");
+      if (hasDs4) names.push("Wireless Controller");
+
+      try {
+        ws.send(JSON.stringify({
+          type: "ready",
+          t: msg.t ?? Date.now(),
+          seq: msg.seq ?? 0,
+          output: session.mode,
+          rateHz: Number(msg.rateHz) || 240,
+          mouse: {
+            supported: process.platform === "win32",
+            injectorAvailable: Boolean(startMouseInjector()),
+          },
+          controller: {
+            supported: process.platform === "win32",
+            connected,
+            type: session.mode,
+            name: connected ? names.join(" + ") : null,
+            xinput: Boolean(xinputTarget),
+            directInputFallback: hasDs4,
+            player: playerIndex(),
+            maxPlayers: MAX_CONTROLLER_SESSIONS,
+            activePlayers: controllerSessions.size,
+            error: connected
+              ? null
+              : controllerSessions.size >= MAX_CONTROLLER_SESSIONS &&
+                  session.targets.length === 0
+                ? `Maximum of ${MAX_CONTROLLER_SESSIONS} simultaneous controller players reached.`
+                : "ViGEmBus virtual controller could not be created.",
+          },
+          telemetry: {
+            forzaPorts: FORZA_PORTS,
+            f1Port: F1_PORT,
+            dirtPort: DIRT_PORT,
+            pcarsPort: PCARS_PORT,
+            outGaugePorts: OUTGAUGE_PORTS,
+            wrcPort: WRC_PORT,
+            wreckfest2Port: WRECKFEST2_PORT,
+            live: Boolean(latestTelemetry),
+          },
+        }));
+      } catch {
+        /* ignore a racing socket close */
       }
-      ws.send(JSON.stringify({
-        type: "ready",
-        t: msg.t ?? Date.now(),
-        seq: msg.seq ?? 0,
-        output: padMode,
-        rateHz: Number(msg.rateHz) || 240,
-        mouse: {
-          supported: process.platform === "win32",
-          injectorAvailable: Boolean(startMouseInjector()),
-        },
-        controller: {
-          supported: process.platform === "win32",
-          connected: Boolean(pad || ds4Pad),
-          type: padMode,
-          xinput: Boolean(pad),
-          directInputFallback: Boolean(ds4Pad),
-        },
-        telemetry: {
-          forzaPorts: FORZA_PORTS,
-          f1Port: F1_PORT,
-          dirtPort: DIRT_PORT,
-          pcarsPort: PCARS_PORT,
-          outGaugePorts: OUTGAUGE_PORTS,
-          wrcPort: WRC_PORT,
-          wreckfest2Port: WRECKFEST2_PORT,
-          live: Boolean(latestTelemetry),
-        },
-      }));
-      if (latestTelemetry && ws.readyState === 1) {
-        try {
-          ws.send(JSON.stringify(latestTelemetry));
-        } catch {
-          /* ignore a racing socket close */
-        }
-      }
+
       return;
     }
 
@@ -1139,46 +1210,55 @@ wss.on("connection", (ws) => {
     }
 
     if (msg.type === "state") {
+      if (!session.targets.length) return;
+
       if (msg.priority === "edge") {
         try {
-          apply(msg);
+          // Keep digital edges outside Claude's analog mailbox so a very short
+          // press/release is applied immediately to every target for this player.
+          applySessionState(session, msg);
         } catch (err) {
-          console.warn("Failed to apply immediate controller edge:", err?.message || err);
+          console.warn(
+            "Failed to apply immediate controller edge:",
+            err?.message || err,
+          );
           appendBridgeLog("EDGE APPLY ERROR: " + (err?.stack || err));
         }
       } else {
-        latestState = msg;
+        // Claude's latency fix, per player: only the newest continuous state
+        // survives until the native driver update gets its turn.
+        session.latestState = msg;
         scheduleApply();
       }
 
-      // ACKs are diagnostic only. Sending one WebSocket packet back for every
-      // 240 Hz input packet creates needless bidirectional traffic and can
-      // make controller-test/property windows feel busy. Keep acknowledgements
-      // around 20 Hz while the controller state itself remains low-latency.
-      // This is measured on receipt, independent of the apply loop, so the
-      // latency reading in Settings reflects transport time, not driver time.
       const now = Date.now();
       const previous = ackState.get(ws) || 0;
       if (now - previous >= 50) {
         ackState.set(ws, now);
-        ws.send(JSON.stringify({ type: "ack", t: msg.t, seq: msg.seq }));
+        try {
+          ws.send(JSON.stringify({
+            type: "ack",
+            t: msg.t,
+            seq: msg.seq,
+          }));
+        } catch {
+          /* ignore */
+        }
       }
     }
   });
 
   ws.on("close", () => {
     ackState.delete(ws);
-    sendMouseNative({ action: "reset" });
-    latestState = null;
-    lastAppliedSignature = "";
-    for (const target of [pad, ds4Pad]) {
-      try {
-        target?.resetInputs();
-        target?.update();
-      } catch {
-        /* ignore */
-      }
-    }
-    console.log("Phone disconnected.");
+    session.latestState = null;
+    disconnectSessionTargets();
+    socketState.delete(ws);
+
+    console.log(
+      `Phone disconnected; active players=${controllerSessions.size}`,
+    );
+    appendBridgeLog(
+      `Phone disconnected; active players=${controllerSessions.size}`,
+    );
   });
 });

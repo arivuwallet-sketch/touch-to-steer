@@ -747,14 +747,29 @@ function stateSignature(s) {
 function applySessionState(session, s) {
   if (!session || !session.targets.length) return;
 
+  const seq = Number(s?.seq);
+  if (Number.isFinite(seq) && seq > 0 && seq <= session.lastAppliedSeq) {
+    // A continuous state that was already superseded by a newer edge is stale.
+    // Drop it rather than letting it resurrect an old button/pedal position.
+    return;
+  }
+
   const signature = stateSignature(s);
-  if (signature === session.lastAppliedSignature) return;
+  if (signature === session.lastAppliedSignature) {
+    if (Number.isFinite(seq) && seq > session.lastAppliedSeq) {
+      session.lastAppliedSeq = seq;
+    }
+    return;
+  }
 
   for (const entry of session.targets) {
     applyToTarget(entry.target, s, entry.map);
   }
 
   session.lastAppliedSignature = signature;
+  if (Number.isFinite(seq) && seq > 0) {
+    session.lastAppliedSeq = seq;
+  }
 }
 const wss = new WebSocketServer({
   port: PORT,
@@ -1029,6 +1044,7 @@ wss.on("connection", (ws) => {
     latestState: null,
     applyScheduled: false,
     lastAppliedSignature: "",
+    lastAppliedSeq: 0,
   };
 
   socketState.set(ws, session);
@@ -1068,6 +1084,7 @@ wss.on("connection", (ws) => {
     session.latestState = null;
     session.applyScheduled = false;
     session.lastAppliedSignature = "";
+    session.lastAppliedSeq = 0;
     controllerSessions.delete(session);
   }
 
@@ -1138,6 +1155,7 @@ wss.on("connection", (ws) => {
     session.mode = requestedMode;
     session.targets = created;
     session.lastAppliedSignature = "";
+    session.lastAppliedSeq = 0;
     controllerSessions.add(session);
     appendBridgeLog(
       `Controller session ready: mode=${requestedMode}, targets=${created.map((entry) => entry.type).join("+")}, players=${controllerSessions.size}`,

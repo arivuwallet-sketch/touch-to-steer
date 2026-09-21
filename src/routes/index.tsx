@@ -56,7 +56,7 @@ function Rig() {
   } = useBridge(stateRef, 240, settings.outputMode);
 
   useEffect(() => {
-    const migrationKey = "mobile-rig-xinput-migration-v1";
+    const migrationKey = "mobile-rig-xinput-migration-v2";
     const migrated = localStorage.getItem(migrationKey) === "1";
     const raw = localStorage.getItem(STORAGE_KEY);
 
@@ -64,13 +64,12 @@ function Rig() {
       try {
         const saved = { ...defaultSettings, ...JSON.parse(raw) } as Settings;
 
-        // One-time compatibility migration: older builds persisted either
-        // XInput or DS4 as a single virtual target. Move that legacy selection
-        // to Universal so the new build provides both an Xbox/XInput target
-        // for modern games and a HID/DirectInput-style fallback for legacy
-        // games. After this one-time migration, explicit user choices persist.
-        if (!migrated && saved.outputMode !== "universal") {
-          saved.outputMode = "universal";
+        // The earlier Universal default created an extra DS4/HID device.
+        // Migrate that generated legacy selection back to one stable Xbox
+        // 360/XInput target. XInput is also exposed through Windows' XUSB/HID
+        // path for DirectInput enumeration, while DS4 remains selectable.
+        if (!migrated && (saved.outputMode === "universal" || saved.outputMode === "ds4")) {
+          saved.outputMode = "xinput";
           localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
         }
 
@@ -80,8 +79,6 @@ function Rig() {
         /* keep defaults */
       }
     } else {
-      // Mark the migration complete for fresh installs so a future, explicit
-      // DS4 selection remains persistent.
       localStorage.setItem(migrationKey, "1");
     }
   }, []);

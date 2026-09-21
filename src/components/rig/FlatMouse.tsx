@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PointerEvent, WheelEvent } from "react";
-import { Crosshair, Gauge, Mouse as MouseIcon, RotateCcw, Wifi, Zap } from "lucide-react";
+import { Crosshair, Gauge, RotateCcw, ScrollText } from "lucide-react";
 import type { Settings } from "@/lib/controller-types";
 
 type MouseButton = "left" | "right" | "middle" | "back" | "forward";
@@ -20,7 +20,21 @@ type Props = {
   sendMouse: (message: MouseMessage) => boolean;
 };
 
+type MotionEventWithRate = DeviceMotionEvent & {
+  rotationRate: DeviceMotionEvent["rotationRate"] | null;
+};
+
+type PermissionDeviceMotion = typeof DeviceMotionEvent & {
+  requestPermission?: () => Promise<"granted" | "denied">;
+};
+
+type PermissionDeviceOrientation = typeof DeviceOrientationEvent & {
+  requestPermission?: () => Promise<"granted" | "denied">;
+};
+
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+const MOTION_PIXELS_PER_DEGREE = 12;
+const ORIENTATION_PIXELS_PER_DEGREE = 10;
 
 function rotateDelta(dx: number, dy: number, deg: number) {
   const r = (deg * Math.PI) / 180;
@@ -31,36 +45,99 @@ function rotateDelta(dx: number, dy: number, deg: number) {
 
 function gainFor(settings: Settings, distance: number) {
   if (!settings.mouseDynamicSensitivity) return settings.mouseSensitivity;
-  const speed = clamp(distance / 22, 0, 1);
+  const speed = clamp(distance / 18, 0, 1);
   return settings.mouseSensitivity * (1 + speed * (settings.mouseDynamicMaxMultiplier - 1));
 }
 
+function phoneFeedback() {
+  try {
+    navigator.vibrate?.(8);
+  } catch {
+    /* haptics unavailable */
+  }
+
+  try {
+    const AudioCtx =
+      window.AudioContext ||
+      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "square";
+    osc.frequency.setValueAtTime(2100, ctx.currentTime);
+    gain.gain.setValueAtTime(0.014, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.018);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.018);
+    void ctx.close().catch(() => undefined);
+  } catch {
+    /* optional audio feedback */
+  }
+}
+
 export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
-  const padRef = useRef<HTMLDivElement | null>(null);
-  const activePointers = useRef(new Map<number, { x: number; y: number; button?: MouseButton }>());
+  const shellRef = useRef<HTMLDivElement | null>(null);
+  const activePointers = useRef(
+    new Map<number, { x: number; y: number; button?: MouseButton }>(),
+  );
   const pressedButtons = useRef(new Set<MouseButton>());
-  const gyroLast = useRef<{ alpha: number; beta: number } | null>(null);
+  const pointerButtonRefs = useRef(new Set<number>());
+  const lastMotionSample = useRef(0);
+  const lastOrientation = useRef<{ beta: number; gamma: number } | null>(null);
   const [gyroOn, setGyroOn] = useState(settings.mouseGyroEnabled);
   const [gyroPermission, setGyroPermission] = useState<"unknown" | "granted" | "denied">("unknown");
+  const [pressed, setPressed] = useState<MouseButton | null>(null);
   const [dpiFlash, setDpiFlash] = useState(false);
 
-  const transmitMove = useCallback((dx: number, dy: number) => {
-    if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
+  const transmitMove = useCallback(
+    (dx: number, dy: number) => {
+      if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
 
-    const rotated = rotateDelta(dx, dy, settings.mouseRotationDeg);
-    const scaled = gainFor(settings, Math.hypot(rotated.x, rotated.y));
-    const x = rotated.x * scaled * (settings.mouseDpi / 1600);
-    const y = rotated.y * scaled * (settings.mouseDpi / 1600) * (settings.mouseInvertY ? -1 : 1);
+      const rotated = rotateDelta(dx, dy, settings.mouseRotationDeg);
+      const scaled = gainFor(settings, Math.hypot(rotated.x, rotated.y));
+      const x = rotated.x * scaled * (settings.mouseDpi / 1600);
+      const y =
+        rotated.y *
+        scaled *
+        (settings.mouseDpi / 1600) *
+        (settings.mouseInvertY ? -1 : 1);
 
-    if (Math.abs(x) < 0.01 && Math.abs(y) < 0.01) return;
-    sendMouse({ action: "move", dx: Math.round(clamp(x, -32767, 32767)), dy: Math.round(clamp(y, -32767, 32767)) });
-  }, [sendMouse, settings.mouseDpi, settings.mouseDynamicMaxMultiplier, settings.mouseDynamicSensitivity, settings.mouseInvertY, settings.mouseRotationDeg, settings.mouseSensitivity]);
+      if (Math.abs(x) < 0.01 && Math.abs(y) < 0.01) return;
 
-  const setMouseButton = useCallback((button: MouseButton, down: boolean) => {
-    if (down) pressedButtons.current.add(button);
-    else pressedButtons.current.delete(button);
-    sendMouse({ action: "button", button, down });
-  }, [sendMouse]);
+      sendMouse({
+        action: "move",
+        dx: Math.round(clamp(x, -32767, 32767)),
+        dy: Math.round(clamp(y, -32767, 32767)),
+      });
+    },
+    [
+      sendMouse,
+      settings.mouseDpi,
+      settings.mouseDynamicMaxMultiplier,
+      settings.mouseDynamicSensitivity,
+      settings.mouseInvertY,
+      settings.mouseRotationDeg,
+      settings.mouseSensitivity,
+    ],
+  );
+
+  const setMouseButton = useCallback(
+    (button: MouseButton, down: boolean) => {
+      if (down) {
+        pressedButtons.current.add(button);
+        setPressed(button);
+        phoneFeedback();
+      } else {
+        pressedButtons.current.delete(button);
+        setPressed((current) => (current === button ? null : current));
+      }
+      sendMouse({ action: "button", button, down });
+    },
+    [sendMouse],
+  );
 
   const releaseButtons = useCallback(() => {
     for (const button of pressedButtons.current) {
@@ -68,80 +145,104 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
     }
     pressedButtons.current.clear();
     activePointers.current.clear();
+    pointerButtonRefs.current.clear();
+    setPressed(null);
   }, [sendMouse]);
 
-  const buttonForPoint = useCallback((x: number, y: number): MouseButton | undefined => {
-    const rect = padRef.current?.getBoundingClientRect();
+  const hitTest = useCallback((clientX: number, clientY: number): MouseButton | undefined => {
+    const rect = shellRef.current?.getBoundingClientRect();
     if (!rect) return undefined;
 
-    const nx = (x - rect.left) / rect.width;
-    const ny = (y - rect.top) / rect.height;
+    const nx = (clientX - rect.left) / rect.width;
+    const ny = (clientY - rect.top) / rect.height;
 
-    if (ny < 0.33) {
-      if (nx < 0.46) return "left";
-      if (nx > 0.54) return "right";
+    if (ny <= 0.42) {
+      if (nx < 0.485) return "left";
+      if (nx > 0.515) return "right";
     }
+
+    if (nx < 0.12 && ny > 0.34 && ny < 0.62) return "back";
+    if (nx < 0.12 && ny >= 0.62 && ny < 0.77) return "forward";
+
     return undefined;
   }, []);
 
-  const handlePointerDown = useCallback((e: PointerEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.currentTarget.setPointerCapture?.(e.pointerId);
+  const handlePointerDown = useCallback(
+    (e: PointerEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.currentTarget.setPointerCapture?.(e.pointerId);
 
-    const button = buttonForPoint(e.clientX, e.clientY);
-    activePointers.current.set(e.pointerId, {
-      x: e.clientX,
-      y: e.clientY,
-      button,
-    });
+      const button = hitTest(e.clientX, e.clientY);
+      activePointers.current.set(e.pointerId, {
+        x: e.clientX,
+        y: e.clientY,
+        button,
+      });
 
-    if (button && !pressedButtons.current.has(button)) {
-      setMouseButton(button, true);
-    }
-  }, [buttonForPoint, setMouseButton]);
+      if (button) {
+        pointerButtonRefs.current.add(e.pointerId);
+        if (!pressedButtons.current.has(button)) setMouseButton(button, true);
+      }
+    },
+    [hitTest, setMouseButton],
+  );
 
-  const handlePointerMove = useCallback((e: PointerEvent<HTMLDivElement>) => {
-    const prev = activePointers.current.get(e.pointerId);
-    if (!prev) return;
-    e.preventDefault();
+  const handlePointerMove = useCallback(
+    (e: PointerEvent<HTMLDivElement>) => {
+      const previous = activePointers.current.get(e.pointerId);
+      if (!previous) return;
+      e.preventDefault();
 
-    const native = e.nativeEvent as PointerEvent & {
-      getCoalescedEvents?: () => PointerEvent[];
-    };
-    const events = settings.mouseSmartTracking && native.getCoalescedEvents
-      ? native.getCoalescedEvents()
-      : [native];
+      const native = e.nativeEvent as PointerEvent & {
+        getCoalescedEvents?: () => PointerEvent[];
+      };
+      const events =
+        settings.mouseSmartTracking && native.getCoalescedEvents
+          ? native.getCoalescedEvents()
+          : [native];
 
-    let lastX = prev.x;
-    let lastY = prev.y;
+      let lastX = previous.x;
+      let lastY = previous.y;
 
-    for (const event of events) {
-      const dx = event.clientX - lastX;
-      const dy = event.clientY - lastY;
-      if (dx || dy) transmitMove(dx, dy);
-      lastX = event.clientX;
-      lastY = event.clientY;
-    }
+      for (const event of events) {
+        const dx = event.clientX - lastX;
+        const dy = event.clientY - lastY;
+        if (dx || dy) transmitMove(dx, dy);
+        lastX = event.clientX;
+        lastY = event.clientY;
+      }
 
-    prev.x = e.clientX;
-    prev.y = e.clientY;
-  }, [settings.mouseSmartTracking, transmitMove]);
+      previous.x = e.clientX;
+      previous.y = e.clientY;
+    },
+    [settings.mouseSmartTracking, transmitMove],
+  );
 
-  const handlePointerUp = useCallback((e: PointerEvent<HTMLDivElement>) => {
-    const entry = activePointers.current.get(e.pointerId);
-    activePointers.current.delete(e.pointerId);
-    if (entry?.button) {
-      pressedButtons.current.delete(entry.button);
-      sendMouse({ action: "button", button: entry.button, down: false });
-    }
-    e.currentTarget.releasePointerCapture?.(e.pointerId);
-  }, [sendMouse]);
+  const handlePointerUp = useCallback(
+    (e: PointerEvent<HTMLDivElement>) => {
+      const previous = activePointers.current.get(e.pointerId);
+      activePointers.current.delete(e.pointerId);
 
-  const handleWheel = useCallback((e: WheelEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    if (Math.abs(e.deltaY) < 0.5) return;
-    sendMouse({ action: "wheel", delta: Math.sign(e.deltaY) * -120 });
-  }, [sendMouse]);
+      if (previous?.button && pointerButtonRefs.current.has(e.pointerId)) {
+        pointerButtonRefs.current.delete(e.pointerId);
+        setMouseButton(previous.button, false);
+      }
+
+      e.currentTarget.releasePointerCapture?.(e.pointerId);
+    },
+    [setMouseButton],
+  );
+
+  const handleWheel = useCallback(
+    (e: WheelEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      const delta = Math.abs(e.deltaY) > 0.5 ? e.deltaY : e.deltaX;
+      if (Math.abs(delta) < 0.5) return;
+      sendMouse({ action: "wheel", delta: Math.sign(delta) * -120 });
+      phoneFeedback();
+    },
+    [sendMouse],
+  );
 
   const cycleDpi = useCallback(() => {
     const values = [400, 800, 1200, 1600, 2400, 3200, 6400, 12800, 25600, 50000];
@@ -149,67 +250,117 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
     const next = values[(index >= 0 ? index + 1 : 0) % values.length];
     onSettingsChange({ mouseDpi: next });
     setDpiFlash(true);
+    phoneFeedback();
     window.setTimeout(() => setDpiFlash(false), 180);
   }, [onSettingsChange, settings.mouseDpi]);
 
   const requestGyro = useCallback(async () => {
     try {
-      const permissionApi = (window as Window & {
-        DeviceOrientationEvent?: {
-          requestPermission?: () => Promise<"granted" | "denied">;
-        };
-      }).DeviceOrientationEvent;
+      const motionApi = window.DeviceMotionEvent as PermissionDeviceMotion | undefined;
+      const orientationApi =
+        window.DeviceOrientationEvent as PermissionDeviceOrientation | undefined;
 
-      if (permissionApi?.requestPermission) {
-        const permission = await permissionApi.requestPermission();
-        setGyroPermission(permission);
+      if (motionApi?.requestPermission) {
+        const permission = await motionApi.requestPermission();
         if (permission !== "granted") {
+          setGyroPermission("denied");
           setGyroOn(false);
           return;
         }
-      } else {
-        setGyroPermission("granted");
       }
 
-      gyroBaseline.current = null;
-      gyroLast.current = null;
+      if (orientationApi?.requestPermission) {
+        const permission = await orientationApi.requestPermission();
+        if (permission !== "granted") {
+          setGyroPermission("denied");
+          setGyroOn(false);
+          return;
+        }
+      }
+
+      lastMotionSample.current = 0;
+      lastOrientation.current = null;
+      setGyroPermission("granted");
       setGyroOn(true);
+      onSettingsChange({ mouseGyroEnabled: true });
+      phoneFeedback();
     } catch {
       setGyroPermission("denied");
       setGyroOn(false);
+      onSettingsChange({ mouseGyroEnabled: false });
     }
-  }, []);
+  }, [onSettingsChange]);
+
+  const disableGyro = useCallback(() => {
+    setGyroOn(false);
+    setGyroPermission("unknown");
+    lastMotionSample.current = 0;
+    lastOrientation.current = null;
+    onSettingsChange({ mouseGyroEnabled: false });
+  }, [onSettingsChange]);
 
   const recenterGyro = useCallback(() => {
-    gyroLast.current = null;
+    lastMotionSample.current = 0;
+    lastOrientation.current = null;
+    phoneFeedback();
   }, []);
 
   useEffect(() => {
     if (!gyroOn) return;
 
-    const handleOrientation = (event: DeviceOrientationEvent) => {
-      if (typeof event.alpha !== "number" || typeof event.beta !== "number") return;
+    const handleMotion = (event: MotionEventWithRate) => {
+      const rate = event.rotationRate;
+      if (!rate) return;
 
-      const current = { alpha: event.alpha, beta: event.beta };
-      const last = gyroLast.current;
-      if (!last) {
-        gyroLast.current = current;
-        return;
-      }
+      const beta = Number(rate.beta) || 0;
+      const gamma = Number(rate.gamma) || 0;
+      if (Math.abs(beta) < 0.03 && Math.abs(gamma) < 0.03) return;
 
-      const wrap = (a: number) => ((a + 540) % 360) - 180;
-      const yaw = wrap(current.alpha - last.alpha);
-      const pitch = current.beta - last.beta;
+      const now = performance.now();
+      const previous = lastMotionSample.current;
+      lastMotionSample.current = now;
+      const dt = previous > 0 ? clamp((now - previous) / 1000, 0.004, 0.04) : 1 / 60;
 
-      gyroLast.current = current;
       transmitMove(
-        yaw * settings.mouseGyroSensitivity * 7,
-        pitch * settings.mouseGyroSensitivity * 7,
+        gamma * dt * MOTION_PIXELS_PER_DEGREE * settings.mouseGyroSensitivity,
+        beta * dt * MOTION_PIXELS_PER_DEGREE * settings.mouseGyroSensitivity,
       );
     };
 
+    const handleOrientation = (event: DeviceOrientationEvent) => {
+      if (
+        lastMotionSample.current > 0 &&
+        performance.now() - lastMotionSample.current < 120
+      ) {
+        return;
+      }
+
+      if (typeof event.beta !== "number" || typeof event.gamma !== "number") return;
+
+      const current = { beta: event.beta, gamma: event.gamma };
+      const previous = lastOrientation.current;
+      lastOrientation.current = current;
+      if (!previous) return;
+
+      const dx = clamp(current.gamma - previous.gamma, -8, 8);
+      const dy = clamp(current.beta - previous.beta, -8, 8);
+      if (Math.abs(dx) < 0.03 && Math.abs(dy) < 0.03) return;
+
+      transmitMove(
+        dx * ORIENTATION_PIXELS_PER_DEGREE * settings.mouseGyroSensitivity,
+        dy * ORIENTATION_PIXELS_PER_DEGREE * settings.mouseGyroSensitivity,
+      );
+    };
+
+    window.addEventListener("devicemotion", handleMotion, { passive: true });
     window.addEventListener("deviceorientation", handleOrientation, { passive: true });
-    return () => window.removeEventListener("deviceorientation", handleOrientation);
+    window.addEventListener("deviceorientationabsolute", handleOrientation, { passive: true });
+
+    return () => {
+      window.removeEventListener("devicemotion", handleMotion);
+      window.removeEventListener("deviceorientation", handleOrientation);
+      window.removeEventListener("deviceorientationabsolute", handleOrientation);
+    };
   }, [gyroOn, settings.mouseGyroSensitivity, transmitMove]);
 
   useEffect(() => {
@@ -217,150 +368,103 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
   }, [releaseButtons]);
 
   useEffect(() => {
-    const handleWindowBlur = () => releaseButtons();
-    window.addEventListener("blur", handleWindowBlur, { passive: true });
-    return () => window.removeEventListener("blur", handleWindowBlur);
+    const onBlur = () => releaseButtons();
+    window.addEventListener("blur", onBlur, { passive: true });
+    window.addEventListener("pagehide", onBlur, { passive: true });
+    return () => {
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("pagehide", onBlur);
+    };
   }, [releaseButtons]);
 
   return (
-    <div className="flat-mouse-root relative h-full w-full overflow-hidden bg-[#070b09] text-white">
+    <div className="flat-mouse-root relative flex h-full w-full items-center justify-center overflow-hidden text-white">
       <div className="flat-mouse-grid absolute inset-0" />
 
-      <header className="flat-mouse-header absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-3 px-4 py-3">
-        <div>
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.24em] text-lime-300">
-            <MouseIcon className="size-4" />
-            MOUSE // VIPER V4 PRO PROFILE
-          </div>
-          <div className="mt-1 flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-white/45">
-            <span>FOCUS PRO 50K GEN-3 PROFILE</span>
-            <span>•</span>
-            <span>{settings.mousePollingRate.toLocaleString()} HZ TARGET</span>
-            <span>•</span>
-            <span className="text-lime-300">RAW EVENT PATH</span>
-          </div>
-        </div>
+      <div className="flat-mouse-topbar absolute left-1/2 top-[max(10px,env(safe-area-inset-top))] z-30 -translate-x-1/2">
+        <span>VIPER V4 PRO</span>
+        <b>{settings.mouseDpi.toLocaleString()} DPI</b>
+        <i>{gyroOn ? "GYRO" : "TOUCH"}</i>
+      </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className={`flat-mouse-top-button ${gyroOn ? "is-active" : ""}`}
-            onClick={requestGyro}
+      <div className="flat-mouse-stage absolute inset-0 flex items-center justify-center">
+        <div className="flat-mouse-viper-wrap">
+          <div className="flat-mouse-side-button-visual flat-mouse-side-button-back" />
+          <div className="flat-mouse-side-button-visual flat-mouse-side-button-forward" />
+
+          <div
+            ref={shellRef}
+            className={`flat-mouse-viper ${pressed ? "is-clicking" : ""}`}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            onWheel={handleWheel}
           >
-            <Crosshair className="size-4" />
-            GYRO {gyroPermission === "denied" ? "BLOCKED" : gyroOn ? "ON" : "OFF"}
-          </button>
-          <button type="button" className="flat-mouse-top-button" onClick={recenterGyro}>
-            <RotateCcw className="size-4" />
-            RECENTER
-          </button>
-        </div>
-      </header>
+            <div className="flat-mouse-shell-shadow" />
 
-      <div
-        ref={padRef}
-        className="flat-mouse-surface absolute inset-x-[5%] top-[13%] bottom-[18%] z-10 rounded-[32px] border border-lime-300/20 bg-black/35 shadow-[0_30px_80px_rgba(0,0,0,.55)]"
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-      >
-        <div className="flat-mouse-aura absolute inset-6 rounded-[24px] border border-white/5" />
+            <div className={`flat-mouse-main-click flat-mouse-main-left ${pressed === "left" ? "is-pressed" : ""}`}>
+              <span className="flat-mouse-click-caption">LMB</span>
+            </div>
+            <div className={`flat-mouse-main-click flat-mouse-main-right ${pressed === "right" ? "is-pressed" : ""}`}>
+              <span className="flat-mouse-click-caption">RMB</span>
+            </div>
 
-        <div className="pointer-events-none absolute inset-x-0 top-4 flex justify-center">
-          <div className="rounded-full border border-white/10 bg-black/35 px-4 py-1.5 text-[9px] font-black uppercase tracking-[0.22em] text-white/45">
-            TOUCH + DRAG = MOUSE MOTION
+            <div className="flat-mouse-center-channel">
+              <div className="flat-mouse-status-light" />
+              <div className={`flat-mouse-scroll-wheel ${pressed === "middle" ? "is-pressed" : ""}`}>
+                <span className="flat-mouse-scroll-ribs" />
+              </div>
+              <small>OPTICAL</small>
+            </div>
+
+            <div className="flat-mouse-seam" />
+            <div className="flat-mouse-viper-logo">RAZER</div>
+            <div className="flat-mouse-spec">FOCUS PRO 50K GEN-3</div>
           </div>
-        </div>
-
-        <div className="pointer-events-none absolute left-[12%] top-[8%] text-[9px] font-black uppercase tracking-[0.18em] text-lime-300/70">
-          LEFT CLICK ZONE
-        </div>
-        <div className="pointer-events-none absolute right-[12%] top-[8%] text-[9px] font-black uppercase tracking-[0.18em] text-lime-300/70">
-          RIGHT CLICK ZONE
-        </div>
-
-        <div className="pointer-events-none absolute inset-x-[45%] top-[8%] bottom-[7%] border-x border-white/5">
-          <div className="absolute left-1/2 top-12 bottom-12 w-px -translate-x-1/2 bg-white/5" />
-          <div className="absolute left-1/2 top-1/2 size-20 -translate-x-1/2 -translate-y-1/2 rounded-[22px] border border-lime-300/15 bg-white/[0.02]" />
-          <div className="absolute left-1/2 top-1/2 size-7 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/15 bg-black/40" />
-        </div>
-
-        <div className="pointer-events-none absolute bottom-5 left-1/2 -translate-x-1/2 text-center text-[8px] font-bold uppercase tracking-[0.16em] text-white/30">
-          NO APP SMOOTHING • COALESCED POINTER EVENTS • DIRECT RELATIVE INPUT
         </div>
       </div>
 
-      <div className="flat-mouse-controls absolute inset-x-[5%] bottom-[4%] z-20 grid grid-cols-[1fr_auto_1fr] items-end gap-3">
-        <div className="flex items-center gap-2">
+      <div className="flat-mouse-bottom-ui absolute inset-x-3 bottom-[max(10px,env(safe-area-inset-bottom))] z-30">
+        <div className="flat-mouse-toolbar">
           <button
             type="button"
-            className="flat-mouse-button flat-mouse-left"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              setMouseButton("back", true);
-            }}
-            onPointerUp={() => setMouseButton("back", false)}
-            onPointerCancel={() => setMouseButton("back", false)}
-          >
-            <span>BACK</span>
-            <small>MB4</small>
-          </button>
-          <button
-            type="button"
-            className="flat-mouse-button flat-mouse-left"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              setMouseButton("forward", true);
-            }}
-            onPointerUp={() => setMouseButton("forward", false)}
-            onPointerCancel={() => setMouseButton("forward", false)}
-          >
-            <span>FORWARD</span>
-            <small>MB5</small>
-          </button>
-        </div>
-
-        <div className="flat-mouse-center-stack">
-          <button
-            type="button"
-            className={`flat-mouse-dpi ${dpiFlash ? "is-flash" : ""}`}
+            className={`flat-mouse-control ${dpiFlash ? "is-flash" : ""}`}
             onClick={cycleDpi}
           >
-            <Gauge className="size-4" />
+            <Gauge />
             <strong>{settings.mouseDpi.toLocaleString()}</strong>
             <small>DPI</small>
           </button>
 
           <button
             type="button"
-            className="flat-mouse-wheel"
-            onWheel={handleWheel}
-            onPointerDown={(e) => {
-              e.preventDefault();
-              setMouseButton("middle", true);
-            }}
-            onPointerUp={() => setMouseButton("middle", false)}
-            onPointerCancel={() => setMouseButton("middle", false)}
+            className={`flat-mouse-control ${gyroOn ? "is-active" : ""}`}
+            onClick={gyroOn ? disableGyro : requestGyro}
           >
-            <span className="flat-mouse-wheel-rib" />
-            <Zap className="size-4" />
-            <small>OPTICAL WHEEL</small>
+            <Crosshair />
+            <strong>GYRO</strong>
+            <small>{gyroPermission === "denied" ? "BLOCKED" : gyroOn ? "ON" : "OFF"}</small>
+          </button>
+
+          <button type="button" className="flat-mouse-control" onClick={recenterGyro}>
+            <RotateCcw />
+            <strong>RECENTER</strong>
+            <small>AIR AIM</small>
+          </button>
+
+          <button type="button" className="flat-mouse-control" onWheel={handleWheel}>
+            <ScrollText />
+            <strong>WHEEL</strong>
+            <small>SCROLL</small>
           </button>
         </div>
 
-        <div className="flex justify-end gap-2">
-          <div className="flat-mouse-feature-readout">
-            <span><b>50K</b> DPI</span>
-            <span><b>930</b> IPS</span>
-            <span><b>90G</b></span>
-            <span><b>100M</b> CLICKS</span>
-          </div>
+        <div className="flat-mouse-help">
+          <span>DRAG BODY = MOVE</span>
+          <span>LMB / RMB = CLICK</span>
+          <span>LEFT EDGE = MB4 / MB5</span>
         </div>
-      </div>
-
-      <div className="absolute left-4 bottom-3 z-20 hidden text-[8px] font-bold uppercase tracking-[0.15em] text-white/30 sm:block">
-        PROFILE: {settings.mouseProfile} • {settings.mouseDynamicSensitivity ? "DYNAMIC SENS ON" : "STATIC SENS"} • SMART TRACKING {settings.mouseSmartTracking ? "ON" : "OFF"}
       </div>
     </div>
   );

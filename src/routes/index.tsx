@@ -66,11 +66,11 @@ function Rig() {
 
         // One-time compatibility migration: older builds could persist the
         // DS4 target, which Windows labels "Wireless Controller". Move that
-        // legacy selection to XInput once. After migration, users can still
-        // explicitly choose DS4 in Settings without it being overwritten on
-        // every reload.
+        // legacy-only selection to Universal so the new build provides both
+        // an Xbox/XInput target for modern games and a HID/DirectInput-style
+        // fallback for legacy games.
         if (!migrated && saved.outputMode === "ds4") {
-          saved.outputMode = "xinput";
+          saved.outputMode = "universal";
           localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
         }
 

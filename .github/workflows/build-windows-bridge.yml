@@ -20,7 +20,7 @@ jobs:
       - name: Use Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 20
 
       - name: Download official ViGEmBus installer
         shell: pwsh
@@ -56,6 +56,28 @@ jobs:
         working-directory: public/bridge
         run: npm run build:exe
 
+      - name: Runtime-smoke-test packaged executable
+        shell: pwsh
+        run: |
+          $log = "public/bridge/dist/bridge-smoke.log"
+          $errlog = "public/bridge/dist/bridge-smoke.err"
+          $env:TOUCHTOSTEER_SKIP_DRIVER_INSTALL = "1"
+          $process = Start-Process -FilePath "public/bridge/dist/TouchToSteer-Bridge.exe" -PassThru -NoNewWindow -RedirectStandardOutput $log -RedirectStandardError $errlog
+          Start-Sleep -Seconds 5
+          if ($process.HasExited) {
+            Write-Host "Bridge exited during startup with code $($process.ExitCode)"
+            if (Test-Path $log) { Get-Content $log }
+            if (Test-Path $errlog) { Get-Content $errlog }
+            throw "Packaged bridge exited during runtime smoke test."
+          }
+          $output = if (Test-Path $log) { Get-Content $log -Raw } else { "" }
+          if ($output -notmatch "TouchToSteer Bridge ready\.") {
+            Get-Content $log -ErrorAction SilentlyContinue
+            Get-Content $errlog -ErrorAction SilentlyContinue
+            throw "Packaged bridge did not report readiness."
+          }
+          Stop-Process -Id $process.Id -Force
+          Write-Host "Packaged bridge runtime smoke test passed."
       - name: Smoke-test packaged executable
         shell: pwsh
         run: |

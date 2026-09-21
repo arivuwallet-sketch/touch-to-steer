@@ -213,10 +213,6 @@ function ApexDPad({ settings, press, turbo }: { settings: Settings; press: Props
       {cell("left", "←", "left-0 top-1/2 -translate-y-1/2")}
       {cell("right", "→", "right-0 top-1/2 -translate-y-1/2")}
       {cell("down", "↓", "bottom-0 left-1/2 -translate-x-1/2")}
-      {cell("upLeft", "↖", "left-[15%] top-[15%]")}
-      {cell("upRight", "↗", "right-[15%] top-[15%]")}
-      {cell("downLeft", "↙", "bottom-[15%] left-[15%]")}
-      {cell("downRight", "↘", "bottom-[15%] right-[15%]")}
     </div>
   );
 }

@@ -310,51 +310,85 @@ function scheduleApply() {
 }
 
 function createPad(mode) {
+  if (!client) return false;
+
   if (pad) {
     try {
       pad.resetInputs();
+      pad.update();
       pad.disconnect();
     } catch {
-      /* ignore */
+      /* ignore a stale target */
     }
     pad = null;
   }
 
-  if (!client) return;
-
   try {
-    pad = mode === "ds4" ? client.createDS4Controller() : client.createX360Controller();
-    lastAppliedSignature = "";
-    pad.updateMode = "manual";
+    const target = mode === "ds4"
+      ? client.createDS4Controller()
+      : client.createX360Controller();
 
-    // node-ViGEmClient returns an Error from target.connect(); it does not
-    // reliably throw. Treat a non-null return as a real connection failure.
-    const connectError = pad.connect();
+    target.updateMode = "manual";
+
+    // Plug the virtual target into ViGEm. node-ViGEmClient returns null on
+    // success and an Error on failure; some driver-level failures can also
+    // surface through property access, so verify the target after connect.
+    const connectError = target.connect();
     if (connectError) {
-      const message = connectError?.message || String(connectError);
-      pad = null;
-      throw new Error(`ViGEm target connect failed: ${message}`);
+      throw new Error(
+        `ViGEm target connect failed: ${connectError?.message || String(connectError)}`,
+      );
     }
 
-    let index = "unknown";
-    try {
-      index = String(pad.index);
-    } catch {
-      /* index can be unavailable until the target is fully enumerated */
+    if (mode === "xinput") {
+      // Accessing userIndex forces a round-trip through the ViGEm bus and
+      // confirms Windows has actually enumerated the XInput target.
+      let userIndex = null;
+      for (let attempt = 0; attempt < 8; attempt += 1) {
+        try {
+          userIndex = Number(target.userIndex);
+          if (Number.isInteger(userIndex) && userIndex >= 0 && userIndex <= 3) break;
+        } catch {
+          /* PnP/XInput enumeration may take a few hundred ms. */
+        }
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 125);
+      }
+
+      if (!Number.isInteger(userIndex) || userIndex < 0 || userIndex > 3) {
+        try {
+          target.disconnect();
+        } catch {
+          /* ignore */
+        }
+        throw new Error("XInput target connected to ViGEmBus but Windows did not assign a user index");
+      }
+
+      pad = target;
+      lastAppliedSignature = "";
+      pad.resetInputs();
+      pad.update();
+
+      console.log(`Virtual Xbox 360 controller connected and enumerated (userIndex=${userIndex}).`);
+      appendBridgeLog(
+        `Virtual Xbox 360 controller connected and enumerated (userIndex=${userIndex}).`,
+      );
+      return true;
     }
 
-    const controllerName = mode === "ds4" ? "DualShock 4" : "Xbox 360";
-    console.log(
-      `Virtual ${controllerName} controller connected successfully (index=${index}).`,
-    );
-    appendBridgeLog(
-      `Virtual ${controllerName} controller connected successfully (index=${index}).`,
-    );
+    pad = target;
+    lastAppliedSignature = "";
+    pad.resetInputs();
+    pad.update();
+
+    console.log("Virtual DualShock 4 controller connected and enumerated.");
+    appendBridgeLog("Virtual DualShock 4 controller connected and enumerated.");
+    return true;
   } catch (err) {
     pad = null;
     const message = err?.message || String(err);
     console.warn(`Unable to connect ${mode} virtual controller:`, message);
     appendBridgeLog(`Unable to connect ${mode} virtual controller: ${message}`);
+    return false;
   }
 }
 
@@ -454,6 +488,48 @@ try {
   } else if (!SKIP_DRIVER_INSTALL && isPackagedBridge() && !pad && installBundledDriverAndRestart()) {
     process.exit(0);
   }
+}
+
+let controllerRecoveryTimer = null;
+
+function ensureVirtualController() {
+  if (pad) return true;
+
+  try {
+    if (!client) {
+      const connection = connectViGEmClient();
+      if (!connection.client) {
+        appendBridgeLog(
+          "ViGEm recovery connect failed: " +
+          (connection.error?.message || String(connection.error || "unknown")),
+        );
+        return false;
+      }
+      client = connection.client;
+    }
+    return createPad(padMode);
+  } catch (error) {
+    appendBridgeLog("ViGEm recovery exception: " + (error?.stack || error));
+    return false;
+  }
+}
+
+if (!pad) {
+  controllerRecoveryTimer = setInterval(() => {
+    if (pad) {
+      if (controllerRecoveryTimer) {
+        clearInterval(controllerRecoveryTimer);
+        controllerRecoveryTimer = null;
+      }
+      return;
+    }
+
+    const recovered = ensureVirtualController();
+    if (recovered && controllerRecoveryTimer) {
+      clearInterval(controllerRecoveryTimer);
+      controllerRecoveryTimer = null;
+    }
+  }, 1500);
 }
 
 console.log("");
@@ -880,7 +956,10 @@ wss.on("connection", (ws) => {
       const requested = String(msg.output || msg.controller || padMode).toLowerCase();
       if (requested === "xinput" || requested === "ds4") {
         padMode = requested;
-        createPad(padMode);
+        ensureVirtualController();
+        if (requested !== "xinput" || !pad) {
+          createPad(padMode);
+        }
       }
       ws.send(JSON.stringify({
         type: "ready",

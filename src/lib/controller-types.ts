@@ -75,6 +75,7 @@ export type Settings = {
   mouseGyroSensitivity: number;
   mouseGyroEnabled: boolean;
   mouseInvertY: boolean;
+  mouseInvertX: boolean;
   mouseRotationDeg: number;
   mouseDynamicSensitivity: boolean;
   mouseDynamicMaxMultiplier: number;
@@ -107,6 +108,7 @@ export const defaultSettings: Settings = {
   mouseGyroSensitivity: 0.65,
   mouseGyroEnabled: false,
   mouseInvertY: false,
+  mouseInvertX: false,
   mouseRotationDeg: 0,
   mouseDynamicSensitivity: false,
   mouseDynamicMaxMultiplier: 2.5,
@@ -120,15 +122,35 @@ export const defaultSettings: Settings = {
 export const PRESETS: Record<string, { label: string; patch: Partial<Settings> }> = {
   gtav: {
     label: "GTA V",
-    patch: { sensitivity: 1.1, steerSensitivity: 0.95, deadzone: 0.06, linearity: 1.4, maxTiltDeg: 35, wheelRotationDeg: 540 },
+    patch: {
+      sensitivity: 1.1,
+      steerSensitivity: 0.95,
+      deadzone: 0.06,
+      linearity: 1.4,
+      maxTiltDeg: 35,
+      wheelRotationDeg: 540,
+    },
   },
   forza: {
     label: "Forza / Sim",
-    patch: { sensitivity: 0.9, steerSensitivity: 0.8, deadzone: 0.02, linearity: 1.8, maxTiltDeg: 45, wheelRotationDeg: 900 },
+    patch: {
+      sensitivity: 0.9,
+      steerSensitivity: 0.8,
+      deadzone: 0.02,
+      linearity: 1.8,
+      maxTiltDeg: 45,
+      wheelRotationDeg: 900,
+    },
   },
   arcade: {
     label: "Arcade racing",
-    patch: { sensitivity: 1.2, steerSensitivity: 1.35, deadzone: 0.08, linearity: 1.1, maxTiltDeg: 25 },
+    patch: {
+      sensitivity: 1.2,
+      steerSensitivity: 1.35,
+      deadzone: 0.08,
+      linearity: 1.1,
+      maxTiltDeg: 25,
+    },
   },
   fps: {
     label: "Shooter",

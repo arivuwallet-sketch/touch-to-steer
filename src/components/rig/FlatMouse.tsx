@@ -20,34 +20,124 @@ type Props = {
   sendMouse: (message: MouseMessage) => boolean;
 };
 
-type MotionEventWithRate = DeviceMotionEvent & {
-  rotationRate: DeviceMotionEvent["rotationRate"] | null;
-};
-
-type PermissionDeviceMotion = typeof DeviceMotionEvent & {
-  requestPermission?: () => Promise<"granted" | "denied">;
-};
-
 type PermissionDeviceOrientation = typeof DeviceOrientationEvent & {
   requestPermission?: () => Promise<"granted" | "denied">;
 };
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
-// Gyro aiming is tuned for a TV-style air-mouse feel: direct angular motion,
- // high initial gain, and acceleration at faster wrist turns.
-const MOTION_X_BASE_PIXELS_PER_DEGREE = 19;
-const MOTION_X_MAX_PIXELS_PER_DEGREE = 48;
-const MOTION_Y_BASE_PIXELS_PER_DEGREE = 27;
-const MOTION_Y_MAX_PIXELS_PER_DEGREE = 62;
-const ORIENTATION_X_BASE_PIXELS_PER_DEGREE = 17;
-const ORIENTATION_Y_BASE_PIXELS_PER_DEGREE = 23;
-const GYRO_DEADZONE_DEG_PER_SEC = 0.12;
 
 function rotateDelta(dx: number, dy: number, deg: number) {
   const r = (deg * Math.PI) / 180;
   const c = Math.cos(r);
   const s = Math.sin(r);
   return { x: dx * c - dy * s, y: dx * s + dy * c };
+}
+
+// --- Absolute "point where the phone points" air mouse (LG Magic Remote /
+// Wiimote style) -------------------------------------------------------
+//
+// Earlier versions drove the pointer from devicemotion.rotationRate
+// (angular *velocity*, integrated every frame) and, in parallel, from raw
+// deviceorientation beta/gamma *deltas*. Two independent handlers were
+// both live at once on devices that fire both events, and raw beta/gamma
+// channels cross-talk once the phone isn't held at the exact reference
+// attitude (tilting "up" bleeds into the gamma channel and vice versa) --
+// together that produced the "moves on its own axis" / wrong-axis reports.
+//
+// This replaces both with one pipeline: convert each deviceorientation
+// sample into a quaternion, measure the angle between the phone's current
+// "pointing" direction and a calibrated center (set when gyro turns on and
+// whenever CENTER SYNC is pressed), and drive the cursor to the absolute
+// screen offset that angle implies. Holding the phone still holds the
+// pointer still; only the phone's current attitude relative to center
+// matters, not how fast it moved to get there.
+type Quat = { x: number; y: number; z: number; w: number };
+
+const POINT_BASE_PIXELS_PER_DEGREE = 42;
+const POINT_MAX_PIXELS_PER_DEGREE = 140;
+const POINT_DEADZONE_DEG = 0.05;
+// Low-pass factor applied to the absolute angle (not a delta), so sensor
+// jitter doesn't wobble the pointer while still tracking real motion with
+// only a few milliseconds of filter lag.
+const POINT_SMOOTHING = 0.35;
+
+function quatMultiply(a: Quat, b: Quat): Quat {
+  return {
+    x: a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
+    y: a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
+    z: a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
+    w: a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
+  };
+}
+
+function quatConjugate(q: Quat): Quat {
+  return { x: -q.x, y: -q.y, z: -q.z, w: q.w };
+}
+
+function rotateVector(q: Quat, v: { x: number; y: number; z: number }) {
+  const tx = 2 * (q.y * v.z - q.z * v.y);
+  const ty = 2 * (q.z * v.x - q.x * v.z);
+  const tz = 2 * (q.x * v.y - q.y * v.x);
+  return {
+    x: v.x + q.w * tx + (q.y * tz - q.z * ty),
+    y: v.y + q.w * ty + (q.z * tx - q.x * tz),
+    z: v.z + q.w * tz + (q.x * ty - q.y * tx),
+  };
+}
+
+/**
+ * DeviceOrientation (alpha/beta/gamma, degrees) -> quaternion, following the
+ * W3C worked-example intrinsic Z-X'-Y'' composition, then re-expressed so
+ * "forward" is -Z (the convention `pointingAngles` below reads back out).
+ * Also compensates for the device's current screen angle so the mapping is
+ * correct even on tablets/phones whose natural orientation isn't portrait.
+ */
+function quatFromDeviceOrientation(
+  alphaDeg: number,
+  betaDeg: number,
+  gammaDeg: number,
+  screenAngleDeg: number,
+): Quat {
+  const alpha = (alphaDeg * Math.PI) / 180;
+  const beta = (betaDeg * Math.PI) / 180;
+  const gamma = (gammaDeg * Math.PI) / 180;
+  const orient = (screenAngleDeg * Math.PI) / 180;
+
+  const cX = Math.cos(beta / 2);
+  const cY = Math.cos(gamma / 2);
+  const cZ = Math.cos(alpha / 2);
+  const sX = Math.sin(beta / 2);
+  const sY = Math.sin(gamma / 2);
+  const sZ = Math.sin(alpha / 2);
+
+  const w = cX * cY * cZ - sX * sY * sZ;
+  const x = sX * cY * cZ - cX * sY * sZ;
+  const y = cX * sY * cZ + sX * cY * sZ;
+  const z = cX * cY * sZ + sX * sY * cZ;
+
+  let q: Quat = quatMultiply({ x, y, z, w }, { x: -Math.SQRT1_2, y: 0, z: 0, w: Math.SQRT1_2 });
+
+  if (orient) {
+    q = quatMultiply(q, { x: 0, y: 0, z: -Math.sin(orient / 2), w: Math.cos(orient / 2) });
+  }
+
+  return q;
+}
+
+function currentScreenAngle(): number {
+  const so = (screen as Screen & { orientation?: { angle?: number } }).orientation;
+  if (so && typeof so.angle === "number") return so.angle;
+  const legacy = (window as Window & { orientation?: number }).orientation;
+  return typeof legacy === "number" ? legacy : 0;
+}
+
+/** Yaw/pitch (degrees) of `currentQuat`'s pointing direction relative to `referenceQuat`. */
+function pointingAngles(referenceQuat: Quat, currentQuat: Quat) {
+  const relative = quatMultiply(quatConjugate(referenceQuat), currentQuat);
+  const forward = rotateVector(relative, { x: 0, y: 0, z: -1 });
+  const yaw = (Math.atan2(forward.x, -forward.z) * 180) / Math.PI;
+  const pitch = (Math.asin(clamp(forward.y, -1, 1)) * 180) / Math.PI;
+  return { yaw, pitch };
 }
 
 function gainFor(settings: Settings, distance: number) {
@@ -87,13 +177,16 @@ function phoneFeedback() {
 
 export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
   const shellRef = useRef<HTMLDivElement | null>(null);
-  const activePointers = useRef(
-    new Map<number, { x: number; y: number; button?: MouseButton }>(),
-  );
+  const activePointers = useRef(new Map<number, { x: number; y: number; button?: MouseButton }>());
   const pressedButtons = useRef(new Set<MouseButton>());
   const pointerButtonRefs = useRef(new Set<number>());
-  const lastMotionSample = useRef(0);
-  const lastOrientation = useRef<{ beta: number; gamma: number } | null>(null);
+  /** Calibrated "straight ahead" attitude — set on gyro enable and on CENTER SYNC. */
+  const referenceQuatRef = useRef<Quat | null>(null);
+  /** Most recent device attitude, cached so CENTER SYNC can recalibrate instantly. */
+  const latestQuatRef = useRef<Quat | null>(null);
+  /** Absolute pixel offset from center already sent to the PC, so we can send deltas. */
+  const pointerOffsetRef = useRef({ x: 0, y: 0 });
+  const smoothedAngleRef = useRef({ yaw: 0, pitch: 0 });
   const [gyroOn, setGyroOn] = useState(settings.mouseGyroEnabled);
   const [gyroPermission, setGyroPermission] = useState<"unknown" | "granted" | "denied">("unknown");
   const [pressed, setPressed] = useState<MouseButton | null>(null);
@@ -109,12 +202,8 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
 
       const rotated = rotateDelta(dx, dy, settings.mouseRotationDeg);
       const scaled = gainFor(settings, Math.hypot(rotated.x, rotated.y));
-      const x = rotated.x * scaled * (settings.mouseDpi / 1600);
-      const y =
-        rotated.y *
-        scaled *
-        (settings.mouseDpi / 1600) *
-        (settings.mouseInvertY ? -1 : 1);
+      const x = rotated.x * scaled * (settings.mouseDpi / 1600) * (settings.mouseInvertX ? -1 : 1);
+      const y = rotated.y * scaled * (settings.mouseDpi / 1600) * (settings.mouseInvertY ? -1 : 1);
 
       if (Math.abs(x) < 0.01 && Math.abs(y) < 0.01) return;
 
@@ -129,6 +218,7 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
       settings.mouseDpi,
       settings.mouseDynamicMaxMultiplier,
       settings.mouseDynamicSensitivity,
+      settings.mouseInvertX,
       settings.mouseInvertY,
       settings.mouseRotationDeg,
       settings.mouseSensitivity,
@@ -267,18 +357,8 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
 
   const requestGyro = useCallback(async () => {
     try {
-      const motionApi = window.DeviceMotionEvent as PermissionDeviceMotion | undefined;
-      const orientationApi =
-        window.DeviceOrientationEvent as PermissionDeviceOrientation | undefined;
-
-      if (motionApi?.requestPermission) {
-        const permission = await motionApi.requestPermission();
-        if (permission !== "granted") {
-          setGyroPermission("denied");
-          setGyroOn(false);
-          return;
-        }
-      }
+      const orientationApi = window.DeviceOrientationEvent as
+        PermissionDeviceOrientation | undefined;
 
       if (orientationApi?.requestPermission) {
         const permission = await orientationApi.requestPermission();
@@ -289,8 +369,10 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
         }
       }
 
-      lastMotionSample.current = 0;
-      lastOrientation.current = null;
+      referenceQuatRef.current = null;
+      latestQuatRef.current = null;
+      pointerOffsetRef.current = { x: 0, y: 0 };
+      smoothedAngleRef.current = { yaw: 0, pitch: 0 };
       setGyroPermission("granted");
       setGyroOn(true);
       onSettingsChange({ mouseGyroEnabled: true });
@@ -305,14 +387,20 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
   const disableGyro = useCallback(() => {
     setGyroOn(false);
     setGyroPermission("unknown");
-    lastMotionSample.current = 0;
-    lastOrientation.current = null;
+    referenceQuatRef.current = null;
+    latestQuatRef.current = null;
+    pointerOffsetRef.current = { x: 0, y: 0 };
+    smoothedAngleRef.current = { yaw: 0, pitch: 0 };
     onSettingsChange({ mouseGyroEnabled: false });
   }, [onSettingsChange]);
 
   const recenterGyro = useCallback(() => {
-    lastMotionSample.current = 0;
-    lastOrientation.current = null;
+    // Whatever attitude the phone is in right now becomes the new "straight
+    // ahead" — exactly like pointing a TV remote at the screen before you
+    // press its center/pairing button.
+    referenceQuatRef.current = latestQuatRef.current;
+    pointerOffsetRef.current = { x: 0, y: 0 };
+    smoothedAngleRef.current = { yaw: 0, pitch: 0 };
 
     // Synchronize the phone's physical mouse center with the PC cursor.
     // The bridge moves the native Windows cursor to the primary display
@@ -325,94 +413,60 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
   useEffect(() => {
     if (!gyroOn) return;
 
-    const handleMotion = (event: MotionEventWithRate) => {
-      const rate = event.rotationRate;
-      if (!rate) return;
-
-      const beta = Number(rate.beta) || 0;
-      const gamma = Number(rate.gamma) || 0;
-
-      const angularSpeed = Math.hypot(beta, gamma);
-      if (angularSpeed < GYRO_DEADZONE_DEG_PER_SEC) return;
-
-      const now = performance.now();
-      const previous = lastMotionSample.current;
-      lastMotionSample.current = now;
-
-      // Use the real elapsed sensor interval. The old 33 ms ceiling discarded
-      // motion during slower mobile deliveries and made pitch feel delayed.
-      const dt = previous > 0
-        ? clamp((now - previous) / 1000, 0.004, 0.080)
-        : 1 / 60;
-
-      // Separate axes: horizontal stays controlled while pitch receives
-      // extra authority so small upward/downward wrist turns track instantly.
-      const xAcceleration = 1 + clamp(Math.abs(gamma) / 85, 0, 1) * 1.15;
-      const yAcceleration = 1 + clamp(Math.abs(beta) / 65, 0, 1) * 1.25;
-
-      const xPixelsPerDegree =
-        clamp(
-          MOTION_X_BASE_PIXELS_PER_DEGREE * xAcceleration,
-          MOTION_X_BASE_PIXELS_PER_DEGREE,
-          MOTION_X_MAX_PIXELS_PER_DEGREE,
-        ) * settings.mouseGyroSensitivity;
-
-      const yPixelsPerDegree =
-        clamp(
-          MOTION_Y_BASE_PIXELS_PER_DEGREE * yAcceleration,
-          MOTION_Y_BASE_PIXELS_PER_DEGREE,
-          MOTION_Y_MAX_PIXELS_PER_DEGREE,
-        ) * settings.mouseGyroSensitivity;
-
-      // Portrait air-mouse mapping.
-      // Flip X to match the phone's physical right/left motion; keep Y
-      // direct so pitching the phone upward moves the pointer upward.
-      transmitMove(
-        -gamma * dt * xPixelsPerDegree,
-        beta * dt * yPixelsPerDegree,
-      );
-    };
-
     const handleOrientation = (event: DeviceOrientationEvent) => {
-      if (
-        lastMotionSample.current > 0 &&
-        performance.now() - lastMotionSample.current < 120
-      ) {
+      if (typeof event.beta !== "number" || typeof event.gamma !== "number") return;
+      const alpha = typeof event.alpha === "number" ? event.alpha : 0;
+
+      const currentQuat = quatFromDeviceOrientation(
+        alpha,
+        event.beta,
+        event.gamma,
+        currentScreenAngle(),
+      );
+      latestQuatRef.current = currentQuat;
+
+      if (!referenceQuatRef.current) {
+        // First sample since gyro was enabled (or since the last recenter)
+        // becomes "straight ahead" — nothing to move to yet.
+        referenceQuatRef.current = currentQuat;
         return;
       }
 
-      if (typeof event.beta !== "number" || typeof event.gamma !== "number") return;
+      const { yaw, pitch } = pointingAngles(referenceQuatRef.current, currentQuat);
 
-      const current = { beta: event.beta, gamma: event.gamma };
-      const previous = lastOrientation.current;
-      lastOrientation.current = current;
-      if (!previous) return;
+      // Smooth the absolute angle itself (not a per-frame delta) so a still
+      // hand gives a still pointer instead of accumulating jitter.
+      const smoothed = smoothedAngleRef.current;
+      smoothed.yaw += (yaw - smoothed.yaw) * POINT_SMOOTHING;
+      smoothed.pitch += (pitch - smoothed.pitch) * POINT_SMOOTHING;
 
-      const dx = clamp(current.gamma - previous.gamma, -8, 8);
-      const dy = clamp(current.beta - previous.beta, -8, 8);
-      const distance = Math.hypot(dx, dy);
-      if (distance < 0.025) return;
+      const yawDeg = Math.abs(smoothed.yaw) < POINT_DEADZONE_DEG ? 0 : smoothed.yaw;
+      const pitchDeg = Math.abs(smoothed.pitch) < POINT_DEADZONE_DEG ? 0 : smoothed.pitch;
 
-      const acceleration = 1 + clamp(distance / 5.5, 0, 1) * 0.65;
-      const xPixelsPerDegree =
-        ORIENTATION_X_BASE_PIXELS_PER_DEGREE * acceleration * settings.mouseGyroSensitivity;
-      const yPixelsPerDegree =
-        ORIENTATION_Y_BASE_PIXELS_PER_DEGREE * acceleration * settings.mouseGyroSensitivity;
-
-      transmitMove(
-        -dx * xPixelsPerDegree,
-        dy * yPixelsPerDegree,
+      const pixelsPerDegree = clamp(
+        POINT_BASE_PIXELS_PER_DEGREE * settings.mouseGyroSensitivity,
+        1,
+        POINT_MAX_PIXELS_PER_DEGREE,
       );
+
+      // Absolute target offset from the calibrated center — cursor position
+      // follows where the phone is currently pointing, not how it got there.
+      const targetX = yawDeg * pixelsPerDegree;
+      const targetY = -pitchDeg * pixelsPerDegree;
+
+      const offset = pointerOffsetRef.current;
+      const dx = targetX - offset.x;
+      const dy = targetY - offset.y;
+      offset.x = targetX;
+      offset.y = targetY;
+
+      if (dx || dy) transmitMove(dx, dy);
     };
 
-    window.addEventListener("devicemotion", handleMotion, { passive: true });
     window.addEventListener("deviceorientation", handleOrientation, { passive: true });
-    window.addEventListener("deviceorientationabsolute", handleOrientation, { passive: true });
 
     return () => {
-      window.removeEventListener("devicemotion", handleMotion);
       window.removeEventListener("deviceorientation", handleOrientation);
-      window.removeEventListener("deviceorientationabsolute", handleOrientation);
     };
   }, [gyroOn, settings.mouseGyroSensitivity, transmitMove]);
 
@@ -456,10 +510,14 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
           >
             <div className="flat-mouse-shell-shadow" />
 
-            <div className={`flat-mouse-main-click flat-mouse-main-left ${pressed === "left" ? "is-pressed" : ""}`}>
+            <div
+              className={`flat-mouse-main-click flat-mouse-main-left ${pressed === "left" ? "is-pressed" : ""}`}
+            >
               <span className="flat-mouse-click-caption">LMB</span>
             </div>
-            <div className={`flat-mouse-main-click flat-mouse-main-right ${pressed === "right" ? "is-pressed" : ""}`}>
+            <div
+              className={`flat-mouse-main-click flat-mouse-main-right ${pressed === "right" ? "is-pressed" : ""}`}
+            >
               <span className="flat-mouse-click-caption">RMB</span>
             </div>
 
@@ -469,7 +527,9 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
                 <i>0</i>
               </div>
               <div className="flat-mouse-status-light" />
-              <div className={`flat-mouse-scroll-wheel ${pressed === "middle" ? "is-pressed" : ""}`}>
+              <div
+                className={`flat-mouse-scroll-wheel ${pressed === "middle" ? "is-pressed" : ""}`}
+              >
                 <span className="flat-mouse-scroll-ribs" />
               </div>
               <small>OPTICAL</small>

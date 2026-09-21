@@ -80,12 +80,7 @@ export function SettingsPanel({
       <div className="panel h-full w-full max-w-sm overflow-y-auto rounded-none p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
           <h2 className="min-w-0 truncate text-lg font-bold">Rig setup</h2>
-          <Button
-            onClick={onClose}
-            variant="ghost"
-            size="icon"
-            aria-label="Close settings"
-          >
+          <Button onClick={onClose} variant="ghost" size="icon" aria-label="Close settings">
             <X />
           </Button>
         </div>
@@ -94,8 +89,11 @@ export function SettingsPanel({
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase">PC connection</p>
-              <p className={`text-xs ${connected ? "text-success" : status === "error" ? "text-destructive" : "text-muted-foreground"}`}>
-                {status === "idle" ? "disconnected" : status}{latency !== null ? ` · ${latency} ms` : ""}
+              <p
+                className={`text-xs ${connected ? "text-success" : status === "error" ? "text-destructive" : "text-muted-foreground"}`}
+              >
+                {status === "idle" ? "disconnected" : status}
+                {latency !== null ? ` · ${latency} ms` : ""}
               </p>
             </div>
             <Button
@@ -224,7 +222,9 @@ export function SettingsPanel({
             />
           </Row>
           <Row label="Controller update">
-            <span className="rounded-lg border border-cyan-300/20 bg-cyan-300/5 px-2 py-1.5 text-xs font-black text-cyan-200">240 Hz</span>
+            <span className="rounded-lg border border-cyan-300/20 bg-cyan-300/5 px-2 py-1.5 text-xs font-black text-cyan-200">
+              240 Hz
+            </span>
           </Row>
           <Row label="Invert tilt">
             <input
@@ -235,7 +235,9 @@ export function SettingsPanel({
             />
           </Row>
           <Row label="Steering auto-centre">
-            <span className="rounded-lg border border-emerald-300/20 bg-emerald-300/5 px-2 py-1.5 text-xs font-black text-emerald-200">ALWAYS ON</span>
+            <span className="rounded-lg border border-emerald-300/20 bg-emerald-300/5 px-2 py-1.5 text-xs font-black text-emerald-200">
+              ALWAYS ON
+            </span>
           </Row>
           <Row label="General phone haptics">
             <input
@@ -257,9 +259,13 @@ export function SettingsPanel({
 
         <div className="mt-5 border-t border-border pt-4">
           <div className="mb-2">
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-lime-300">Mouse Mode • Viper V4 Pro profile</p>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-lime-300">
+              Mouse Mode • Viper V4 Pro profile
+            </p>
             <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-              Software equivalents for the Viper V4 Pro control model. Phone/browser hardware cannot reproduce the physical mouse sensor, weight, optical switch hardware, or true 8 kHz sensor scan rate; the bridge emits real Windows mouse input.
+              Software equivalents for the Viper V4 Pro control model. Phone/browser hardware cannot
+              reproduce the physical mouse sensor, weight, optical switch hardware, or true 8 kHz
+              sensor scan rate; the bridge emits real Windows mouse input.
             </p>
           </div>
 
@@ -298,7 +304,14 @@ export function SettingsPanel({
                 onChange={(e) => setMatcherDpi(Number(e.target.value) || 100)}
                 className="h-8 w-24 rounded-md border border-input bg-background px-2 text-xs"
               />
-              <Button type="button" size="sm" variant="outline" onClick={() => onChange({ mouseDpi: Math.max(100, Math.min(50000, Math.round(matcherDpi))) })}>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  onChange({ mouseDpi: Math.max(100, Math.min(50000, Math.round(matcherDpi))) })
+                }
+              >
                 MATCH
               </Button>
             </span>
@@ -307,7 +320,11 @@ export function SettingsPanel({
           <Row label="Polling target">
             <select
               value={settings.mousePollingRate}
-              onChange={(e) => onChange({ mousePollingRate: Number(e.target.value) as Settings["mousePollingRate"] })}
+              onChange={(e) =>
+                onChange({
+                  mousePollingRate: Number(e.target.value) as Settings["mousePollingRate"],
+                })
+              }
               className="rounded-lg border border-input bg-background px-2 py-1.5 text-xs"
             >
               <option value={125}>125 Hz</option>
@@ -332,7 +349,7 @@ export function SettingsPanel({
             />
           </Row>
 
-          <Row label={`Gyro sensitivity ${settings.mouseGyroSensitivity.toFixed(2)}×`}>
+          <Row label={`Pointer sensitivity ${settings.mouseGyroSensitivity.toFixed(2)}×`}>
             <input
               type="range"
               min={0.05}
@@ -344,7 +361,7 @@ export function SettingsPanel({
             />
           </Row>
 
-          <Row label="Gyro mouse">
+          <Row label="Gyro mouse (Magic Remote style)">
             <input
               type="checkbox"
               checked={settings.mouseGyroEnabled}
@@ -419,6 +436,15 @@ export function SettingsPanel({
             />
           </Row>
 
+          <Row label="Invert gyro / mouse X">
+            <input
+              type="checkbox"
+              checked={settings.mouseInvertX}
+              onChange={(e) => onChange({ mouseInvertX: e.target.checked })}
+              className="size-5 accent-[var(--primary)]"
+            />
+          </Row>
+
           <Row label="Invert gyro / mouse Y">
             <input
               type="checkbox"
@@ -430,7 +456,9 @@ export function SettingsPanel({
         </div>
 
         <div className="mt-4 rounded-lg border border-cyan-300/15 bg-cyan-300/5 p-3 text-[11px] leading-relaxed text-muted-foreground">
-          <strong className="text-slate-200">Ultra-low-latency mode</strong> targets 240 Hz output (about 4.17 ms between packets). Actual end-to-end latency depends on the phone, browser, Wi-Fi/LAN path, PC load, and game input polling.
+          <strong className="text-slate-200">Ultra-low-latency mode</strong> targets 240 Hz output
+          (about 4.17 ms between packets). Actual end-to-end latency depends on the phone, browser,
+          Wi-Fi/LAN path, PC load, and game input polling.
         </div>
 
         <p className="mt-6 text-xs leading-relaxed text-muted-foreground">

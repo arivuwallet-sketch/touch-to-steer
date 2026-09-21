@@ -34,7 +34,8 @@ export function useBridge(
   const [telemetry, setTelemetry] = useState<BridgeTelemetry>({});
   const [telemetryLive, setTelemetryLive] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
-  const mouseLastSendRef = useRef(0);
+  const moveAccumRef = useRef({ dx: 0, dy: 0 });
+  const moveFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const telemetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const packetCounterRef = useRef(0);
@@ -51,8 +52,55 @@ export function useBridge(
     telemetryTimerRef.current = null;
   }, []);
 
+  const clearMoveFlush = useCallback(() => {
+    if (moveFlushTimerRef.current) clearTimeout(moveFlushTimerRef.current);
+    moveFlushTimerRef.current = null;
+    moveAccumRef.current = { dx: 0, dy: 0 };
+  }, []);
+
+  /**
+   * Mouse-move deltas are accumulated and sent as one coalesced packet per
+   * flush instead of one packet per pointer/gyro sample. On a healthy
+   * connection this still goes out within a tick or two. If the socket is
+   * backed up (weak Wi-Fi, a busy tab) the accumulated delta is kept and
+   * retried rather than sent late (stale queueing -> perceived lag) or
+   * dropped (which would desync the absolute-pointing cursor from the
+   * phone's current attitude).
+   */
+  const flushMove = useCallback(() => {
+    moveFlushTimerRef.current = null;
+    const ws = wsRef.current;
+    const pending = moveAccumRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      moveAccumRef.current = { dx: 0, dy: 0 };
+      return;
+    }
+    if (!pending.dx && !pending.dy) return;
+
+    if (ws.bufferedAmount > 48_000) {
+      moveFlushTimerRef.current = setTimeout(flushMove, 4);
+      return;
+    }
+
+    moveAccumRef.current = { dx: 0, dy: 0 };
+    try {
+      ws.send(
+        JSON.stringify({
+          type: "mouse",
+          t: Date.now(),
+          action: "move",
+          dx: pending.dx,
+          dy: pending.dy,
+        }),
+      );
+    } catch {
+      /* ignore a send racing socket close */
+    }
+  }, []);
+
   const disconnect = useCallback(() => {
     clearLoop();
+    clearMoveFlush();
     const ws = wsRef.current;
     wsRef.current = null;
     if (ws) {
@@ -67,7 +115,7 @@ export function useBridge(
     setTelemetry({});
     setTelemetryLive(false);
     clearTelemetryTimer();
-  }, [clearLoop, clearTelemetryTimer]);
+  }, [clearLoop, clearMoveFlush, clearTelemetryTimer]);
 
   const connect = useCallback(
     (url: string) => {
@@ -89,14 +137,16 @@ export function useBridge(
       ws.onopen = () => {
         setStatus("connected");
         try {
-          ws.send(JSON.stringify({
-            type: "hello",
-            client: "mobile-rig",
-            version: 3,
-            transport: "websocket",
-            rateHz: clampRate(rateHz),
-            output: outputMode,
-          }));
+          ws.send(
+            JSON.stringify({
+              type: "hello",
+              client: "mobile-rig",
+              version: 3,
+              transport: "websocket",
+              rateHz: clampRate(rateHz),
+              output: outputMode,
+            }),
+          );
         } catch {
           /* socket may close immediately */
         }
@@ -192,42 +242,57 @@ export function useBridge(
     [clearLoop, clearTelemetryTimer, disconnect, outputMode, rateHz, stateRef],
   );
 
-  useEffect(() => () => {
-    disconnect();
-    clearTelemetryTimer();
-  }, [clearTelemetryTimer, disconnect]);
+  useEffect(
+    () => () => {
+      disconnect();
+      clearTelemetryTimer();
+    },
+    [clearTelemetryTimer, disconnect],
+  );
 
-  const sendMouse = useCallback((message: {
-    action: "move" | "button" | "wheel" | "reset" | "center";
-    dx?: number;
-    dy?: number;
-    button?: "left" | "right" | "middle" | "back" | "forward";
-    down?: boolean;
-    delta?: number;
-  }) => {
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return false;
+  const sendMouse = useCallback(
+    (message: {
+      action: "move" | "button" | "wheel" | "reset" | "center";
+      dx?: number;
+      dy?: number;
+      button?: "left" | "right" | "middle" | "back" | "forward";
+      down?: boolean;
+      delta?: number;
+    }) => {
+      const ws = wsRef.current;
+      if (!ws || ws.readyState !== WebSocket.OPEN) return false;
 
-    // Mouse movement is event-driven rather than forced through the controller
-    // 240 Hz timer. This keeps every coalesced pointer/gyro delta on the hot path.
-    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-    const minInterval = message.action === "move" ? 1000 / 8000 : 0;
-    if (minInterval > 0 && now - mouseLastSendRef.current < minInterval) {
-      return false;
-    }
+      if (message.action === "move") {
+        const dx = message.dx ?? 0;
+        const dy = message.dy ?? 0;
+        if (!dx && !dy) return true;
 
-    try {
-      ws.send(JSON.stringify({
-        type: "mouse",
-        t: Date.now(),
-        ...message,
-      }));
-      mouseLastSendRef.current = now;
-      return true;
-    } catch {
-      return false;
-    }
-  }, []);
+        // Merge with any delta still waiting to go out. Several pointer/gyro
+        // samples handled in the same burst collapse into one packet; nothing
+        // is lost if the socket is momentarily backed up (see flushMove).
+        moveAccumRef.current.dx += dx;
+        moveAccumRef.current.dy += dy;
+        if (!moveFlushTimerRef.current) {
+          moveFlushTimerRef.current = setTimeout(flushMove, 0);
+        }
+        return true;
+      }
+
+      try {
+        ws.send(
+          JSON.stringify({
+            type: "mouse",
+            t: Date.now(),
+            ...message,
+          }),
+        );
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [flushMove],
+  );
 
   return { status, latency, packets, telemetry, telemetryLive, connect, disconnect, sendMouse };
 }

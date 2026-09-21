@@ -88,7 +88,9 @@ function installBundledDriverAndRestart() {
 
   try {
     fs.mkdirSync(installDir, { recursive: true });
-    fs.copyFileSync(source, installer);
+    // pkg keeps bundled assets in its virtual filesystem, so read/write the
+    // installer instead of asking the OS to copy directly from the snapshot.
+    fs.writeFileSync(installer, fs.readFileSync(source));
   } catch (err) {
     console.error("Could not unpack the bundled ViGEmBus installer:", err.message);
     return false;

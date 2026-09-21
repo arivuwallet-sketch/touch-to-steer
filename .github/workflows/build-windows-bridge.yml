@@ -32,10 +32,16 @@ jobs:
         working-directory: public/bridge
         run: npm install --omit=dev
 
+      - name: Verify CMake and Visual Studio generator
+        shell: pwsh
+        run: |
+          cmake --version
+          cmake --help | Select-String "Visual Studio 18 2026"
+
       - name: Build native Windows mouse injector
         shell: pwsh
         run: |
-          cmake -S public/bridge/native -B public/bridge/native/build -G "Visual Studio 17 2022" -A x64
+          cmake -S public/bridge/native -B public/bridge/native/build -G "Visual Studio 18 2026" -A x64
           cmake --build public/bridge/native/build --config Release
           Copy-Item "public/bridge/native/build/Release/mouse-injector.exe" "public/bridge/native/mouse-injector.exe"
 

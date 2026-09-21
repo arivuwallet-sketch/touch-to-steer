@@ -112,7 +112,9 @@ function loadPackagedNativeViGEmAddon() {
 
 function loadViGEmClient() {
   if (!isPackagedBridge()) {
-    return require("vigemclient");
+    const clientModule = require("vigemclient");
+    appendBridgeLog("ViGEm native addon loaded in development mode.");
+    return clientModule;
   }
 
   // node-ViGEmClient's JavaScript wrapper requires its .node addon through a
@@ -134,7 +136,9 @@ function loadViGEmClient() {
   };
 
   try {
-    return require("vigemclient");
+    const clientModule = require("vigemclient");
+    appendBridgeLog("ViGEm native addon loaded from packaged filesystem extraction.");
+    return clientModule;
   } finally {
     Module._load = originalLoad;
   }
@@ -1029,6 +1033,11 @@ wss.on("connection", (ws) => {
         mouse: {
           supported: process.platform === "win32",
           injectorAvailable: Boolean(startMouseInjector()),
+        },
+        controller: {
+          supported: process.platform === "win32",
+          connected: Boolean(pad),
+          type: padMode,
         },
         telemetry: {
           forzaPorts: FORZA_PORTS,

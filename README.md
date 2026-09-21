@@ -27,3 +27,10 @@ npm run dev
 - TypeScript
 - React
 - Tailwind CSS
+
+
+## End-user Windows bridge
+
+Normal users do **not** need Node.js, npm, Git Bash, Visual Studio, or C++ build tools. The repository builds a portable `TouchToSteer-Bridge.exe` automatically on pushes to `main` and publishes the current Windows build as the `bridge-latest` GitHub release.
+
+Run the EXE on the Windows gaming PC. On first run it can launch the bundled official ViGEmBus installer, then restart the bridge. The bridge prints the local `ws://<PC-IP>:8787` address to use from the phone.

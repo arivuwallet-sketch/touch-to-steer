@@ -198,7 +198,7 @@ export function useBridge(
   }, [clearTelemetryTimer, disconnect]);
 
   const sendMouse = useCallback((message: {
-    action: "move" | "button" | "wheel" | "reset";
+    action: "move" | "button" | "wheel" | "reset" | "center";
     dx?: number;
     dy?: number;
     button?: "left" | "right" | "middle" | "back" | "forward";

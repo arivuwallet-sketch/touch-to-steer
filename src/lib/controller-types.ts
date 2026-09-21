@@ -46,8 +46,8 @@ export const emptyState = (): ControllerState => ({
 
 export type Settings = {
   bridgeUrl: string;
-  /** Virtual PC controller output: Xbox/XInput is the default; DS4 broadens compatibility with PlayStation-aware games. */
-  outputMode: "xinput" | "ds4";
+  /** Virtual PC controller output. Universal creates synchronized XInput + DirectInput/HID-compatible targets for broad legacy/modern coverage. */
+  outputMode: "xinput" | "ds4" | "universal";
   steerMode: "tilt" | "touch";
   /** aim/stick sensitivity */
   sensitivity: number;
@@ -87,7 +87,7 @@ export type Settings = {
 
 export const defaultSettings: Settings = {
   bridgeUrl: "ws://192.168.1.10:8787",
-  outputMode: "xinput",
+  outputMode: "universal",
   steerMode: "touch",
   sensitivity: 1,
   steerSensitivity: 1,

@@ -1,16 +1,17 @@
 /**
  * Mobile Rig -> PC low-latency bridge
  * ----------------------------------
- * Receives the newest phone controller state and feeds a virtual XInput
- * controller by default. Set RIG_OUTPUT=ds4 before starting to expose a
- * DualShock 4-style virtual controller instead.
+ * Receives the newest phone controller state and feeds synchronized virtual
+ * controller targets. Universal mode exposes Xbox/XInput plus a HID/DirectInput
+ * fallback so modern and legacy PC games can use the interface they support.
+ * Set RIG_OUTPUT=xinput or RIG_OUTPUT=ds4 to expose one target only.
  *
  *   npm init -y && npm i ws vigemclient
  *   node rig-bridge.js
  *
  * Environment:
  *   RIG_PORT=8787
- *   RIG_OUTPUT=xinput | ds4
+ *   RIG_OUTPUT=xinput | ds4 | universal
  *   RIG_FORZA_PORT=5300   (Forza Data Out UDP)
  *   RIG_F1_PORT=20777     (EA F1 UDP telemetry)
  *
@@ -33,7 +34,7 @@ const OUTGAUGE_PORTS = String(process.env.RIG_OUTGAUGE_PORTS || "4444,30000,6339
   .map((v) => Number(v.trim()))
   .filter((v) => Number.isInteger(v) && v > 0 && v < 65536);
 const WRECKFEST2_PORT = Number(process.env.RIG_WRECKFEST2_PORT || 23123);
-const OUTPUT = String(process.env.RIG_OUTPUT || "xinput").toLowerCase();
+const OUTPUT = String(process.env.RIG_OUTPUT || "universal").toLowerCase();
 const dgram = require("node:dgram");
 const fs = require("node:fs");
 const os = require("node:os");

@@ -955,10 +955,12 @@ wss.on("connection", (ws) => {
     if (msg.type === "hello") {
       const requested = String(msg.output || msg.controller || padMode).toLowerCase();
       if (requested === "xinput" || requested === "ds4") {
+        const modeChanged = requested !== padMode;
         padMode = requested;
-        ensureVirtualController();
-        if (requested !== "xinput" || !pad) {
+        if (modeChanged || !pad) {
           createPad(padMode);
+        } else {
+          ensureVirtualController();
         }
       }
       ws.send(JSON.stringify({

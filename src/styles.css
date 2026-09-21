@@ -362,6 +362,24 @@
     padding: 5px 8px !important;
   }
 
+  .flat-wheel-root .flat-wheel-telemetry {
+    top: 6px !important;
+    gap: 4px !important;
+    padding: 4px !important;
+    border-radius: 16px !important;
+  }
+
+  .flat-wheel-root .flat-wheel-telemetry > div:first-child,
+  .flat-wheel-root .flat-wheel-telemetry > div:last-child {
+    width: min(24vw, 108px) !important;
+    height: min(24vw, 108px) !important;
+  }
+
+  .flat-wheel-root .flat-wheel-telemetry > div:nth-child(2) {
+    width: min(11vw, 50px) !important;
+    height: min(11vw, 50px) !important;
+  }
+
   .flat-wheel-root .flat-wheel-gyro {
     top: 6px !important;
   }

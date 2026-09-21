@@ -273,6 +273,31 @@ export function useBridge(
     }
   }, [outputMode, rateHz]);
 
+  const sendControllerStateNow = useCallback(() => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return false;
+
+    // Analog controls use the same newest-state mailbox as the 240 Hz safety
+    // pump, but the first available frame is sent directly from the touch/
+    // pointer event. This removes the extra wait for the periodic scheduler.
+    if (ws.bufferedAmount >= 32_768) return false;
+
+    try {
+      ws.send(
+        JSON.stringify({
+          type: "state",
+          priority: "hot",
+          t: Date.now(),
+          seq: ++packetCounterRef.current,
+          ...stateRef.current,
+        }),
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  }, [stateRef]);
+
   const sendControllerEdge = useCallback(() => {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return false;
@@ -351,6 +376,7 @@ export function useBridge(
     connect,
     disconnect,
     sendMouse,
+    sendControllerStateNow,
     sendControllerEdge,
   };
 }

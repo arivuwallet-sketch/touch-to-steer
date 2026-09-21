@@ -45,6 +45,10 @@ const DRIVER_FILE = "ViGEmBus_1.22.0_x64_x86_arm64.exe";
 const DRIVER_URL =
   "https://github.com/nefarius/ViGEmBus/releases/download/v1.22.0/ViGEmBus_1.22.0_x64_x86_arm64.exe";
 
+const SKIP_DRIVER_INSTALL = /^(1|true|yes)$/i.test(
+  String(process.env.TOUCHTOSTEER_SKIP_DRIVER_INSTALL || ""),
+);
+
 function isPackagedBridge() {
   return typeof process.pkg !== "undefined";
 }
@@ -345,7 +349,7 @@ try {
     console.warn(
       "The bridge will NOT relaunch the ViGEmBus installer because an installation was detected.",
     );
-  } else if (isPackagedBridge() && !pad && installBundledDriverAndRestart()) {
+  } else if (!SKIP_DRIVER_INSTALL && isPackagedBridge() && !pad && installBundledDriverAndRestart()) {
     process.exit(0);
   }
 }

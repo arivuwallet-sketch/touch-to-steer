@@ -75,8 +75,22 @@ function Rig() {
   }, []);
 
   const set = useCallback((p: Partial<ControllerState>) => {
-    stateRef.current = { ...stateRef.current, ...p };
-  }, []);
+    const previous = stateRef.current;
+    const next = { ...previous, ...p };
+    stateRef.current = next;
+
+    // Steering mode exposes handbrake, nitro and gear as state fields rather
+    // than button-map entries. Treat their digital thresholds exactly like
+    // normal button edges so every tap/press reaches ViGEm immediately.
+    const digitalEdge = ["handbrake", "nitro", "gear"].some((key) => {
+      if (!(key in p)) return false;
+      if (key === "gear") return Number(previous.gear) !== Number(next.gear);
+      return (Number(previous[key as "handbrake" | "nitro"]) || 0) > 0.5 !==
+        (Number(next[key as "handbrake" | "nitro"]) || 0) > 0.5;
+    });
+
+    if (digitalEdge) sendControllerEdge();
+  }, [sendControllerEdge]);
 
   const press = useCallback((id: string, down: boolean) => {
     const previous = Boolean(stateRef.current.buttons?.[id]);

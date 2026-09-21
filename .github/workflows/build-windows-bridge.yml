@@ -9,6 +9,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: touch-to-steer-windows-bridge
+  cancel-in-progress: true
+
 jobs:
   build-windows-bridge:
     runs-on: windows-2022

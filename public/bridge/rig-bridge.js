@@ -267,6 +267,48 @@ let padMode = OUTPUT === "ds4" ? "ds4" : "xinput";
 let lastAppliedSignature = "";
 const ackState = new WeakMap();
 
+// The phone can send controller state up to 240 times/sec, but applying a
+// report to the driver (pad.update(), a synchronous native call) is not
+// guaranteed to be faster than that under real-world driver/OS scheduling.
+// Calling apply() directly from ws.on("message") would process every queued
+// packet in strict arrival order with no way to skip ahead -- if the driver
+// ever falls behind for a moment, a backlog of now-stale packets builds up
+// and every button press is delayed by however much backlog is ahead of it,
+// growing for as long as input keeps coming in.
+//
+// Instead, incoming messages only update a single-slot "latest state"
+// mailbox (cheap, never blocks), and a separate loop applies whatever is
+// currently in that slot on setImmediate. Because a newer state always
+// overwrites an older, not-yet-applied one, there is nothing to queue --
+// the bridge is always working from the freshest input, and the worst-case
+// added latency is one driver update, not an accumulating backlog.
+let latestState = null;
+let applyScheduled = false;
+
+function flushState() {
+  applyScheduled = false;
+  const state = latestState;
+  latestState = null;
+  if (!state) return;
+
+  try {
+    apply(state);
+  } catch (err) {
+    console.warn("Failed to apply controller state:", err?.message || err);
+    appendBridgeLog("APPLY ERROR: " + (err?.stack || err));
+  }
+
+  // Another packet may have arrived while this one was being applied --
+  // catch up immediately instead of waiting for the next network message.
+  if (latestState) scheduleApply();
+}
+
+function scheduleApply() {
+  if (applyScheduled) return;
+  applyScheduled = true;
+  setImmediate(flushState);
+}
+
 function createPad(mode) {
   if (pad) {
     try {
@@ -471,7 +513,6 @@ function apply(s) {
   // UI and input stack get unnecessary work when identical reports are
   // continuously pushed.
   if (signature === lastAppliedSignature) return;
-  lastAppliedSignature = signature;
 
   const held = {};
   const mark = (name) => {
@@ -527,8 +568,13 @@ function apply(s) {
     pad.button[name].setValue(!!held[name]);
   }
 
-  // Exactly one driver report per packet.
+  // Exactly one driver report per packet. Only remember this state as
+  // "applied" once the report has actually gone out -- if vigem_target_x360_update
+  // throws (a transient driver hiccup), the caller's catch logs it and this
+  // same signature is retried on the next tick instead of being silently
+  // treated as already delivered forever.
   pad.update();
+  lastAppliedSignature = signature;
 }
 
 const wss = new WebSocketServer({
@@ -860,12 +906,15 @@ wss.on("connection", (ws) => {
     }
 
     if (msg.type === "state") {
-      apply(msg);
+      latestState = msg;
+      scheduleApply();
 
       // ACKs are diagnostic only. Sending one WebSocket packet back for every
       // 240 Hz input packet creates needless bidirectional traffic and can
       // make controller-test/property windows feel busy. Keep acknowledgements
       // around 20 Hz while the controller state itself remains low-latency.
+      // This is measured on receipt, independent of the apply loop, so the
+      // latency reading in Settings reflects transport time, not driver time.
       const now = Date.now();
       const previous = ackState.get(ws) || 0;
       if (now - previous >= 50) {
@@ -878,6 +927,7 @@ wss.on("connection", (ws) => {
   ws.on("close", () => {
     ackState.delete(ws);
     sendMouseNative({ action: "reset" });
+    latestState = null;
     lastAppliedSignature = "";
     if (pad) {
       try {

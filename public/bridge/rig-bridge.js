@@ -11,6 +11,8 @@
  * Environment:
  *   RIG_PORT=8787
  *   RIG_OUTPUT=xinput | ds4
+ *   RIG_FORZA_PORT=5300   (Forza Data Out UDP)
+ *   RIG_F1_PORT=20777     (EA F1 UDP telemetry)
  *
  * The transport is deliberately simple WebSocket for broad browser support.
  * The bridge uses TCP_NODELAY and manual ViGEm updates so each state packet
@@ -18,7 +20,10 @@
  */
 
 const PORT = Number(process.env.RIG_PORT || 8787);
+const FORZA_PORT = Number(process.env.RIG_FORZA_PORT || 5300);
+const F1_PORT = Number(process.env.RIG_F1_PORT || 20777);
 const OUTPUT = String(process.env.RIG_OUTPUT || "xinput").toLowerCase();
+const dgram = require("node:dgram");
 const { WebSocketServer } = require("ws");
 
 let client = null;
@@ -167,8 +172,146 @@ const wss = new WebSocketServer({
   perMessageDeflate: false,
 });
 
+let latestTelemetry = null;
+let telemetrySeq = 0;
+let f1RpmMax = null;
+
+function broadcastTelemetry(data) {
+  const telemetry = {
+    type: "telemetry",
+    seq: ++telemetrySeq,
+    source: data.source,
+    speed: Number.isFinite(data.speed) ? Math.max(0, data.speed) : undefined,
+    rpm: Number.isFinite(data.rpm) ? Math.max(0, data.rpm) : undefined,
+    rpmMax: Number.isFinite(data.rpmMax) && data.rpmMax > 0 ? data.rpmMax : undefined,
+    gear: Number.isFinite(data.gear) ? Math.trunc(data.gear) : undefined,
+    receivedAt: Date.now(),
+  };
+
+  latestTelemetry = telemetry;
+
+  const packet = JSON.stringify(telemetry);
+  for (const ws of wss.clients) {
+    if (ws.readyState === 1 && ws.bufferedAmount < 16_384) {
+      try {
+        ws.send(packet);
+      } catch {
+        /* ignore a racing socket close */
+      }
+    }
+  }
+}
+
+function parseForza(packet) {
+  // Forza Data Out: the stable Sled block exposes max RPM, current RPM
+  // and world velocity. Speed is the magnitude of the velocity vector.
+  if (packet.length < 44) return null;
+
+  const isRaceOn = packet.readInt32LE(0);
+  if (isRaceOn !== 1) return null;
+
+  const rpmMax = packet.readFloatLE(8);
+  const rpm = packet.readFloatLE(16);
+  const vx = packet.readFloatLE(32);
+  const vy = packet.readFloatLE(36);
+  const vz = packet.readFloatLE(40);
+  const speed = Math.sqrt(vx * vx + vy * vy + vz * vz) * 3.6;
+  const gear = packet.length > 319 ? packet.readUInt8(319) - 1 : undefined;
+
+  if (!Number.isFinite(speed) || !Number.isFinite(rpm) || !Number.isFinite(rpmMax)) return null;
+
+  return {
+    source: "Forza",
+    speed,
+    rpm,
+    rpmMax,
+    gear,
+  };
+}
+
+function parseF1(packet) {
+  // F1 25 / 2026 Season Pack uses a 29-byte packed little-endian header.
+  if (packet.length < 29) return null;
+
+  const packetFormat = packet.readUInt16LE(0);
+  const packetId = packet.readUInt8(6);
+  const playerIndex = packet.readUInt8(27);
+
+  // CarTelemetry is packet 6. The 2025 layout uses 22 cars x 60 bytes;
+  // the 2026 Season Pack uses 24 cars x 59 bytes.
+  if (packetId === 6) {
+    const carSize = packet.length >= 1448 ? 59 : 60;
+    const carOffset = 29 + playerIndex * carSize;
+    if (carOffset + 18 > packet.length) return null;
+
+    const speed = packet.readUInt16LE(carOffset);
+    const gear = packet.readInt8(carOffset + 15);
+    const rpm = packet.readUInt16LE(carOffset + 16);
+
+    if (!Number.isFinite(speed) || !Number.isFinite(rpm)) return null;
+
+    return {
+      source: packetFormat >= 2025 ? "F1 25 / 2026" : "F1",
+      speed,
+      rpm,
+      rpmMax: f1RpmMax,
+      gear,
+    };
+  }
+
+  // CarStatus is packet 7. Max RPM is the 18th byte of each packed
+  // CarStatusData record (zero-based offset 17).
+  if (packetId === 7) {
+    const carCount = packet.length >= 1445 ? 24 : 22;
+    const recordSize = packet.length >= 1445 ? 59 : 55;
+    const carOffset = 29 + playerIndex * recordSize;
+    if (carOffset + 19 > packet.length) return null;
+
+    const rpmMax = packet.readUInt16LE(carOffset + 17);
+    if (rpmMax > 0 && rpmMax < 100000) {
+      f1RpmMax = rpmMax;
+      if (latestTelemetry && latestTelemetry.source.startsWith("F1")) {
+        broadcastTelemetry({
+          ...latestTelemetry,
+          rpmMax,
+          source: latestTelemetry.source,
+        });
+      }
+    }
+  }
+
+  return null;
+}
+
+function bindTelemetrySocket(port, name, parser) {
+  const socket = dgram.createSocket("udp4");
+
+  socket.on("message", (packet) => {
+    try {
+      const telemetry = parser(packet);
+      if (telemetry) broadcastTelemetry(telemetry);
+    } catch {
+      /* ignore malformed game telemetry packets */
+    }
+  });
+
+  socket.on("error", (err) => {
+    console.warn(`${name} telemetry UDP error on ${port}:`, err.message);
+  });
+
+  socket.bind(port, "0.0.0.0", () => {
+    console.log(`${name} telemetry listening on udp://0.0.0.0:${port}`);
+  });
+
+  return socket;
+}
+
+const forzaTelemetrySocket = bindTelemetrySocket(FORZA_PORT, "Forza", parseForza);
+const f1TelemetrySocket = bindTelemetrySocket(F1_PORT, "F1", parseF1);
+
 console.log(`Rig bridge listening on ws://0.0.0.0:${PORT}`);
 console.log(`Output target: ${padMode === "ds4" ? "DualShock 4" : "Xbox 360/XInput"}`);
+console.log("Live gauges use game telemetry only; there is no simulated speed/RPM.");
 
 wss.on("connection", (ws) => {
   const socket = ws._socket;
@@ -197,7 +340,19 @@ wss.on("connection", (ws) => {
         seq: msg.seq ?? 0,
         output: padMode,
         rateHz: Number(msg.rateHz) || 240,
+        telemetry: {
+          forzaPort: FORZA_PORT,
+          f1Port: F1_PORT,
+          live: Boolean(latestTelemetry),
+        },
       }));
+      if (latestTelemetry && ws.readyState === 1) {
+        try {
+          ws.send(JSON.stringify(latestTelemetry));
+        } catch {
+          /* ignore a racing socket close */
+        }
+      }
       return;
     }
 

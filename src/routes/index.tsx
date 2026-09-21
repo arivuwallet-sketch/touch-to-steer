@@ -56,7 +56,7 @@ function Rig() {
   } = useBridge(stateRef, 240, settings.outputMode);
 
   useEffect(() => {
-    const migrationKey = "mobile-rig-xinput-migration-v2";
+    const migrationKey = "mobile-rig-universal-migration-v3";
     const migrated = localStorage.getItem(migrationKey) === "1";
     const raw = localStorage.getItem(STORAGE_KEY);
 
@@ -64,12 +64,13 @@ function Rig() {
       try {
         const saved = { ...defaultSettings, ...JSON.parse(raw) } as Settings;
 
-        // The earlier Universal default created an extra DS4/HID device.
-        // Migrate that generated legacy selection back to one stable Xbox
-        // 360/XInput target. XInput is also exposed through Windows' XUSB/HID
-        // path for DirectInput enumeration, while DS4 remains selectable.
-        if (!migrated && (saved.outputMode === "universal" || saved.outputMode === "ds4")) {
-          saved.outputMode = "xinput";
+        // Use the broad compatibility target for existing installs unless the
+        // user explicitly chose it as DS4-only. Universal keeps one mirrored
+        // XInput target for current games and one DS4/HID target for legacy
+        // DirectInput-style games. XInput-only remains selectable when a game
+        // behaves badly with multiple enumerated controllers.
+        if (!migrated && saved.outputMode === "xinput") {
+          saved.outputMode = "universal";
           localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
         }
 

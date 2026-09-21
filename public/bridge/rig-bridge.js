@@ -252,21 +252,100 @@ function createPad(mode) {
   }
 }
 
+function queryViGEmBusService() {
+  if (process.platform !== "win32") {
+    return { installed: false, running: false, raw: "" };
+  }
+
+  try {
+    const result = spawnSync("sc.exe", ["query", "ViGEmBus"], {
+      encoding: "utf8",
+      windowsHide: true,
+    });
+    const raw = `${result.stdout || ""}\n${result.stderr || ""}`;
+    const installed = result.status === 0 || /SERVICE_NAME:\s*ViGEmBus/i.test(raw);
+    const running = /STATE\s*:\s*\d+\s+RUNNING/i.test(raw);
+    return { installed, running, raw };
+  } catch {
+    return { installed: false, running: false, raw: "" };
+  }
+}
+
+function startViGEmBusService() {
+  if (process.platform !== "win32") return false;
+  try {
+    const result = spawnSync("sc.exe", ["start", "ViGEmBus"], {
+      encoding: "utf8",
+      windowsHide: true,
+    });
+    return result.status === 0 || /START_PENDING|RUNNING|already been started/i.test(
+      `${result.stdout || ""}\n${result.stderr || ""}`,
+    );
+  } catch {
+    return false;
+  }
+}
+
+function connectViGEmClient() {
+  const ViGEmClient = require("vigemclient");
+  const service = queryViGEmBusService();
+
+  if (service.installed && !service.running) {
+    console.log("ViGEmBus is installed but not running; attempting to start the service...");
+    startViGEmBusService();
+  }
+
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
+    try {
+      const candidate = new ViGEmClient();
+      const error = candidate.connect();
+      if (!error) return { client: candidate, error: null, service };
+      lastError = error;
+    } catch (error) {
+      lastError = error;
+    }
+
+    if (attempt < 5) {
+      const retryService = queryViGEmBusService();
+      if (retryService.installed && !retryService.running) {
+        startViGEmBusService();
+      }
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250);
+    }
+  }
+
+  return { client: null, error: lastError, service: queryViGEmBusService() };
+}
+
 let vigemConnectionError = null;
 
 try {
-  const ViGEmClient = require("vigemclient");
-  client = new ViGEmClient();
-  vigemConnectionError = client.connect();
-  if (vigemConnectionError) throw vigemConnectionError;
+  const connection = connectViGEmClient();
+  if (!connection.client) throw connection.error || new Error("ViGEmBus connection failed");
+
+  client = connection.client;
+  vigemConnectionError = null;
   createPad(padMode);
   if (!pad) throw new Error("Virtual controller creation failed");
 } catch (err) {
   const message = err?.message || String(err);
+  const service = queryViGEmBusService();
+
   console.warn("ViGEm unavailable - running in echo-only mode:", message);
 
-  // In the packaged Windows build, a missing virtual-controller driver is a first-run condition.
-  if (isPackagedBridge() && !pad && installBundledDriverAndRestart()) {
+  if (service.installed) {
+    console.warn(
+      `ViGEmBus is installed but the client could not connect (running=${service.running}).`,
+    );
+    console.warn(
+      "Open Windows Device Manager and verify 'Nefarius Virtual Gamepad Emulation Bus'.",
+    );
+    console.warn(
+      "The bridge will NOT relaunch the ViGEmBus installer because an installation was detected.",
+    );
+  } else if (isPackagedBridge() && !pad && installBundledDriverAndRestart()) {
     process.exit(0);
   }
 }

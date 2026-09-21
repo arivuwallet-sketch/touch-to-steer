@@ -131,8 +131,10 @@ export function SettingsPanel({
             <strong className="text-emerald-200">Universal compatibility</strong> keeps one
             synchronized Xbox 360/XInput target for modern games and one DualShock/HID target
             for legacy DirectInput-style games. Windows may therefore show both devices in
-            <code className="mx-1 text-slate-300">joy.cpl</code>. Choose XInput-only when you
-            specifically want only <strong className="text-slate-200">Controller (XBOX 360 For Windows)</strong>.
+            <code className="mx-1 text-slate-300">joy.cpl</code>.
+            For local co-op and split-screen, use <strong className="text-slate-200">XInput-only</strong>
+            on each phone when the game expects Xbox controllers; the bridge assigns each phone
+            its own virtual player, up to 4 simultaneous players.
           </div>
           <Row label="Steering input">
             <select

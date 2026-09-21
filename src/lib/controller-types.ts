@@ -68,6 +68,20 @@ export type Settings = {
   wheelRotationDeg: number;
   /** simulated stick tension for thumb travel */
   stickTension: number;
+  /** Virtual mouse profile. Values are software output scaling, not physical sensor characteristics. */
+  mouseDpi: number;
+  mousePollingRate: 125 | 250 | 500 | 1000 | 2000 | 4000 | 8000;
+  mouseSensitivity: number;
+  mouseGyroSensitivity: number;
+  mouseGyroEnabled: boolean;
+  mouseInvertY: boolean;
+  mouseRotationDeg: number;
+  mouseDynamicSensitivity: boolean;
+  mouseDynamicMaxMultiplier: number;
+  mouseSmartTracking: boolean;
+  mouseLiftOffLevel: number;
+  mouseLandingLevel: number;
+  mouseProfile: string;
 };
 
 export const defaultSettings: Settings = {
@@ -87,6 +101,19 @@ export const defaultSettings: Settings = {
   invertLookY: false,
   wheelRotationDeg: 900,
   stickTension: 0.7,
+  mouseDpi: 1600,
+  mousePollingRate: 8000,
+  mouseSensitivity: 1,
+  mouseGyroSensitivity: 0.65,
+  mouseGyroEnabled: false,
+  mouseInvertY: false,
+  mouseRotationDeg: 0,
+  mouseDynamicSensitivity: false,
+  mouseDynamicMaxMultiplier: 2.5,
+  mouseSmartTracking: true,
+  mouseLiftOffLevel: 0,
+  mouseLandingLevel: 0,
+  mouseProfile: "viper-v4-pro",
 };
 
 /** Tuned presets so each genre feels right without manual fiddling. */

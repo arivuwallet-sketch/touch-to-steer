@@ -340,9 +340,28 @@ export function useBridge(
         const dy = message.dy ?? 0;
         if (!dx && !dy) return true;
 
-        // Merge with any delta still waiting to go out. Several pointer/gyro
-        // samples handled in the same burst collapse into one packet; nothing
-        // is lost if the socket is momentarily backed up (see flushMove).
+        // Healthy LAN path: put the mouse delta directly on the WebSocket
+        // from the pointer/gyro event. Do not add a timer tick to the hot path.
+        if (ws.bufferedAmount < 32_768) {
+          try {
+            ws.send(
+              JSON.stringify({
+                type: "mouse",
+                t: Date.now(),
+                action: "move",
+                dx,
+                dy,
+              }),
+            );
+            return true;
+          } catch {
+            /* fall through to the bounded coalescing path */
+          }
+        }
+
+        // Only use the coalescer while the browser socket is actually backed
+        // up. This prevents stale move queues without sacrificing the fastest
+        // path during normal local-network operation.
         moveAccumRef.current.dx += dx;
         moveAccumRef.current.dy += dy;
         if (!moveFlushTimerRef.current) {

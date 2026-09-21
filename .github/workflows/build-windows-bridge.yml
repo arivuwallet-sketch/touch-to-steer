@@ -77,11 +77,21 @@ jobs:
             Get-Content $errlog -ErrorAction SilentlyContinue
             throw "Packaged bridge did not report readiness."
           }
-          if ($output -notmatch "ViGEm native addon loaded") {
+
+          # The packaged bridge writes its native-addon diagnostics to the
+          # persistent log before console startup output is emitted.
+          $bridgeLogPath = Join-Path $env:TEMP "TouchToSteer\bridge.log"
+          $bridgeLog = if (Test-Path $bridgeLogPath) { Get-Content $bridgeLogPath -Raw } else { "" }
+          if ($bridgeLog -notmatch "ViGEm native addon loaded") {
             Get-Content $log -ErrorAction SilentlyContinue
             Get-Content $errlog -ErrorAction SilentlyContinue
+            Get-Content $bridgeLogPath -ErrorAction SilentlyContinue
             throw "Packaged bridge could not load the ViGEm native addon."
           }
+
+          # GitHub-hosted Windows runners do not have the ViGEmBus kernel
+          # driver installed. VIGEM_ERROR_BUS_NOT_FOUND is therefore an
+          # expected CI result; the local user machine will supply the driver.
           if ($output -notmatch "ViGEm unavailable - running in echo-only mode" -and $output -notmatch "Virtual Xbox 360 target added to ViGEmBus") {
             Get-Content $log -ErrorAction SilentlyContinue
             Get-Content $errlog -ErrorAction SilentlyContinue

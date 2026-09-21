@@ -1,1 +1,80 @@
-name: Build Windows Bridge\n\non:\n  push:\n    branches:\n      - main\n  workflow_dispatch:\n\npermissions:\n  contents: write\n\njobs:\n  build-windows-bridge:\n    runs-on: windows-latest\n\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v4\n\n      - name: Use Node.js 24\n        uses: actions/setup-node@v4\n        with:\n          node-version: 24\n          cache: npm\n          cache-dependency-path: public/bridge/package-lock.json\n\n      - name: Download official ViGEmBus installer\n        shell: pwsh\n        run: |\n          New-Item -ItemType Directory -Force -Path public/bridge/drivers | Out-Null\n          Invoke-WebRequest -Uri "https://github.com/nefarius/ViGEmBus/releases/download/v1.22.0/ViGEmBus_1.22.0_x64_x86_arm64.exe" -OutFile "public/bridge/drivers/ViGEmBus_1.22.0_x64_x86_arm64.exe"\n\n      - name: Install bridge dependencies\n        working-directory: public/bridge\n        run: npm install --omit=dev\n\n      - name: Package bridge as a Windows executable\n        working-directory: public/bridge\n        run: npm run build:exe\n\n      - name: Smoke-test packaged executable\n        shell: pwsh\n        run: |\n          if (-not (Test-Path "public/bridge/dist/TouchToSteer-Bridge.exe")) {\n            throw "TouchToSteer-Bridge.exe was not created."\n          }\n          $size = (Get-Item "public/bridge/dist/TouchToSteer-Bridge.exe").Length\n          if ($size -lt 1000000) {\n            throw "Packaged bridge is unexpectedly small: $size bytes."\n          }\n          Write-Host "Packaged bridge size: $size bytes"\n\n      - name: Prepare release package\n        shell: pwsh\n        run: |\n          New-Item -ItemType Directory -Force -Path release | Out-Null\n          Copy-Item "public/bridge/dist/TouchToSteer-Bridge.exe" "release/TouchToSteer-Bridge.exe"\n          Copy-Item "public/bridge/windows/README.md" "release/README.md"\n          Compress-Archive -Path "release/TouchToSteer-Bridge.exe", "release/README.md" -DestinationPath "public/bridge/dist/TouchToSteer-Bridge-Windows.zip" -Force\n\n      - name: Upload workflow artifact\n        uses: actions/upload-artifact@v4\n        with:\n          name: TouchToSteer-Bridge-Windows\n          path: |\n            public/bridge/dist/TouchToSteer-Bridge.exe\n            public/bridge/dist/TouchToSteer-Bridge-Windows.zip\n          retention-days: 90\n\n      - name: Publish stable latest release\n        shell: bash\n        env:\n          GH_TOKEN: ${{ github.token }}\n        run: |\n          gh release delete bridge-latest --repo "${GITHUB_REPOSITORY}" --yes --cleanup-tag >/dev/null 2>&1 || true\n          gh release create bridge-latest \\n            "public/bridge/dist/TouchToSteer-Bridge-Windows.zip" \\n            "public/bridge/dist/TouchToSteer-Bridge.exe" \\n            --repo "${GITHUB_REPOSITORY}" \\n            --target "${GITHUB_SHA}" \\n            --title "TouchToSteer Windows Bridge (latest)" \\n            --notes "Portable Windows bridge built from commit ${GITHUB_SHA}. No Node.js, npm, Git Bash, Visual Studio, or C++ build tools are required on the target PC. The package contains the TouchToSteer bridge and the official ViGEmBus installer used for first-run driver setup."\n
+name: Build Windows Bridge
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows-bridge:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Download official ViGEmBus installer
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path public/bridge/drivers | Out-Null
+          Invoke-WebRequest -Uri "https://github.com/nefarius/ViGEmBus/releases/download/v1.22.0/ViGEmBus_1.22.0_x64_x86_arm64.exe" -OutFile "public/bridge/drivers/ViGEmBus_1.22.0_x64_x86_arm64.exe"
+
+      - name: Install bridge dependencies
+        working-directory: public/bridge
+        run: npm install --omit=dev
+
+      - name: Package bridge as a Windows executable
+        working-directory: public/bridge
+        run: npm run build:exe
+
+      - name: Smoke-test packaged executable
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "public/bridge/dist/TouchToSteer-Bridge.exe")) {
+            throw "TouchToSteer-Bridge.exe was not created."
+          }
+          $size = (Get-Item "public/bridge/dist/TouchToSteer-Bridge.exe").Length
+          if ($size -lt 1000000) {
+            throw "Packaged bridge is unexpectedly small: $size bytes."
+          }
+          Write-Host "Packaged bridge size: $size bytes"
+
+      - name: Prepare release package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          Copy-Item "public/bridge/dist/TouchToSteer-Bridge.exe" "release/TouchToSteer-Bridge.exe"
+          Copy-Item "public/bridge/windows/README.md" "release/README.md"
+          Compress-Archive -Path "release/TouchToSteer-Bridge.exe", "release/README.md" -DestinationPath "public/bridge/dist/TouchToSteer-Bridge-Windows.zip" -Force
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TouchToSteer-Bridge-Windows
+          path: |
+            public/bridge/dist/TouchToSteer-Bridge.exe
+            public/bridge/dist/TouchToSteer-Bridge-Windows.zip
+          retention-days: 90
+
+      - name: Publish stable latest release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete bridge-latest --repo "${GITHUB_REPOSITORY}" --yes --cleanup-tag >/dev/null 2>&1 || true
+          gh release create bridge-latest \
+            "public/bridge/dist/TouchToSteer-Bridge-Windows.zip" \
+            "public/bridge/dist/TouchToSteer-Bridge.exe" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target "${GITHUB_SHA}" \
+            --title "TouchToSteer Windows Bridge (latest)" \
+            --notes "Portable Windows bridge built from commit ${GITHUB_SHA}. No Node.js, npm, Git Bash, Visual Studio, or C++ build tools are required on the target PC. The package contains the TouchToSteer bridge and the official ViGEmBus installer used for first-run driver setup."

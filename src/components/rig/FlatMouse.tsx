@@ -506,8 +506,8 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
 
           <button type="button" className="flat-mouse-control" onClick={recenterGyro}>
             <RotateCcw />
-            <strong>RECENTER</strong>
-            <small>AIR AIM</small>
+            <strong>CENTER SYNC</strong>
+            <small>PC CURSOR</small>
           </button>
 
           <button type="button" className="flat-mouse-control" onWheel={handleWheel}>
@@ -518,6 +518,7 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
         </div>
 
         <div className="flat-mouse-help">
+          <span>CENTER DOT = AIM ORIGIN</span>
           <span>DRAG BODY = MOVE</span>
           <span>LMB / RMB = CLICK</span>
           <span>LEFT EDGE = MB4 / MB5</span>

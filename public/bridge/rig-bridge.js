@@ -326,11 +326,35 @@ function createPad(mode) {
     pad = mode === "ds4" ? client.createDS4Controller() : client.createX360Controller();
     lastAppliedSignature = "";
     pad.updateMode = "manual";
-    pad.connect();
-    console.log(`Virtual ${mode === "ds4" ? "DualShock 4" : "Xbox 360"} controller created (manual updates).`);
+
+    // node-ViGEmClient returns an Error from target.connect(); it does not
+    // reliably throw. Treat a non-null return as a real connection failure.
+    const connectError = pad.connect();
+    if (connectError) {
+      const message = connectError?.message || String(connectError);
+      pad = null;
+      throw new Error(`ViGEm target connect failed: ${message}`);
+    }
+
+    let index = "unknown";
+    try {
+      index = String(pad.index);
+    } catch {
+      /* index can be unavailable until the target is fully enumerated */
+    }
+
+    const controllerName = mode === "ds4" ? "DualShock 4" : "Xbox 360";
+    console.log(
+      `Virtual ${controllerName} controller connected successfully (index=${index}).`,
+    );
+    appendBridgeLog(
+      `Virtual ${controllerName} controller connected successfully (index=${index}).`,
+    );
   } catch (err) {
     pad = null;
-    console.warn(`Unable to create ${mode} virtual controller:`, err.message);
+    const message = err?.message || String(err);
+    console.warn(`Unable to connect ${mode} virtual controller:`, message);
+    appendBridgeLog(`Unable to connect ${mode} virtual controller: ${message}`);
   }
 }
 

@@ -122,10 +122,18 @@ export function SettingsPanel({
               onChange={(e) => onChange({ outputMode: e.target.value as Settings["outputMode"] })}
               className="rounded-lg border border-input bg-background px-2 py-1.5 text-xs"
             >
+              <option value="universal">Universal · XInput + DirectInput</option>
               <option value="xinput">XInput / Xbox 360</option>
-              <option value="ds4">DualShock 4</option>
+              <option value="ds4">DualShock 4 / HID</option>
             </select>
           </Row>
+          <div className="mt-3 rounded-lg border border-emerald-300/15 bg-emerald-300/5 p-3 text-[11px] leading-relaxed text-muted-foreground">
+            <strong className="text-emerald-200">Universal compatibility</strong> keeps one
+            synchronized Xbox 360/XInput target for modern games and one DualShock/HID target
+            for legacy DirectInput-style games. Windows may therefore show both devices in
+            <code className="mx-1 text-slate-300">joy.cpl</code>. Choose XInput-only when you
+            specifically want only <strong className="text-slate-200">Controller (XBOX 360 For Windows)</strong>.
+          </div>
           <Row label="Steering input">
             <select
               value={settings.steerMode}

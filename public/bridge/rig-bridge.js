@@ -40,6 +40,8 @@ const { WebSocketServer } = require("ws");
 let client = null;
 let pad = null;
 let padMode = OUTPUT === "ds4" ? "ds4" : "xinput";
+let lastAppliedSignature = "";
+const ackState = new WeakMap();
 
 function createPad(mode) {
   if (pad) {
@@ -119,6 +121,32 @@ function setDpad(s) {
 function apply(s) {
   if (!pad) return;
 
+  const buttons = s.buttons || {};
+  const signature = [
+    clamp(s.steer, -1, 1),
+    clamp(s.lx, -1, 1),
+    clamp(s.ly, -1, 1),
+    clamp(s.rx, -1, 1),
+    clamp(s.ry, -1, 1),
+    clamp(s.brake, 0, 1),
+    clamp(s.clutch, 0, 1),
+    clamp(s.lt, 0, 1),
+    clamp(s.throttle, 0, 1),
+    clamp(s.rt, 0, 1),
+    clamp(s.handbrake, 0, 1),
+    clamp(s.nitro, 0, 1),
+    Number(s.gear) || 0,
+    Number(s.dial) || 0,
+    Object.keys(buttons).filter((id) => buttons[id]).sort().join(","),
+  ].join("|");
+
+  // The phone sends at 240 Hz, but the same state may arrive repeatedly.
+  // Do not submit duplicate ViGEm reports: Windows' controller-properties
+  // UI and input stack get unnecessary work when identical reports are
+  // continuously pushed.
+  if (signature === lastAppliedSignature) return;
+  lastAppliedSignature = signature;
+
   const held = {};
   const mark = (name) => {
     if (pad.button[name]) held[name] = true;
@@ -146,7 +174,6 @@ function apply(s) {
     ),
   );
 
-  const buttons = s.buttons || {};
   const map = padMode === "ds4" ? DSBTN : XBTN;
   for (const [id, name] of Object.entries(map)) if (buttons[id]) mark(name);
 
@@ -487,11 +514,23 @@ wss.on("connection", (ws) => {
 
     if (msg.type === "state") {
       apply(msg);
-      ws.send(JSON.stringify({ type: "ack", t: msg.t, seq: msg.seq }));
+
+      // ACKs are diagnostic only. Sending one WebSocket packet back for every
+      // 240 Hz input packet creates needless bidirectional traffic and can
+      // make controller-test/property windows feel busy. Keep acknowledgements
+      // around 20 Hz while the controller state itself remains low-latency.
+      const now = Date.now();
+      const previous = ackState.get(ws) || 0;
+      if (now - previous >= 50) {
+        ackState.set(ws, now);
+        ws.send(JSON.stringify({ type: "ack", t: msg.t, seq: msg.seq }));
+      }
     }
   });
 
   ws.on("close", () => {
+    ackState.delete(ws);
+    lastAppliedSignature = "";
     if (pad) {
       try {
         pad.resetInputs();

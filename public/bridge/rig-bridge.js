@@ -201,6 +201,9 @@ function sendMouseNative(message) {
       case "reset":
         proc.stdin.write("RESET\n");
         break;
+      case "center":
+        proc.stdin.write("CENTER\n");
+        break;
       default:
         return false;
     }

@@ -664,7 +664,7 @@ const XBTN = {
   start: "START", back: "BACK", home: "GUIDE",
   lb: "LEFT_SHOULDER", rb: "RIGHT_SHOULDER",
   select: "BACK", m1: "LEFT_SHOULDER", m2: "RIGHT_SHOULDER",
-  m3: "LEFT_THUMB", m4: "BACK", m5: "BACK", m6: "START",
+  m3: "LEFT_THUMB", m4: "RIGHT_THUMB", m5: "BACK", m6: "START",
   __horn: "LEFT_THUMB", __look: "RIGHT_THUMB", __reset: "Y",
   __handbrake: "A", __nitro: "LEFT_SHOULDER",
   __gearUp: "RIGHT_SHOULDER", __gearDown: "LEFT_SHOULDER",

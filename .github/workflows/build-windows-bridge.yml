@@ -71,7 +71,10 @@ jobs:
             if (Test-Path $errlog) { Get-Content $errlog }
             throw "Packaged bridge exited during runtime smoke test."
           }
-          $output = if (Test-Path $log) { Get-Content $log -Raw } else { "" }
+          $stdout = if (Test-Path $log) { Get-Content $log -Raw } else { "" }
+          $stderr = if (Test-Path $errlog) { Get-Content $errlog -Raw } else { "" }
+          $output = $stdout + [Environment]::NewLine + $stderr
+
           if ($output -notmatch "TouchToSteer Bridge ready\.") {
             Get-Content $log -ErrorAction SilentlyContinue
             Get-Content $errlog -ErrorAction SilentlyContinue

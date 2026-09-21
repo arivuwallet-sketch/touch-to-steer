@@ -30,6 +30,17 @@ jobs:
           New-Item -ItemType Directory -Force -Path public/bridge/drivers | Out-Null
           Invoke-WebRequest -Uri "https://github.com/nefarius/ViGEmBus/releases/download/v1.22.0/ViGEmBus_1.22.0_x64_x86_arm64.exe" -OutFile "public/bridge/drivers/ViGEmBus_1.22.0_x64_x86_arm64.exe"
 
+      - name: Install ViGEmBus on CI runner
+        shell: pwsh
+        run: |
+          $installer = "public/bridge/drivers/ViGEmBus_1.22.0_x64_x86_arm64.exe"
+          $process = Start-Process -FilePath $installer -ArgumentList "/exenoui", "/qn", "/norestart" -Wait -PassThru
+          Write-Host "ViGEmBus installer exit code: $($process.ExitCode)"
+          if ($process.ExitCode -notin @(0, 1641, 3010)) {
+            throw "ViGEmBus installation failed with exit code $($process.ExitCode)"
+          }
+          Start-Sleep -Seconds 3
+
       - name: Install bridge dependencies
         working-directory: public/bridge
         run: npm install --omit=dev
@@ -62,7 +73,7 @@ jobs:
         run: |
           $log = "public/bridge/dist/bridge-smoke.log"
           $errlog = "public/bridge/dist/bridge-smoke.err"
-          $env:TOUCHTOSTEER_SKIP_DRIVER_INSTALL = "1"
+          Remove-Item Env:TOUCHTOSTEER_SKIP_DRIVER_INSTALL -ErrorAction SilentlyContinue
           $process = Start-Process -FilePath "public/bridge/dist/TouchToSteer-Bridge.exe" -PassThru -NoNewWindow -RedirectStandardOutput $log -RedirectStandardError $errlog
           Start-Sleep -Seconds 5
           if ($process.HasExited) {
@@ -76,6 +87,11 @@ jobs:
             Get-Content $log -ErrorAction SilentlyContinue
             Get-Content $errlog -ErrorAction SilentlyContinue
             throw "Packaged bridge did not report readiness."
+          }
+          if ($output -notmatch "Virtual Xbox 360 target added to ViGEmBus") {
+            Get-Content $log -ErrorAction SilentlyContinue
+            Get-Content $errlog -ErrorAction SilentlyContinue
+            throw "Packaged bridge started, but the Xbox 360 ViGEm target was not enumerated."
           }
           Stop-Process -Id $process.Id -Force
           Write-Host "Packaged bridge runtime smoke test passed."

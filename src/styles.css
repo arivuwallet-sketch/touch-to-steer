@@ -267,9 +267,8 @@
   }
 
   .flat-pad-root .flat-pad-bottom {
-    bottom: 5.5% !important;
+    bottom: 15% !important;
     gap: 5px !important;
-    padding-right: 150px !important;
   }
 
   .flat-pad-root .flat-pad-bottom button {
@@ -419,6 +418,14 @@
     width: 40px !important;
     height: 38px !important;
   }
+}
+
+/* Controller mode/settings dock. Bottom placement keeps it out of the top trigger area
+   in both gamepad and steering modes. Safe-area padding is applied on mobile below. */
+.mode-toolbar {
+  top: auto !important;
+  bottom: 10px !important;
+  right: 10px !important;
 }
 
 /* ---------- high-frequency input path ---------- */

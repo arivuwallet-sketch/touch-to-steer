@@ -82,6 +82,64 @@ const SKIP_DRIVER_INSTALL = /^(1|true|yes)$/i.test(
   String(process.env.TOUCHTOSTEER_SKIP_DRIVER_INSTALL || ""),
 );
 
+function loadPackagedNativeViGEmAddon() {
+  const Module = require("node:module");
+  const nativeSource = path.join(
+    __dirname,
+    "node_modules",
+    "vigemclient",
+    "build",
+    "Release",
+    "vigemclient.node",
+  );
+  if (!fs.existsSync(nativeSource)) {
+    throw new Error("Bundled vigemclient.node was not found inside the packaged bridge.");
+  }
+
+  const outDir = path.join(os.tmpdir(), "TouchToSteer");
+  const outFile = path.join(outDir, "vigemclient.node");
+  fs.mkdirSync(outDir, { recursive: true });
+
+  if (!fs.existsSync(outFile)) {
+    fs.writeFileSync(outFile, fs.readFileSync(nativeSource));
+  }
+
+  const parent = module;
+  const nativeModule = new Module(outFile, parent);
+  process.dlopen(nativeModule, outFile);
+  return nativeModule.exports;
+}
+
+function loadViGEmClient() {
+  if (!isPackagedBridge()) {
+    return require("vigemclient");
+  }
+
+  // node-ViGEmClient's JavaScript wrapper requires its .node addon through a
+  // relative path. pkg bundles that addon into its snapshot, but Windows'
+  // native loader needs a real filesystem path. Extract it to %TEMP% and
+  // intercept only that one relative native-addon request while loading the
+  // wrapper. All other require() calls behave normally.
+  const Module = require("node:module");
+  const originalLoad = Module._load;
+  const nativeExports = { value: null };
+  const nativeRequest = "/build/Release/vigemclient";
+
+  Module._load = function(request, parent, isMain) {
+    if (String(request).replace(/\\/g, "/").endsWith(nativeRequest)) {
+      if (!nativeExports.value) nativeExports.value = loadPackagedNativeViGEmAddon();
+      return nativeExports.value;
+    }
+    return originalLoad.call(this, request, parent, isMain);
+  };
+
+  try {
+    return require("vigemclient");
+  } finally {
+    Module._load = originalLoad;
+  }
+}
+
 function isPackagedBridge() {
   return typeof process.pkg !== "undefined";
 }
@@ -421,7 +479,7 @@ function startViGEmBusService() {
 }
 
 function connectViGEmClient() {
-  const ViGEmClient = require("vigemclient");
+  const ViGEmClient = loadViGEmClient();
   const service = queryViGEmBusService();
 
   if (service.installed && !service.running) {

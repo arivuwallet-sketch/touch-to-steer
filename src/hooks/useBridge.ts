@@ -250,6 +250,29 @@ export function useBridge(
     [clearTelemetryTimer, disconnect],
   );
 
+  // Switching the controller output while the phone is already connected
+  // must renegotiate the virtual device immediately. Otherwise Windows can
+  // keep the old DS4 "Wireless Controller" target until the next reconnect.
+  useEffect(() => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+    try {
+      ws.send(
+        JSON.stringify({
+          type: "hello",
+          client: "mobile-rig",
+          version: 3,
+          transport: "websocket",
+          rateHz: clampRate(rateHz),
+          output: outputMode,
+        }),
+      );
+    } catch {
+      /* ignore a send racing socket close */
+    }
+  }, [outputMode, rateHz]);
+
   const sendControllerEdge = useCallback(() => {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return false;

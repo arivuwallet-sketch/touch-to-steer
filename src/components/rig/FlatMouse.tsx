@@ -39,7 +39,6 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
   const padRef = useRef<HTMLDivElement | null>(null);
   const activePointers = useRef(new Map<number, { x: number; y: number; button?: MouseButton }>());
   const pressedButtons = useRef(new Set<MouseButton>());
-  const gyroBaseline = useRef<{ alpha: number; beta: number } | null>(null);
   const gyroLast = useRef<{ alpha: number; beta: number } | null>(null);
   const [gyroOn, setGyroOn] = useState(settings.mouseGyroEnabled);
   const [gyroPermission, setGyroPermission] = useState<"unknown" | "granted" | "denied">("unknown");
@@ -56,6 +55,12 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
     if (Math.abs(x) < 0.01 && Math.abs(y) < 0.01) return;
     sendMouse({ action: "move", dx: Math.round(clamp(x, -32767, 32767)), dy: Math.round(clamp(y, -32767, 32767)) });
   }, [sendMouse, settings.mouseDpi, settings.mouseDynamicMaxMultiplier, settings.mouseDynamicSensitivity, settings.mouseInvertY, settings.mouseRotationDeg, settings.mouseSensitivity]);
+
+  const setMouseButton = useCallback((button: MouseButton, down: boolean) => {
+    if (down) pressedButtons.current.add(button);
+    else pressedButtons.current.delete(button);
+    sendMouse({ action: "button", button, down });
+  }, [sendMouse]);
 
   const releaseButtons = useCallback(() => {
     for (const button of pressedButtons.current) {
@@ -91,10 +96,9 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
     });
 
     if (button && !pressedButtons.current.has(button)) {
-      pressedButtons.current.add(button);
-      sendMouse({ action: "button", button, down: true });
+      setMouseButton(button, true);
     }
-  }, [buttonForPoint, sendMouse]);
+  }, [buttonForPoint, setMouseButton]);
 
   const handlePointerMove = useCallback((e: PointerEvent<HTMLDivElement>) => {
     const prev = activePointers.current.get(e.pointerId);
@@ -177,7 +181,6 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
   }, []);
 
   const recenterGyro = useCallback(() => {
-    gyroBaseline.current = null;
     gyroLast.current = null;
   }, []);
 
@@ -191,7 +194,6 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
       const last = gyroLast.current;
       if (!last) {
         gyroLast.current = current;
-        gyroBaseline.current = current;
         return;
       }
 
@@ -200,8 +202,6 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
       const pitch = current.beta - last.beta;
 
       gyroLast.current = current;
-      if (!gyroBaseline.current) gyroBaseline.current = current;
-
       transmitMove(
         yaw * settings.mouseGyroSensitivity * 7,
         pitch * settings.mouseGyroSensitivity * 7,
@@ -298,9 +298,10 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
             className="flat-mouse-button flat-mouse-left"
             onPointerDown={(e) => {
               e.preventDefault();
-              sendMouse({ action: "button", button: "back", down: true });
+              setMouseButton("back", true);
             }}
-            onPointerUp={() => sendMouse({ action: "button", button: "back", down: false })}
+            onPointerUp={() => setMouseButton("back", false)}
+            onPointerCancel={() => setMouseButton("back", false)}
           >
             <span>BACK</span>
             <small>MB4</small>
@@ -310,9 +311,10 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
             className="flat-mouse-button flat-mouse-left"
             onPointerDown={(e) => {
               e.preventDefault();
-              sendMouse({ action: "button", button: "forward", down: true });
+              setMouseButton("forward", true);
             }}
-            onPointerUp={() => sendMouse({ action: "button", button: "forward", down: false })}
+            onPointerUp={() => setMouseButton("forward", false)}
+            onPointerCancel={() => setMouseButton("forward", false)}
           >
             <span>FORWARD</span>
             <small>MB5</small>
@@ -336,9 +338,10 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
             onWheel={handleWheel}
             onPointerDown={(e) => {
               e.preventDefault();
-              sendMouse({ action: "button", button: "middle", down: true });
+              setMouseButton("middle", true);
             }}
-            onPointerUp={() => sendMouse({ action: "button", button: "middle", down: false })}
+            onPointerUp={() => setMouseButton("middle", false)}
+            onPointerCancel={() => setMouseButton("middle", false)}
           >
             <span className="flat-mouse-wheel-rib" />
             <Zap className="size-4" />

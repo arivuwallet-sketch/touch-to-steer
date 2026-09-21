@@ -1139,18 +1139,31 @@ wss.on("connection", (ws) => {
       if (created.some((entry) => entry.type === type)) continue;
 
       const target = createTarget(type);
-      if (!target) {
+      if (target) {
+        created.push({
+          target,
+          type,
+          map: type === "ds4" ? DSBTN : XBTN,
+        });
+        continue;
+      }
+
+      // Universal mode is deliberately best-effort. XInput is the primary
+      // modern/co-op path; a DS4/HID compatibility target may be unavailable
+      // on a particular Windows installation. Never tear down a working
+      // XInput device just because the optional legacy target failed.
+      if (requestedMode !== "universal") {
         for (const entry of created) disconnectTarget(entry.target);
         created.length = 0;
         return false;
       }
 
-      created.push({
-        target,
-        type,
-        map: type === "ds4" ? DSBTN : XBTN,
-      });
+      appendBridgeLog(
+        `Optional universal target unavailable: ${type}; keeping other targets active.`,
+      );
     }
+
+    if (!created.length) return false;
 
     session.mode = requestedMode;
     session.targets = created;

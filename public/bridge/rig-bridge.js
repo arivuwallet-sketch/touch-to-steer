@@ -1089,6 +1089,18 @@ wss.on("connection", (ws) => {
         ? ["xinput", "ds4"]
         : [requestedMode];
 
+    // If a legacy-only DS4/HID session is requested, remove the diagnostic
+    // XInput standby device so that games do not see an unintended extra pad.
+    if (
+      requestedMode === "ds4" &&
+      standbyXInputTarget &&
+      controllerSessions.size === 0
+    ) {
+      disconnectTarget(standbyXInputTarget);
+      standbyXInputTarget = null;
+      appendBridgeLog("Removed standby XInput target for DS4-only compatibility session.");
+    }
+
     const created = [];
 
     // Reuse the always-visible XInput target for player 1. This both fixes

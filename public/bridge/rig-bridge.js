@@ -116,11 +116,17 @@ function startMouseInjector() {
 
   try {
     mouseInjector = spawn(executable, [], {
-      stdio: ["pipe", "ignore", "ignore"],
+      stdio: ["pipe", "ignore", "pipe"],
       windowsHide: true,
+      windowsVerbatimArguments: false,
     });
-    mouseInjector.on("error", () => {
+    mouseInjector.on("error", (err) => {
+      console.warn("Mouse injector error:", err.message);
       mouseInjector = null;
+    });
+    mouseInjector.stderr?.on("data", (chunk) => {
+      const text = String(chunk).trim();
+      if (text) console.warn("Mouse injector:", text);
     });
     mouseInjector.on("close", () => {
       mouseInjector = null;
@@ -692,6 +698,10 @@ wss.on("connection", (ws) => {
         seq: msg.seq ?? 0,
         output: padMode,
         rateHz: Number(msg.rateHz) || 240,
+        mouse: {
+          supported: process.platform === "win32",
+          injectorAvailable: Boolean(startMouseInjector()),
+        },
         telemetry: {
           forzaPorts: FORZA_PORTS,
           f1Port: F1_PORT,
@@ -714,7 +724,18 @@ wss.on("connection", (ws) => {
     }
 
     if (msg.type === "mouse") {
-      sendMouseNative(msg);
+      const ok = sendMouseNative(msg);
+      if (msg.action !== "move" && ws.readyState === 1) {
+        try {
+          ws.send(JSON.stringify({
+            type: "mouseAck",
+            action: msg.action,
+            ok,
+          }));
+        } catch {
+          /* ignore a racing socket close */
+        }
+      }
       return;
     }
 

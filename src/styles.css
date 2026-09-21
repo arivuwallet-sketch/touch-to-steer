@@ -138,8 +138,9 @@
    landscape phones do not inherit desktop/tablet width breakpoints. */
 @media (pointer: coarse) and (orientation: landscape) and (max-height: 650px) {
   .mode-toolbar {
-    top: 6px !important;
+    top: auto !important;
     right: 6px !important;
+    bottom: max(6px, env(safe-area-inset-bottom)) !important;
     gap: 3px !important;
   }
 
@@ -195,7 +196,7 @@
 
   .flat-pad-root .flat-pad-left,
   .flat-pad-root .flat-pad-right {
-    bottom: 9% !important;
+    bottom: 13% !important;
     gap: 10px !important;
     align-items: center !important;
   }
@@ -266,8 +267,9 @@
   }
 
   .flat-pad-root .flat-pad-bottom {
-    bottom: 2% !important;
+    bottom: 5.5% !important;
     gap: 5px !important;
+    padding-right: 150px !important;
   }
 
   .flat-pad-root .flat-pad-bottom button {
@@ -300,14 +302,14 @@
   .flat-wheel-root .flat-wheel-hit {
     width: min(58svh, 42vw) !important;
     left: 1.5% !important;
-    bottom: 3% !important;
+    bottom: 8% !important;
     min-width: 0 !important;
     min-height: 0 !important;
   }
 
   .flat-wheel-root .flat-wheel-pedals {
     right: 15.5% !important;
-    bottom: 3% !important;
+    bottom: 8% !important;
     gap: clamp(5px, 0.8vw, 9px) !important;
     max-width: 39vw !important;
   }
@@ -335,7 +337,7 @@
 
   .flat-wheel-root .flat-wheel-aux {
     right: 1.2% !important;
-    bottom: 3% !important;
+    bottom: 10% !important;
     gap: 6px !important;
   }
 
@@ -362,11 +364,19 @@
     padding: 5px 8px !important;
   }
 
+  .flat-wheel-root .flat-wheel-instructions {
+    bottom: 2.5% !important;
+    left: 2% !important;
+    max-width: 70vw !important;
+  }
+
   .flat-wheel-root .flat-wheel-telemetry {
     top: 6px !important;
+    left: 50% !important;
     gap: 4px !important;
     padding: 4px !important;
     border-radius: 16px !important;
+    max-width: 46vw !important;
   }
 
   .flat-wheel-root .flat-wheel-telemetry > div:first-child,
@@ -399,8 +409,9 @@
 
 @media (pointer: coarse) and (orientation: portrait) and (max-width: 650px) {
   .mode-toolbar {
-    top: 6px !important;
+    top: auto !important;
     right: 6px !important;
+    bottom: max(6px, env(safe-area-inset-bottom)) !important;
     gap: 3px !important;
   }
 

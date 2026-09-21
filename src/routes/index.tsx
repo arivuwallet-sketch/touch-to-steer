@@ -56,27 +56,33 @@ function Rig() {
   } = useBridge(stateRef, 240, settings.outputMode);
 
   useEffect(() => {
+    const migrationKey = "mobile-rig-xinput-migration-v1";
+    const migrated = localStorage.getItem(migrationKey) === "1";
     const raw = localStorage.getItem(STORAGE_KEY);
+
     if (raw) {
       try {
         const saved = { ...defaultSettings, ...JSON.parse(raw) } as Settings;
 
         // One-time compatibility migration: older builds could persist the
-        // DS4 target, which Windows labels "Wireless Controller". Use the
-        // XInput/Xbox 360 target by default so older games and XInput titles
-        // see the same controller class as a physical Xbox 360 pad.
-        const migrationKey = "mobile-rig-xinput-migration-v1";
-        const migrated = localStorage.getItem(migrationKey) === "1";
+        // DS4 target, which Windows labels "Wireless Controller". Move that
+        // legacy selection to XInput once. After migration, users can still
+        // explicitly choose DS4 in Settings without it being overwritten on
+        // every reload.
         if (!migrated && saved.outputMode === "ds4") {
           saved.outputMode = "xinput";
           localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
-          localStorage.setItem(migrationKey, "1");
         }
 
+        localStorage.setItem(migrationKey, "1");
         setSettings(saved);
       } catch {
         /* keep defaults */
       }
+    } else {
+      // Mark the migration complete for fresh installs so a future, explicit
+      // DS4 selection remains persistent.
+      localStorage.setItem(migrationKey, "1");
     }
   }, []);
 

@@ -6,7 +6,7 @@ import type { Settings } from "@/lib/controller-types";
 type MouseButton = "left" | "right" | "middle" | "back" | "forward";
 
 type MouseMessage = {
-  action: "move" | "button" | "wheel" | "reset";
+  action: "move" | "button" | "wheel" | "reset" | "center";
   dx?: number;
   dy?: number;
   button?: MouseButton;
@@ -313,8 +313,14 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
   const recenterGyro = useCallback(() => {
     lastMotionSample.current = 0;
     lastOrientation.current = null;
+
+    // Synchronize the phone's physical mouse center with the PC cursor.
+    // The bridge moves the native Windows cursor to the primary display
+    // center, giving the next gyro movement a deterministic origin.
+    sendMouse({ action: "center" });
+
     phoneFeedback();
-  }, []);
+  }, [sendMouse]);
 
   useEffect(() => {
     if (!gyroOn) return;
@@ -458,6 +464,10 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
             </div>
 
             <div className="flat-mouse-center-channel">
+              <div className="flat-mouse-aim-center" aria-hidden="true">
+                <span />
+                <i>0</i>
+              </div>
               <div className="flat-mouse-status-light" />
               <div className={`flat-mouse-scroll-wheel ${pressed === "middle" ? "is-pressed" : ""}`}>
                 <span className="flat-mouse-scroll-ribs" />

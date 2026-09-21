@@ -64,12 +64,12 @@ function Rig() {
       try {
         const saved = { ...defaultSettings, ...JSON.parse(raw) } as Settings;
 
-        // One-time compatibility migration: older builds could persist the
-        // DS4 target, which Windows labels "Wireless Controller". Move that
-        // legacy-only selection to Universal so the new build provides both
-        // an Xbox/XInput target for modern games and a HID/DirectInput-style
-        // fallback for legacy games.
-        if (!migrated && saved.outputMode === "ds4") {
+        // One-time compatibility migration: older builds persisted either
+        // XInput or DS4 as a single virtual target. Move that legacy selection
+        // to Universal so the new build provides both an Xbox/XInput target
+        // for modern games and a HID/DirectInput-style fallback for legacy
+        // games. After this one-time migration, explicit user choices persist.
+        if (!migrated && saved.outputMode !== "universal") {
           saved.outputMode = "universal";
           localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
         }

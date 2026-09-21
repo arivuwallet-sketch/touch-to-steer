@@ -53,6 +53,11 @@ jobs:
             throw "mouse-injector.exe was not created."
           }
 
+      - name: Validate bridge JavaScript
+        shell: pwsh
+        run: |
+          node --check public/bridge/rig-bridge.js
+
       - name: Package bridge as a Windows executable
         working-directory: public/bridge
         run: npm run build:exe

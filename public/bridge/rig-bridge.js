@@ -644,6 +644,11 @@ const DSBTN = {
   m3: "THUMB_LEFT", m4: "THUMB_RIGHT", m5: "SHARE", m6: "OPTIONS",
   __horn: "THUMB_LEFT", __look: "THUMB_RIGHT", __reset: "TRIANGLE",
   __handbrake: "CROSS", __nitro: "SHOULDER_LEFT",
+  // DS4 exposes trigger buttons in addition to its analog trigger axes.
+  // Setting both lets legacy DirectInput games that bind LT/RT as buttons
+  // recognize the steering pedals while games that read the analog axis still
+  // receive the full pedal position.
+  __brakeTrigger: "TRIGGER_LEFT", __throttleTrigger: "TRIGGER_RIGHT",
   __gearUp: "SHOULDER_RIGHT", __gearDown: "SHOULDER_LEFT",
 };
 
@@ -706,6 +711,8 @@ function applyToTarget(target, s, buttonMap) {
   if (buttons.reset) mark(buttonMap.__reset);
   if (clamp(s.handbrake, 0, 1) > 0.5) mark(buttonMap.__handbrake);
   if (clamp(s.nitro, 0, 1) > 0.5) mark(buttonMap.__nitro);
+  if (buttonMap.__brakeTrigger && brake > 0.02) mark(buttonMap.__brakeTrigger);
+  if (buttonMap.__throttleTrigger && throttle > 0.02) mark(buttonMap.__throttleTrigger);
   if (s.gear === 1) mark(buttonMap.__gearUp);
   if (s.gear === -1) mark(buttonMap.__gearDown);
 

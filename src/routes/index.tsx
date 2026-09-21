@@ -44,7 +44,16 @@ function Rig() {
   const [showSettings, setShowSettings] = useState(false);
   const [mode, setMode] = useState<"pad" | "wheel" | "mouse">("pad");
   const stateRef = useRef<ControllerState>(emptyState());
-  const { status, latency, telemetry, telemetryLive, connect, disconnect, sendMouse } = useBridge(stateRef, 240, settings.outputMode);
+  const {
+    status,
+    latency,
+    telemetry,
+    telemetryLive,
+    connect,
+    disconnect,
+    sendMouse,
+    sendControllerEdge,
+  } = useBridge(stateRef, 240, settings.outputMode);
 
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -70,15 +79,21 @@ function Rig() {
   }, []);
 
   const press = useCallback((id: string, down: boolean) => {
+    const previous = Boolean(stateRef.current.buttons?.[id]);
     stateRef.current = {
       ...stateRef.current,
       buttons: { ...stateRef.current.buttons, [id]: down },
     };
-  }, []);
+
+    // Send every real digital edge immediately instead of waiting for the
+    // 240 Hz transport sampler. This preserves sub-frame taps in joy.cpl.
+    if (previous !== down) sendControllerEdge();
+  }, [sendControllerEdge]);
 
   const releaseAll = useCallback(() => {
     stateRef.current = emptyState();
-  }, []);
+    sendControllerEdge();
+  }, [sendControllerEdge]);
 
   useEffect(() => {
     const handleVisibility = () => {

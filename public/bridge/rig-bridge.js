@@ -40,6 +40,39 @@ const os = require("node:os");
 const path = require("node:path");
 const { spawn, spawnSync } = require("node:child_process");
 const { WebSocketServer } = require("ws");
+const BRIDGE_LOG_DIR = path.join(os.tmpdir(), "TouchToSteer");
+const BRIDGE_LOG_FILE = path.join(BRIDGE_LOG_DIR, "bridge.log");
+
+function appendBridgeLog(message) {
+  try {
+    fs.mkdirSync(BRIDGE_LOG_DIR, { recursive: true });
+    fs.appendFileSync(
+      BRIDGE_LOG_FILE,
+      "[" + new Date().toISOString() + "] " + String(message) + "\n",
+    );
+  } catch {
+    /* logging must never interfere with the bridge */
+  }
+}
+
+appendBridgeLog(
+  "Starting TouchToSteer Bridge; packaged=" +
+  (typeof process.pkg !== "undefined") +
+  "; node=" + process.version +
+  "; platform=" + process.platform +
+  "; arch=" + process.arch,
+);
+
+process.on("uncaughtException", (error) => {
+  appendBridgeLog("UNCAUGHT EXCEPTION: " + (error?.stack || error));
+  console.error("TouchToSteer Bridge fatal error:", error?.stack || error);
+  process.exitCode = 1;
+});
+
+process.on("unhandledRejection", (reason) => {
+  appendBridgeLog("UNHANDLED REJECTION: " + (reason?.stack || reason));
+  console.error("TouchToSteer Bridge unhandled rejection:", reason?.stack || reason);
+});
 
 const DRIVER_FILE = "ViGEmBus_1.22.0_x64_x86_arm64.exe";
 const DRIVER_URL =
@@ -356,6 +389,7 @@ try {
 
 console.log("");
 console.log("TouchToSteer Bridge ready.");
+appendBridgeLog("TouchToSteer Bridge ready.");
 const addresses = localIpv4Addresses();
 if (addresses.length) {
   console.log("Phone WebSocket address(es):");

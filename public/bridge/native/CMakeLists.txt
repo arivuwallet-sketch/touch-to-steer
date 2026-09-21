@@ -7,3 +7,9 @@ target_compile_definitions(mouse-injector PRIVATE UNICODE _UNICODE WIN32_LEAN_AN
 set_target_properties(mouse-injector PROPERTIES
   OUTPUT_NAME "mouse-injector"
 )
+
+if(MSVC)
+  # Keep the small native mouse helper independent of a separately installed
+  # Visual C++ redistributable on the end-user PC.
+  set_property(TARGET mouse-injector PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
+endif()

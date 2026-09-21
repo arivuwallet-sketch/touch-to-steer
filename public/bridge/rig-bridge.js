@@ -996,7 +996,9 @@ bindTelemetrySocket(PCARS_PORT, "Project CARS 2 / AMS2", parseProjectCars);
 bindMany(OUTGAUGE_PORTS, "OutGauge", parseOutGauge);
 
 console.log(`Rig bridge listening on ws://0.0.0.0:${PORT}`);
-console.log(`Output target: ${padMode === "universal" ? "Universal (Xbox 360/XInput + DirectInput/HID)" : padMode === "ds4" ? "DualShock 4/HID" : "Xbox 360/XInput"}`);
+console.log(
+  `Default virtual controller target: ${DEFAULT_OUTPUT === "universal" ? "Universal (Xbox 360/XInput + HID/DirectInput)" : DEFAULT_OUTPUT === "ds4" ? "DualShock 4/HID" : "Xbox 360/XInput"}`,
+);
 console.log(`Native telemetry listeners: Forza [${FORZA_PORTS.join(", ")}], F1/Codemasters [${F1_PORT}], DiRT [${DIRT_PORT}], PCARS/AMS2 [${PCARS_PORT}], OutGauge [${OUTGAUGE_PORTS.join(", ")}]`);
 console.log(`EA WRC is not guessed: its native packet structure is configurable. Default documented port is ${WRC_PORT}; use the included WRC structure/config instructions for its exact packet schema.`);
 console.log(`Wreckfest 2 native telemetry is supported by the game on UDP ${WRECKFEST2_PORT}, but its Pino packet is not decoded by this bridge yet rather than showing fabricated values.`);

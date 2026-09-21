@@ -422,15 +422,13 @@ function bindTelemetrySocket(port, name, parser) {
   return socket;
 }
 
-const telemetrySockets = [
-  ...bindMany(FORZA_PORTS, "Forza", parseForza),
-  bindTelemetrySocket(F1_PORT, "F1 / Codemasters", (packet) => {
-    return parseF1(packet) || parseDirtRally(packet);
-  }),
-  bindTelemetrySocket(DIRT_PORT, "DiRT Rally", parseDirtRally),
-  bindTelemetrySocket(PCARS_PORT, "Project CARS 2 / AMS2", parseProjectCars),
-  ...bindMany(OUTGAUGE_PORTS, "OutGauge", parseOutGauge),
-];
+bindMany(FORZA_PORTS, "Forza", parseForza);
+bindTelemetrySocket(F1_PORT, "F1 / Codemasters", (packet) => {
+  return parseF1(packet) || parseDirtRally(packet);
+});
+bindTelemetrySocket(DIRT_PORT, "DiRT Rally", parseDirtRally);
+bindTelemetrySocket(PCARS_PORT, "Project CARS 2 / AMS2", parseProjectCars);
+bindMany(OUTGAUGE_PORTS, "OutGauge", parseOutGauge);
 
 console.log(`Rig bridge listening on ws://0.0.0.0:${PORT}`);
 console.log(`Output target: ${padMode === "ds4" ? "DualShock 4" : "Xbox 360/XInput"}`);

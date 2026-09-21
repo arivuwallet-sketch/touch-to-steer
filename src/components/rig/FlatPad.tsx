@@ -553,7 +553,7 @@ export function FlatPad({ settings, set, press }: Props) {
       <div className="pointer-events-none absolute inset-x-[7%] top-[12%] bottom-[8%] rounded-[34%_34%_42%_42%/18%_18%_44%_44%] border border-white/5 bg-[#0b1118]/70 shadow-[inset_0_0_50px_rgba(0,0,0,.7)]" />
 
       <div className="flat-pad-left absolute bottom-[17%] left-[7%] flex items-center gap-[clamp(1rem,3vw,2.5rem)]">
-        <Stick side="left" settings={settings} onMove={(x, y) => set({ lx: x, ly: y })} onClick3={(d) => press("l3", d)} />
+        <Stick side="left" settings={settings} onMove={(x, y) => set({ lx: x, ly: -y })} onClick3={(d) => press("l3", d)} />
         <ApexDPad settings={settings} press={press} turbo={turbo} />
       </div>
 

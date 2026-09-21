@@ -19,27 +19,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Use Node.js 22
+      - name: Use Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
 
       - name: Download official ViGEmBus installer
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path public/bridge/drivers | Out-Null
           Invoke-WebRequest -Uri "https://github.com/nefarius/ViGEmBus/releases/download/v1.22.0/ViGEmBus_1.22.0_x64_x86_arm64.exe" -OutFile "public/bridge/drivers/ViGEmBus_1.22.0_x64_x86_arm64.exe"
-
-      - name: Install ViGEmBus on CI runner
-        shell: pwsh
-        run: |
-          $installer = "public/bridge/drivers/ViGEmBus_1.22.0_x64_x86_arm64.exe"
-          $process = Start-Process -FilePath $installer -ArgumentList "/exenoui", "/qn", "/norestart" -Wait -PassThru
-          Write-Host "ViGEmBus installer exit code: $($process.ExitCode)"
-          if ($process.ExitCode -notin @(0, 1641, 3010)) {
-            throw "ViGEmBus installation failed with exit code $($process.ExitCode)"
-          }
-          Start-Sleep -Seconds 3
 
       - name: Install bridge dependencies
         working-directory: public/bridge
@@ -87,6 +76,11 @@ jobs:
             Get-Content $log -ErrorAction SilentlyContinue
             Get-Content $errlog -ErrorAction SilentlyContinue
             throw "Packaged bridge did not report readiness."
+          }
+          if ($output -notmatch "ViGEm native addon loaded") {
+            Get-Content $log -ErrorAction SilentlyContinue
+            Get-Content $errlog -ErrorAction SilentlyContinue
+            throw "Packaged bridge could not load the ViGEm native addon."
           }
           if ($output -notmatch "Virtual Xbox 360 target added to ViGEmBus") {
             Get-Content $log -ErrorAction SilentlyContinue

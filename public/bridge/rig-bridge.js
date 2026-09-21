@@ -79,6 +79,94 @@ function restartPackagedBridge() {
   }
 }
 
+let mouseInjector = null;
+
+function findMouseInjector() {
+  const packaged = path.join(__dirname, "native", "mouse-injector.exe");
+  if (isPackagedBridge()) return packaged;
+  const local = path.join(__dirname, "native", "mouse-injector.exe");
+  return fs.existsSync(local) ? local : null;
+}
+
+function preparePackagedMouseInjector() {
+  const source = findMouseInjector();
+  if (!source) return null;
+  if (!isPackagedBridge()) return source;
+
+  const outDir = path.join(os.tmpdir(), "TouchToSteer");
+  const outFile = path.join(outDir, "mouse-injector.exe");
+  try {
+    fs.mkdirSync(outDir, { recursive: true });
+    if (!fs.existsSync(outFile)) {
+      fs.writeFileSync(outFile, fs.readFileSync(source));
+    }
+    return outFile;
+  } catch (err) {
+    console.warn("Could not unpack mouse injector:", err.message);
+    return null;
+  }
+}
+
+function startMouseInjector() {
+  if (mouseInjector && !mouseInjector.killed) return mouseInjector;
+  if (process.platform !== "win32") return null;
+
+  const executable = preparePackagedMouseInjector();
+  if (!executable) return null;
+
+  try {
+    mouseInjector = spawn(executable, [], {
+      stdio: ["pipe", "ignore", "ignore"],
+      windowsHide: true,
+    });
+    mouseInjector.on("error", () => {
+      mouseInjector = null;
+    });
+    mouseInjector.on("close", () => {
+      mouseInjector = null;
+    });
+    return mouseInjector;
+  } catch {
+    mouseInjector = null;
+    return null;
+  }
+}
+
+function sendMouseNative(message) {
+  const proc = startMouseInjector();
+  if (!proc?.stdin || proc.stdin.destroyed) return false;
+
+  try {
+    switch (message.action) {
+      case "move": {
+        const dx = Math.trunc(clamp(message.dx, -32767, 32767));
+        const dy = Math.trunc(clamp(message.dy, -32767, 32767));
+        if (dx || dy) proc.stdin.write(`MOVE ${dx} ${dy}\n`);
+        break;
+      }
+      case "button": {
+        const allowed = new Set(["left", "right", "middle", "back", "forward"]);
+        if (!allowed.has(message.button)) return false;
+        proc.stdin.write(`BUTTON ${message.button} ${message.down ? "DOWN" : "UP"}\n`);
+        break;
+      }
+      case "wheel": {
+        const delta = Math.trunc(clamp(message.delta, -32768, 32768));
+        if (delta) proc.stdin.write(`WHEEL ${delta}\n`);
+        break;
+      }
+      case "reset":
+        proc.stdin.write("RESET\n");
+        break;
+      default:
+        return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function installBundledDriverAndRestart() {
   const source = bundledDriverPath();
   if (!source) return false;
@@ -624,6 +712,11 @@ wss.on("connection", (ws) => {
       return;
     }
 
+    if (msg.type === "mouse") {
+      sendMouseNative(msg);
+      return;
+    }
+
     if (msg.type === "state") {
       apply(msg);
 
@@ -642,6 +735,7 @@ wss.on("connection", (ws) => {
 
   ws.on("close", () => {
     ackState.delete(ws);
+    sendMouseNative({ action: "reset" });
     lastAppliedSignature = "";
     if (pad) {
       try {

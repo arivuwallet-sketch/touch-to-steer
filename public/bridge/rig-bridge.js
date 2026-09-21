@@ -369,22 +369,93 @@ const ackState = new WeakMap();
 let latestState = null;
 let applyScheduled = false;
 
+// Keep analog input coalesced, but never coalesce away a digital transition.
+// A very fast tap produces DOWN -> UP across two 240 Hz state snapshots; both
+// snapshots must reach ViGEm even when they arrive before the next event-loop
+// turn. Only digital edge snapshots are queued, so this cannot grow with the
+// continuous 240 Hz analog stream.
+const MAX_DIGITAL_EDGE_QUEUE = 64;
+const DIGITAL_EDGE_MIN_MS = 1000 / 240;
+let pendingDigitalStates = [];
+let lastReceivedDigitalSignature = "";
+let lastAppliedDigitalSignature = "";
+let lastDigitalAppliedAt = 0;
+
+function digitalSignature(s) {
+  const buttons = s?.buttons || {};
+  const pressed = Object.keys(buttons)
+    .filter((id) => Boolean(buttons[id]))
+    .sort();
+
+  if (clamp(s?.handbrake, 0, 1) > 0.5) pressed.push("__handbrake__");
+  if (clamp(s?.nitro, 0, 1) > 0.5) pressed.push("__nitro__");
+  if (Number(s?.gear) === 1) pressed.push("__gear_up__");
+  if (Number(s?.gear) === -1) pressed.push("__gear_reverse__");
+
+  return pressed.join(",");
+}
+
+function queueControllerState(state) {
+  const signature = digitalSignature(state);
+
+  if (signature !== lastReceivedDigitalSignature) {
+    lastReceivedDigitalSignature = signature;
+    pendingDigitalStates.push(state);
+
+    // A 64-edge safety cap prevents pathological input from ever becoming
+    // an unbounded latency queue while still preserving rapid human taps.
+    if (pendingDigitalStates.length > MAX_DIGITAL_EDGE_QUEUE) {
+      pendingDigitalStates = pendingDigitalStates.slice(-MAX_DIGITAL_EDGE_QUEUE);
+    }
+  }
+
+  // Analog values always use the freshest snapshot.
+  latestState = state;
+}
+
 function flushState() {
   applyScheduled = false;
-  const state = latestState;
-  latestState = null;
+
+  const state = pendingDigitalStates.length
+    ? pendingDigitalStates.shift()
+    : latestState;
+
+  if (state === latestState) latestState = null;
   if (!state) return;
+
+  const digital = digitalSignature(state);
+  if (digital !== lastAppliedDigitalSignature) {
+    const elapsed = performance.now?.() - lastDigitalAppliedAt;
+    const remaining =
+      lastDigitalAppliedAt > 0 && Number.isFinite(elapsed)
+        ? DIGITAL_EDGE_MIN_MS - elapsed
+        : 0;
+
+    // Keep a lightning tap visible for at least one 240 Hz report interval.
+    // This is tiny enough to preserve low latency, while preventing a DOWN
+    // report and its following UP report from collapsing into an invisible
+    // sub-millisecond pulse in joy.cpl.
+    if (remaining > 0) {
+      applyScheduled = true;
+      setTimeout(flushState, remaining);
+      return;
+    }
+  }
 
   try {
     apply(state);
+    if (digital !== lastAppliedDigitalSignature) {
+      lastAppliedDigitalSignature = digital;
+      lastDigitalAppliedAt = performance.now?.() || Date.now();
+    }
   } catch (err) {
     console.warn("Failed to apply controller state:", err?.message || err);
     appendBridgeLog("APPLY ERROR: " + (err?.stack || err));
   }
 
-  // Another packet may have arrived while this one was being applied --
-  // catch up immediately instead of waiting for the next network message.
-  if (latestState) scheduleApply();
+  // Another digital edge or a newer analog snapshot may have arrived while
+  // the native report was being applied.
+  if (pendingDigitalStates.length || latestState) scheduleApply();
 }
 
 function scheduleApply() {
@@ -1026,6 +1097,11 @@ wss.on("connection", (ws) => {
 
   console.log("Phone connected.");
   lastAppliedSignature = "";
+  latestState = null;
+  pendingDigitalStates = [];
+  lastReceivedDigitalSignature = "";
+  lastAppliedDigitalSignature = "";
+  lastDigitalAppliedAt = 0;
 
   ws.on("message", (raw) => {
     let msg;
@@ -1099,7 +1175,7 @@ wss.on("connection", (ws) => {
     }
 
     if (msg.type === "state") {
-      latestState = msg;
+      queueControllerState(msg);
       scheduleApply();
 
       // ACKs are diagnostic only. Sending one WebSocket packet back for every
@@ -1121,6 +1197,10 @@ wss.on("connection", (ws) => {
     ackState.delete(ws);
     sendMouseNative({ action: "reset" });
     latestState = null;
+    pendingDigitalStates = [];
+    lastReceivedDigitalSignature = "";
+    lastAppliedDigitalSignature = "";
+    lastDigitalAppliedAt = 0;
     lastAppliedSignature = "";
     if (pad) {
       try {

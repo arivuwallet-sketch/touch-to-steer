@@ -23,36 +23,32 @@ export const Route = createFileRoute("/setup")({
 
 const steps = [
   {
-    t: "1. Install the driver",
-    d: "On the PC, install the ViGEmBus virtual gamepad driver. The original project is retired, but its final Windows 10/11 installer is still available from the official Nefarius GitHub releases page.",
+    t: "1. Download the Windows bridge",
+    d: "Download the packaged TouchToSteer bridge below. It already contains its own Node.js runtime and native bridge dependencies, so you do not need Node.js, npm, Git, Git Bash, Visual Studio, or C++ build tools on the gaming PC.",
   },
   {
-    t: "2. Install the C++ build tools",
-    d: "Install Visual Studio Build Tools 2022 and select the Desktop development with C++ workload. The vigemclient package contains native C++ code and node-gyp needs a Visual C++ compiler to build it.",
+    t: "2. Run TouchToSteer-Bridge.exe",
+    d: "Double-click the EXE. The first run checks for ViGEmBus. When it is missing, the bridge launches the bundled official installer and restarts automatically after setup.",
   },
   {
-    t: "3. Install Node.js",
-    d: "Install Node.js 18 or newer. Your current Node.js 24 installation is okay; reopen the terminal after installing the C++ tools.",
+    t: "3. Allow Windows administrator access",
+    d: "Windows may show a UAC prompt for the virtual-controller driver. Approve it. This is the only driver installation required for XInput/Xbox 360 or DS4 virtual output.",
   },
   {
-    t: "4. Get the bridge",
-    d: "Download rig-bridge.js below into an empty folder, open that folder in a terminal, and run: npm init -y && npm i ws vigemclient",
+    t: "4. Connect the phone",
+    d: "Put the phone and PC on the same Wi-Fi. The bridge window prints one or more ws://<PC-IP>:8787 addresses. Enter the matching address in the phone Settings panel and tap Connect.",
   },
   {
-    t: "5. Start it",
-    d: "Run: node rig-bridge.js. Allow Node through the Windows Firewall on Private networks. The bridge keeps the WebSocket controller path and native telemetry listeners in one process.",
+    t: "5. Play",
+    d: "The phone now appears to Windows as a virtual game controller. Switch between joystick and steering-wheel modes from the phone without changing the PC setup.",
   },
   {
-    t: "6. Pair the phone",
-    d: "Phone and PC must be on the same Wi-Fi. On the phone, open Setup and enter ws://<PC-IP>:8787, then tap Connect.",
+    t: "6. Optional: enable native game telemetry",
+    d: "Point the game's built-in telemetry/Data Out feature at the PC IP and its supported UDP port listed below. The phone gauges remain -- / NO SIGNAL until genuine game packets arrive.",
   },
   {
-    t: "7. Enable native game telemetry",
-    d: "Point the game's built-in telemetry/Data Out feature at the PC IP and the game's supported UDP port listed below. The phone gauges remain -- / NO SIGNAL until genuine game packets arrive.",
-  },
-  {
-    t: "8. Play",
-    d: "Steering mode displays live speed, RPM and gear from supported native telemetry. No speed or RPM simulation is generated.",
+    t: "7. Live driving data",
+    d: "Steering mode can display live speed, RPM and gear from supported native telemetry. No speed or RPM simulation is generated.",
   },
 ];
 
@@ -64,8 +60,9 @@ function Setup() {
       </Link>
       <h1 className="mt-4 text-3xl font-bold">Connect to your PC</h1>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-        A web page can't reach a game on its own, so a tiny helper runs on the PC and turns what your
-        phone sends into a genuine virtual gamepad. Set it up once; after that it's just tap and play.
+        A web page cannot create a Windows XInput/DS4 device by itself, so TouchToSteer uses a small
+        packaged Windows bridge. Download it once and run it on the PC — no developer toolchain is
+        required on the gaming computer.
       </p>
 
       <ol className="mt-6 space-y-3">
@@ -79,52 +76,32 @@ function Setup() {
 
       <div className="mt-4 flex flex-wrap gap-3">
         <a
+          href="https://github.com/arivuwallet-sketch/touch-to-steer/releases/download/bridge-latest/TouchToSteer-Bridge-Windows.zip"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex rounded-xl px-5 py-3 text-sm font-bold uppercase tracking-widest text-primary-foreground glow"
+          style={{ background: "var(--gradient-primary)" }}
+        >
+          Download Windows Bridge
+        </a>
+        <a
           href="https://github.com/nefarius/ViGEmBus/releases/latest"
           target="_blank"
           rel="noreferrer"
           className="inline-flex rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold uppercase tracking-widest text-white hover:bg-white/10"
         >
-          Install ViGEmBus
-        </a>
-        <a
-          href="https://visualstudio.microsoft.com/visual-cpp-build-tools/"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold uppercase tracking-widest text-white hover:bg-white/10"
-        >
-          Install C++ Build Tools
+          Driver fallback
         </a>
       </div>
 
-      <button
-        type="button"
-        onClick={async () => {
-          try {
-            const response = await fetch("/bridge/rig-bridge.js", { cache: "no-store" });
-            if (!response.ok) throw new Error("Bridge file unavailable");
-            const source = await response.text();
-            if (!source.includes("Mobile Rig -> PC low-latency bridge")) {
-              throw new Error("Bridge file content was not returned");
-            }
-
-            const blob = new Blob([source], { type: "application/octet-stream" });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = "rig-bridge.js";
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-          } catch {
-            window.open("/bridge/rig-bridge.js", "_blank", "noopener,noreferrer");
-          }
-        }}
-        className="mt-6 inline-flex rounded-xl px-5 py-3 text-sm font-bold uppercase tracking-widest text-primary-foreground glow"
-        style={{ background: "var(--gradient-primary)" }}
-      >
-        Download rig-bridge.js
-      </button>
+      <div className="panel mt-4 p-4">
+        <h2 className="text-base font-bold">One-click Windows setup</h2>
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+          The Windows bridge package is built automatically from this project. It contains the bridge
+          executable plus the official ViGEmBus installer used on first launch, so the gaming PC does
+          not need Node.js or a C++ compiler.
+        </p>
+      </div>
 
       <div className="panel mt-6 p-4">
         <h2 className="text-base font-bold">Native telemetry supported</h2>
@@ -162,20 +139,18 @@ function Setup() {
       </div>
 
       <div className="panel mt-6 p-4">
-        <h2 className="text-base font-bold">If npm install fails with node-gyp</h2>
+        <h2 className="text-base font-bold">Developer build (optional)</h2>
         <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-          An error such as “could not use Visual Studio”, “Failure details: undefined”, or
-          “Desktop development with C++” means the native C++ compiler is missing. Install the
-          C++ Build Tools above, reopen Command Prompt, then run the install command again.
-          If a previous failed install left a locked node_modules folder, close Node/VS Code and
-          remove node_modules before retrying.
+          Developers can still run the raw rig-bridge.js with Node.js and npm, but that path is no
+          longer required for normal users. The downloadable Windows EXE is the intended end-user
+          setup.
         </p>
       </div>
 
       <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
-        Games that only read keyboard input can still work: pair the virtual pad with a key-mapping
-        tool such as Steam Input or reWASD. On macOS and Linux the bridge runs in echo mode only,
-        since the virtual-pad driver is Windows-only.
+        Games that only read keyboard input can still work with Steam Input or a separate key-mapping
+        tool. The packaged virtual-controller path is Windows-only because XInput/DS4 emulation uses
+        the Windows virtual gamepad driver.
       </p>
     </main>
   );

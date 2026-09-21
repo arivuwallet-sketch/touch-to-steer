@@ -250,6 +250,31 @@ export function useBridge(
     [clearTelemetryTimer, disconnect],
   );
 
+  const sendControllerEdge = useCallback(() => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return false;
+
+    // Digital button transitions must not wait for the 240 Hz state sampler.
+    // A lightning-fast tap can otherwise happen entirely between two pump
+    // ticks and never reach the bridge at all. Send the complete current
+    // controller snapshot immediately; the bridge applies edge snapshots
+    // synchronously while continuous state traffic remains coalesced.
+    try {
+      ws.send(
+        JSON.stringify({
+          type: "state",
+          priority: "edge",
+          t: Date.now(),
+          seq: ++packetCounterRef.current,
+          ...stateRef.current,
+        }),
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  }, [stateRef]);
+
   const sendMouse = useCallback(
     (message: {
       action: "move" | "button" | "wheel" | "reset" | "center";
@@ -294,5 +319,15 @@ export function useBridge(
     [flushMove],
   );
 
-  return { status, latency, packets, telemetry, telemetryLive, connect, disconnect, sendMouse };
+  return {
+    status,
+    latency,
+    packets,
+    telemetry,
+    telemetryLive,
+    connect,
+    disconnect,
+    sendMouse,
+    sendControllerEdge,
+  };
 }

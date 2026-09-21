@@ -35,10 +35,10 @@ type PermissionDeviceOrientation = typeof DeviceOrientationEvent & {
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 // Gyro aiming is tuned for a TV-style air-mouse feel: direct angular motion,
  // high initial gain, and acceleration at faster wrist turns.
-const MOTION_BASE_PIXELS_PER_DEGREE = 24;
-const MOTION_MAX_PIXELS_PER_DEGREE = 52;
-const ORIENTATION_BASE_PIXELS_PER_DEGREE = 20;
-const GYRO_DEADZONE_DEG_PER_SEC = 0.35;
+const MOTION_BASE_PIXELS_PER_DEGREE = 18;
+const MOTION_MAX_PIXELS_PER_DEGREE = 42;
+const ORIENTATION_BASE_PIXELS_PER_DEGREE = 16;
+const GYRO_DEADZONE_DEG_PER_SEC = 0.18;
 
 function rotateDelta(dx: number, dy: number, deg: number) {
   const r = (deg * Math.PI) / 180;
@@ -333,17 +333,17 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
 
       // Magic-Remote style acceleration: slow wrist corrections stay precise,
       // faster turns accelerate the cursor without adding temporal smoothing.
-      const acceleration = 1 + clamp(angularSpeed / 65, 0, 1) * 1.4;
+      const acceleration = 1 + clamp(angularSpeed / 90, 0, 1) * 0.85;
       const pixelsPerDegree =
         clamp(MOTION_BASE_PIXELS_PER_DEGREE * acceleration, MOTION_BASE_PIXELS_PER_DEGREE, MOTION_MAX_PIXELS_PER_DEGREE) *
         settings.mouseGyroSensitivity;
 
-      // Phone gyro axes are opposite to the desired on-screen pointer axes.
-      // Keep both raw axes inverted; transmitMove applies the user's optional
-      // Y inversion setting and DPI scaling exactly once.
+      // Air-mouse mapping: rotating the phone to the right moves the
+      // pointer right; pitching the phone upward moves the pointer upward.
+      // transmitMove applies the user's optional Y inversion and DPI scaling.
       transmitMove(
-        -gamma * dt * pixelsPerDegree,
-        -beta * dt * pixelsPerDegree,
+        gamma * dt * pixelsPerDegree,
+        beta * dt * pixelsPerDegree,
       );
     };
 
@@ -367,7 +367,7 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
       const distance = Math.hypot(dx, dy);
       if (distance < 0.025) return;
 
-      const acceleration = 1 + clamp(distance / 4.5, 0, 1) * 1.2;
+      const acceleration = 1 + clamp(distance / 5.5, 0, 1) * 0.65;
       const pixelsPerDegree =
         clamp(
           ORIENTATION_BASE_PIXELS_PER_DEGREE * acceleration,
@@ -375,8 +375,8 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
           MOTION_MAX_PIXELS_PER_DEGREE,
         ) * settings.mouseGyroSensitivity;
       transmitMove(
-        -dx * pixelsPerDegree,
-        -dy * pixelsPerDegree,
+        dx * pixelsPerDegree,
+        dy * pixelsPerDegree,
       );
     };
 

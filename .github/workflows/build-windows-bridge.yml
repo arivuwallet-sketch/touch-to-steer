@@ -104,7 +104,7 @@ jobs:
           # GitHub-hosted Windows runners do not have the ViGEmBus kernel
           # driver installed. VIGEM_ERROR_BUS_NOT_FOUND is therefore an
           # expected CI result; the local user machine will supply the driver.
-          if ($output -notmatch "ViGEm unavailable - running in echo-only mode" -and $output -notmatch "Virtual Xbox 360 / XInput target added") {
+          if ($output -notmatch "ViGEm unavailable - running in echo-only mode" -and $output -notmatch "Virtual .*Xbox 360.*target added") {
             Get-Content $log -ErrorAction SilentlyContinue
             Get-Content $errlog -ErrorAction SilentlyContinue
             throw "Packaged bridge did not initialize ViGEm cleanly."

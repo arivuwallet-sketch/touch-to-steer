@@ -26,7 +26,7 @@ const nowMs = () => (typeof performance !== "undefined" ? performance.now() : Da
 export function useBridge(
   stateRef: React.MutableRefObject<ControllerState>,
   rateHz: number,
-  outputMode: "xinput" | "ds4" = "xinput",
+  outputMode: "xinput" | "ds4" | "universal" = "universal",
 ) {
   const [status, setStatus] = useState<BridgeStatus>("idle");
   const [latency, setLatency] = useState<number | null>(null);

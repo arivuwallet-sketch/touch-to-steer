@@ -92,6 +92,10 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
   const [pressed, setPressed] = useState<MouseButton | null>(null);
   const [dpiFlash, setDpiFlash] = useState(false);
 
+  useEffect(() => {
+    setGyroOn(settings.mouseGyroEnabled);
+  }, [settings.mouseGyroEnabled]);
+
   const transmitMove = useCallback(
     (dx: number, dy: number) => {
       if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;

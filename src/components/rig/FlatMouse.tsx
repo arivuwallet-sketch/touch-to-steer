@@ -33,8 +33,12 @@ type PermissionDeviceOrientation = typeof DeviceOrientationEvent & {
 };
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
-const MOTION_PIXELS_PER_DEGREE = 12;
-const ORIENTATION_PIXELS_PER_DEGREE = 10;
+// Gyro aiming is tuned for a TV-style air-mouse feel: direct angular motion,
+ // high initial gain, and acceleration at faster wrist turns.
+const MOTION_BASE_PIXELS_PER_DEGREE = 24;
+const MOTION_MAX_PIXELS_PER_DEGREE = 52;
+const ORIENTATION_BASE_PIXELS_PER_DEGREE = 20;
+const GYRO_DEADZONE_DEG_PER_SEC = 0.35;
 
 function rotateDelta(dx: number, dy: number, deg: number) {
   const r = (deg * Math.PI) / 180;
@@ -316,18 +320,30 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
       const rate = event.rotationRate;
       if (!rate) return;
 
-      const beta = Number(rate.beta) || 0;
-      const gamma = Number(rate.gamma) || 0;
-      if (Math.abs(beta) < 0.03 && Math.abs(gamma) < 0.03) return;
+      let beta = Number(rate.beta) || 0;
+      let gamma = Number(rate.gamma) || 0;
+
+      const angularSpeed = Math.hypot(beta, gamma);
+      if (angularSpeed < GYRO_DEADZONE_DEG_PER_SEC) return;
 
       const now = performance.now();
       const previous = lastMotionSample.current;
       lastMotionSample.current = now;
-      const dt = previous > 0 ? clamp((now - previous) / 1000, 0.004, 0.04) : 1 / 60;
+      const dt = previous > 0 ? clamp((now - previous) / 1000, 0.008, 0.033) : 1 / 60;
 
+      // Magic-Remote style acceleration: slow wrist corrections stay precise,
+      // faster turns accelerate the cursor without adding temporal smoothing.
+      const acceleration = 1 + clamp(angularSpeed / 65, 0, 1) * 1.4;
+      const pixelsPerDegree =
+        clamp(MOTION_BASE_PIXELS_PER_DEGREE * acceleration, MOTION_BASE_PIXELS_PER_DEGREE, MOTION_MAX_PIXELS_PER_DEGREE) *
+        settings.mouseGyroSensitivity;
+
+      // Phone gyro axes are opposite to the desired on-screen pointer axes.
+      // Invert both axes by default; mouseInvertY can intentionally flip Y back.
+      const invertY = settings.mouseInvertY ? 1 : -1;
       transmitMove(
-        gamma * dt * MOTION_PIXELS_PER_DEGREE * settings.mouseGyroSensitivity,
-        beta * dt * MOTION_PIXELS_PER_DEGREE * settings.mouseGyroSensitivity,
+        -gamma * dt * pixelsPerDegree * (settings.mouseDpi / 1600),
+        -beta * dt * pixelsPerDegree * (settings.mouseDpi / 1600) * invertY,
       );
     };
 
@@ -348,11 +364,21 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
 
       const dx = clamp(current.gamma - previous.gamma, -8, 8);
       const dy = clamp(current.beta - previous.beta, -8, 8);
-      if (Math.abs(dx) < 0.03 && Math.abs(dy) < 0.03) return;
+      const distance = Math.hypot(dx, dy);
+      if (distance < 0.025) return;
+
+      const acceleration = 1 + clamp(distance / 4.5, 0, 1) * 1.2;
+      const pixelsPerDegree =
+        clamp(
+          ORIENTATION_BASE_PIXELS_PER_DEGREE * acceleration,
+          ORIENTATION_BASE_PIXELS_PER_DEGREE,
+          MOTION_MAX_PIXELS_PER_DEGREE,
+        ) * settings.mouseGyroSensitivity;
+      const invertY = settings.mouseInvertY ? 1 : -1;
 
       transmitMove(
-        dx * ORIENTATION_PIXELS_PER_DEGREE * settings.mouseGyroSensitivity,
-        dy * ORIENTATION_PIXELS_PER_DEGREE * settings.mouseGyroSensitivity,
+        -dx * pixelsPerDegree * (settings.mouseDpi / 1600),
+        -dy * pixelsPerDegree * (settings.mouseDpi / 1600) * invertY,
       );
     };
 

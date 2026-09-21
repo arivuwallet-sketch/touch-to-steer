@@ -50,6 +50,16 @@ static void wheelMouse(LONG delta) {
     inject(input);
 }
 
+static void centerMouse() {
+    // Synchronize the PC cursor with the logical origin represented by the
+    // phone's centered air-mouse surface.
+    const int width = GetSystemMetrics(SM_CXSCREEN);
+    const int height = GetSystemMetrics(SM_CYSCREEN);
+    if (width > 0 && height > 0) {
+        SetCursorPos(width / 2, height / 2);
+    }
+}
+
 int main() {
     std::ios::sync_with_stdio(false);
     std::cin.tie(nullptr);
@@ -88,6 +98,12 @@ int main() {
         if (command == "RESET") {
             const char* buttons[] = {"left", "right", "middle", "back", "forward"};
             for (const char* button : buttons) buttonMouse(button, false);
+            continue;
+        }
+
+        if (command == "CENTER") {
+            centerMouse();
+            continue;
         }
     }
 

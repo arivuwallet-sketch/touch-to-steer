@@ -59,7 +59,21 @@ function Rig() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       try {
-        setSettings({ ...defaultSettings, ...JSON.parse(raw) });
+        const saved = { ...defaultSettings, ...JSON.parse(raw) } as Settings;
+
+        // One-time compatibility migration: older builds could persist the
+        // DS4 target, which Windows labels "Wireless Controller". Use the
+        // XInput/Xbox 360 target by default so older games and XInput titles
+        // see the same controller class as a physical Xbox 360 pad.
+        const migrationKey = "mobile-rig-xinput-migration-v1";
+        const migrated = localStorage.getItem(migrationKey) === "1";
+        if (!migrated && saved.outputMode === "ds4") {
+          saved.outputMode = "xinput";
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+          localStorage.setItem(migrationKey, "1");
+        }
+
+        setSettings(saved);
       } catch {
         /* keep defaults */
       }

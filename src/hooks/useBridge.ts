@@ -34,6 +34,7 @@ export function useBridge(
   const [telemetry, setTelemetry] = useState<BridgeTelemetry>({});
   const [telemetryLive, setTelemetryLive] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
+  const mouseLastSendRef = useRef(0);
   const telemetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const packetCounterRef = useRef(0);
@@ -196,5 +197,37 @@ export function useBridge(
     clearTelemetryTimer();
   }, [clearTelemetryTimer, disconnect]);
 
-  return { status, latency, packets, telemetry, telemetryLive, connect, disconnect };
+  const sendMouse = useCallback((message: {
+    action: "move" | "button" | "wheel" | "reset";
+    dx?: number;
+    dy?: number;
+    button?: "left" | "right" | "middle" | "back" | "forward";
+    down?: boolean;
+    delta?: number;
+  }) => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return false;
+
+    // Mouse movement is event-driven rather than forced through the controller
+    // 240 Hz timer. This keeps every coalesced pointer/gyro delta on the hot path.
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const minInterval = message.action === "move" ? 1000 / 8000 : 0;
+    if (minInterval > 0 && now - mouseLastSendRef.current < minInterval) {
+      return false;
+    }
+
+    try {
+      ws.send(JSON.stringify({
+        type: "mouse",
+        t: Date.now(),
+        ...message,
+      }));
+      mouseLastSendRef.current = now;
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  return { status, latency, packets, telemetry, telemetryLive, connect, disconnect, sendMouse };
 }

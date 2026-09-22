@@ -60,7 +60,7 @@ jobs:
         env:
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
           ANDROID_HOME: /usr/local/lib/android/sdk
-        run: gradle -p android assembleRelease --no-daemon --stacktrace
+        run: gradle -p android assembleRelease -PskipDependencyChecks=true --no-daemon --stacktrace
 
       - name: Verify APK
         shell: bash

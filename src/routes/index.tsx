@@ -19,7 +19,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Apex5ControllerScene, LandingBackground } from "@/components/landing/LandingScene";
+import { Apex5ControllerScene, LandingScene } from "@/components/landing/LandingScene";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -230,48 +230,13 @@ function LandingPage() {
         </header>
 
         <section className="spectral-hero" id="system">
-          <div className="spectral-hero-copy">
-            <div className="spectral-status-line">
-              <span className="spectral-status-dot" />
-              SPECTRAL CONTROL SYSTEM / ONLINE
+          <div className="spectral-hero-background" aria-hidden="true">
+            <LandingScene />
+            <div className="spectral-hero-background-sheen" />
+            <div className="spectral-background-hud">
+              <span>IMMERSIVE SIGNAL FIELD</span>
+              <strong>3D TRACKING / LIVE MOTION</strong>
             </div>
-
-            <p className="spectral-kicker">PHONE → PC / LOW-LATENCY INPUT</p>
-            <h1>
-              CONTROL
-              <span>HAS A</span>
-              <em>NEW GHOST.</em>
-            </h1>
-
-            <p className="spectral-hero-description">
-              TouchToSteer turns the device already in your hand into a virtual gamepad,
-              steering wheel and precision mouse — wrapped in a living 3D signal that
-              follows your movement.
-            </p>
-
-            <div className="spectral-hero-actions">
-              <Link to="/controller" className="spectral-primary">
-                Get started
-                <ArrowUpRight size={18} />
-              </Link>
-              <a href="#features" className="spectral-secondary">
-                Explore capability <ArrowDown size={16} />
-              </a>
-            </div>
-
-            <div className="spectral-mode-readout">
-              {capabilities.map(([name, desc]) => (
-                <div key={name}>
-                  <strong>{name}</strong>
-                  <span>{desc}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="spectral-hero-backdrop">
-            <LandingBackground />
-            <div className="spectral-hero-backdrop-sheen" />
           </div>
 
           <div className="spectral-hero-copy">
@@ -280,7 +245,7 @@ function LandingPage() {
               SPECTRAL CONTROL SYSTEM / ONLINE
             </div>
 
-            <p className="spectral-kicker">PHONE → PC / LOW-LATENCY INPUT</p>
+            <p className="spectral-kicker">FLYDIGI APEX 5 / PHONE → PC</p>
             <h1>
               CONTROL
               <span>HAS A</span>
@@ -324,14 +289,12 @@ function LandingPage() {
             </div>
             <div className="spectral-stage-id">APEX / 005</div>
             <div className="spectral-controller-reticle" />
+            <div className="spectral-controller-caption">
+              <span>FLYDIGI APEX 5</span>
+              <strong>REAL-TIME POINTER FOLLOW</strong>
+            </div>
             <Apex5ControllerScene />
           </div>
-        </section>
-
-        <section className="spectral-scroll-banner">
-          <span>01 / SYSTEM</span>
-          <strong>THE CONTROL SURFACE IS ALIVE.</strong>
-          <span>SCROLL TO DECODE</span>
         </section>
 
         <section className="spectral-section spectral-section-dark" id="features">

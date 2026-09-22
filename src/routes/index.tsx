@@ -54,7 +54,7 @@ function Rig() {
     sendMouse,
     sendControllerStateNow,
     sendControllerEdge,
-  } = useBridge(stateRef, 240, settings.outputMode);
+  } = useBridge(stateRef, settings.sendRateHz, settings.outputMode);
 
   useEffect(() => {
     const migrationKey = "mobile-rig-universal-migration-v3";
@@ -182,7 +182,7 @@ function Rig() {
       {/* ---------- rig fills the screen ---------- */}
       <div className="absolute inset-0">
         {mode === "pad" ? (
-          <FlatPad settings={settings} set={set} press={press} />
+          <FlatPad settings={settings} set={set} press={press} onSettingsChange={patch} />
         ) : mode === "wheel" ? (
           <FlatWheel settings={settings} set={set} press={press} telemetry={telemetry} telemetryLive={telemetryLive} onSettingsChange={patch} />
         ) : (

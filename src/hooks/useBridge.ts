@@ -18,7 +18,7 @@ const nowMs = () => (typeof performance !== "undefined" ? performance.now() : Da
 
 /**
  * Low-latency state transport:
- * - target rate is capped at 240 Hz (~4.17 ms cadence)
+ * - target rate is selectable up to 240 Hz (~4.17 ms minimum cadence)
  * - self-scheduling avoids interval drift
  * - only the newest controller state is sent
  * - browser/transport buffering is bounded so stale input is not accumulated
@@ -43,6 +43,11 @@ export function useBridge(
   const lastLatencyPaintRef = useRef(0);
   const lastSentStateRef = useRef("");
   const lastHeartbeatRef = useRef(0);
+  const rateHzRef = useRef(rateHz);
+
+  useEffect(() => {
+    rateHzRef.current = rateHz;
+  }, [rateHz]);
 
   const stateSignature = useCallback(() => JSON.stringify(stateRef.current), [stateRef]);
 
@@ -149,7 +154,7 @@ export function useBridge(
               client: "mobile-rig",
               version: 3,
               transport: "websocket",
-              rateHz: clampRate(rateHz),
+              rateHz: clampRate(rateHzRef.current),
               output: outputMode,
             }),
           );
@@ -190,7 +195,7 @@ export function useBridge(
             }
           }
 
-          const period = 1000 / clampRate(rateHz);
+          const period = 1000 / clampRate(rateHzRef.current);
           nextDue += period;
           if (nextDue < currentTime - period * 2) nextDue = currentTime + period;
           timerRef.current = setTimeout(pump, Math.max(0, nextDue - currentTime));
@@ -289,7 +294,7 @@ export function useBridge(
     if (!ws || ws.readyState !== WebSocket.OPEN) return false;
 
     // Live analog controls use a dedicated hot lane. The bridge applies these
-    // snapshots immediately; the 240 Hz pump remains as a safety/refresh lane.
+    // snapshots immediately; the selected-rate pump remains as a safety/refresh lane.
     // This matters most for steering, accelerator, brake and other pedal axes.
     if (ws.bufferedAmount >= 32_768) return false;
 

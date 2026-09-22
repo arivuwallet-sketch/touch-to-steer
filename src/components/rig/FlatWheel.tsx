@@ -735,6 +735,14 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
     setWheelRaw(ratio);
   }, [cancelCentre, maxLockDeg, setWheelRaw]);
 
+  const cycleSendRate = () => {
+    const values: Settings["sendRateHz"][] = [60, 120, 144, 180, 240];
+    const index = values.indexOf(settings.sendRateHz);
+    const next = values[(index >= 0 ? index + 1 : 0) % values.length] ?? 240;
+    buzz(settings.vibration, 8);
+    onSettingsChange({ sendRateHz: next });
+  };
+
   const selectDegrees = (deg: number) => {
     if (deg === settings.wheelRotationDeg) return;
     buzz(settings.vibration, 8);
@@ -762,7 +770,7 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
             ? `Touch ${settings.wheelRotationDeg}° wheel • Auto-centre`
             : gyroReady
               ? "Gyro steering"
-              : "Gyro permission required"}
+              : "Gyro permission required"} • {settings.sendRateHz} Hz
         </div>
       </div>
 
@@ -822,7 +830,18 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
         })}
       </div>
 
-
+      <button
+        type="button"
+        onPointerDown={(e) => {
+          e.preventDefault();
+          cycleSendRate();
+        }}
+        className="absolute right-2 top-[4.65rem] z-30 rounded-xl border border-white/10 bg-black/55 px-2.5 py-1.5 text-[7px] font-black uppercase tracking-[0.16em] text-cyan-200 backdrop-blur-md md:right-5 md:top-[5.9rem] md:px-3 md:py-2 md:text-[9px]"
+        aria-label={`Controller polling rate ${settings.sendRateHz} Hz. Tap to change.`}
+        title="Change controller polling rate"
+      >
+        RATE {settings.sendRateHz} HZ
+      </button>
 
 
       {settings.steerMode === "tilt" && !gyroReady && (

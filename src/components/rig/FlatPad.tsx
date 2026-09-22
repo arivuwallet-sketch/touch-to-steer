@@ -5,6 +5,7 @@ type Props = {
   settings: Settings;
   set: (p: Partial<ControllerState>) => void;
   press: (id: string, down: boolean) => void;
+  onSettingsChange: (patch: Partial<Settings>) => void;
 };
 
 type TriggerMode = "regular" | "race" | "sniper" | "recoil" | "vibration" | "lock";
@@ -543,13 +544,21 @@ function GyroControl({
   );
 }
 
-export function FlatPad({ settings, set, press }: Props) {
+export function FlatPad({ settings, set, press, onSettingsChange }: Props) {
   const [turbo, setTurbo] = useState(false);
   const [rgb, setRgb] = useState(true);
   const [profile, setProfile] = useState(1);
   const [triggerMode, setTriggerMode] = useState<TriggerMode>("regular");
   const [gyroEnabled, setGyroEnabled] = useState(false);
   const [gyroDenied, setGyroDenied] = useState(false);
+
+  const cycleSendRate = useCallback(() => {
+    const values: Settings["sendRateHz"][] = [60, 120, 144, 180, 240];
+    const index = values.indexOf(settings.sendRateHz);
+    const next = values[(index >= 0 ? index + 1 : 0) % values.length] ?? 240;
+    onSettingsChange({ sendRateHz: next });
+    buzz(settings.vibration, 8);
+  }, [onSettingsChange, settings.sendRateHz, settings.vibration]);
 
   const requestGyro = useCallback(async () => {
     try {
@@ -654,6 +663,15 @@ export function FlatPad({ settings, set, press }: Props) {
             <SurfaceButton label="LOGO" id="logo" settings={settings} press={press} className="h-8 min-w-0 w-full rounded-lg text-[7px] text-slate-300" />
             <button type="button" onClick={() => setTurbo((v) => !v)} className={`h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border px-2 text-[7px] font-black uppercase tracking-[0.14em] ${turbo ? "border-orange-300/50 bg-orange-300/10 text-orange-200" : "border-white/10 bg-black/20 text-slate-400"}`}>TURBO</button>
             <GyroControl enabled={gyroEnabled} denied={gyroDenied} onToggle={requestGyro} />
+            <button
+              type="button"
+              onClick={cycleSendRate}
+              className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border border-cyan-300/20 bg-cyan-300/5 px-2 text-[7px] font-black uppercase tracking-[0.14em] text-cyan-200"
+              aria-label={`Controller polling rate ${settings.sendRateHz} Hz. Tap to change.`}
+              title="Change controller polling rate"
+            >
+              RATE {settings.sendRateHz} HZ
+            </button>
             <button type="button" onClick={nextTriggerMode} className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border border-white/10 bg-black/20 px-2 text-[7px] font-black uppercase tracking-[0.14em] text-slate-400">FORCEADAPT</button>
             <button type="button" onClick={() => setRgb((v) => !v)} className={`h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border px-2 text-[7px] font-black uppercase tracking-[0.14em] ${rgb ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-200" : "border-white/10 bg-black/20 text-slate-400"}`}>RGB</button>
           </div>

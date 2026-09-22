@@ -233,10 +233,22 @@ export function SettingsPanel({
               className="w-40 accent-[var(--primary)]"
             />
           </Row>
-          <Row label="Controller update">
-            <span className="rounded-lg border border-cyan-300/20 bg-cyan-300/5 px-2 py-1.5 text-xs font-black text-cyan-200">
-              240 Hz
-            </span>
+          <Row label="Controller polling rate">
+            <select
+              value={settings.sendRateHz}
+              onChange={(e) =>
+                onChange({
+                  sendRateHz: Number(e.target.value) as Settings["sendRateHz"],
+                })
+              }
+              className="rounded-lg border border-input bg-background px-2 py-1.5 text-xs"
+            >
+              <option value={60}>60 Hz</option>
+              <option value={120}>120 Hz</option>
+              <option value={144}>144 Hz</option>
+              <option value={180}>180 Hz</option>
+              <option value={240}>240 Hz</option>
+            </select>
           </Row>
           <Row label="Invert tilt">
             <input
@@ -468,8 +480,8 @@ export function SettingsPanel({
         </div>
 
         <div className="mt-4 rounded-lg border border-cyan-300/15 bg-cyan-300/5 p-3 text-[11px] leading-relaxed text-muted-foreground">
-          <strong className="text-slate-200">Ultra-low-latency mode</strong> targets 240 Hz output
-          (about 4.17 ms between packets). Actual end-to-end latency depends on the phone, browser,
+          <strong className="text-slate-200">Controller polling</strong> is selectable from 60 to 240 Hz.
+          240 Hz is the current low-latency ceiling (about 4.17 ms between refresh packets). Actual end-to-end latency depends on the phone, browser,
           Wi-Fi/LAN path, PC load, and game input polling.
         </div>
 

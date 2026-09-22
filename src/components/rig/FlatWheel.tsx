@@ -8,7 +8,12 @@ type Props = {
   press: (id: string, down: boolean) => void;
   telemetry: BridgeTelemetry;
   telemetryLive: boolean;
+  onSettingsChange: (p: Partial<Settings>) => void;
 };
+
+/** Selectable lock-to-lock steering ranges, matching common wheel firmware options. */
+const STEER_DEGREES = [180, 270, 360, 540, 720, 900, 1080] as const;
+
 
 // Haptics are deferred off the input task so a vibration call can never delay
 // the controller packet leaving the phone.

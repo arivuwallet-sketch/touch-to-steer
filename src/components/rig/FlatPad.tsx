@@ -50,10 +50,6 @@ function SurfaceButton({
 }) {
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastHapticAt = useRef(0);
-  const rgbIds = ["dpad_up","dpad_down","dpad_left","dpad_right","y","x","b","a","lm","rm","lt","rt"];
-  const rgbIndex = rgbIds.indexOf(id);
-  const isRgb = rgbIndex >= 0;
-
   const stopTurbo = useCallback(() => {
     if (timer.current) clearInterval(timer.current);
     timer.current = null;
@@ -91,8 +87,8 @@ function SurfaceButton({
       onPointerUp={stopTurbo}
       onPointerCancel={stopTurbo}
       onClick={onClick}
-      className={`${isRgb ? "rgb-neon-button " : ""}grid touch-none select-none place-items-center rounded-xl border border-white/10 bg-[linear-gradient(145deg,#3a4551,#151b22)] font-black text-slate-100 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),inset_0_-5px_9px_rgba(0,0,0,.62),0_5px_0_#06090d,0_9px_14px_rgba(0,0,0,.5)] transition-transform active:translate-y-[3px] active:shadow-[inset_0_2px_6px_rgba(0,0,0,.65),0_2px_0_#06090d] ${className}`}
-      style={isRgb ? { ...style, "--rgb-index": rgbIndex } as CSSProperties : style}
+      className={`grid touch-none select-none place-items-center rounded-xl border border-white/10 bg-[linear-gradient(145deg,#3a4551,#151b22)] font-black text-slate-100 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),inset_0_-5px_9px_rgba(0,0,0,.62),0_5px_0_#06090d,0_9px_14px_rgba(0,0,0,.5)] transition-transform active:translate-y-[3px] active:shadow-[inset_0_2px_6px_rgba(0,0,0,.65),0_2px_0_#06090d] ${className}`}
+      style={style}
     >
       {label}
     </button>
@@ -206,14 +202,13 @@ function Stick({
           onClick3(true);
           window.setTimeout(() => onClick3(false), 90);
         }}
-        className="flat-pad-stick rgb-neon-stick relative size-[clamp(5.25rem,23svh,10.5rem)] touch-none rounded-full border border-white/10 bg-[#0c1117] shadow-[inset_0_0_22px_rgba(0,0,0,.95),0_8px_20px_rgba(0,0,0,.45)]"
-        style={{ "--rgb-index": side === "left" ? 12 : 13 } as CSSProperties}
+        className="flat-pad-stick relative size-[clamp(5.25rem,23svh,10.5rem)] touch-none rounded-full border border-white/10 bg-[#0c1117] shadow-[inset_0_0_22px_rgba(0,0,0,.95),0_8px_20px_rgba(0,0,0,.45)]"
       >
         <div className="absolute inset-[8%] rounded-full border border-[#2e3945] bg-[radial-gradient(circle_at_38%_28%,#202a35,#080c11_72%)]" />
         <div
           ref={thumbRef}
           data-stick-thumb
-          className="rgb-neon-thumb absolute left-1/2 top-1/2 size-[57%] rounded-full border border-white/10 bg-[radial-gradient(circle_at_35%_25%,#626e7a,#1a222b_70%)] shadow-[0_8px_16px_rgba(0,0,0,.65),inset_0_-7px_10px_rgba(0,0,0,.58)] will-change-transform"
+          className="absolute left-1/2 top-1/2 size-[57%] rounded-full border border-white/10 bg-[radial-gradient(circle_at_35%_25%,#626e7a,#1a222b_70%)] shadow-[0_8px_16px_rgba(0,0,0,.65),inset_0_-7px_10px_rgba(0,0,0,.58)] will-change-transform"
           style={{ transform: "translate3d(-50%,-50%,0)" }}
         />
         <div className="pointer-events-none absolute left-1/2 top-[11%] h-[8%] w-[28%] -translate-x-1/2 rounded-full bg-[#0a0e13]" />
@@ -447,8 +442,7 @@ function Trigger({
       onPointerUp={release}
       onPointerCancel={release}
       className={`flat-pad-trigger group relative grid h-[clamp(2.75rem,7.8svh,3.5rem)] w-[clamp(4.5rem,8vw,6rem)] touch-none select-none place-items-center overflow-hidden rounded-[1rem] border border-white/10 bg-[linear-gradient(180deg,#394754,#11171e)] text-[10px] font-black tracking-[0.25em] text-cyan-200 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),inset_0_-7px_14px_rgba(0,0,0,.72),0_7px_0_#05080b,0_11px_18px_rgba(0,0,0,.58)] ${id === "lt" ? "rgb-neon-button" : "rgb-neon-button"}`}
-      data-rgb-index={id === "lt" ? 10 : 11}
-      style={{ perspective: "700px", "--rgb-index": id === "lt" ? 10 : 11 } as CSSProperties}
+      style={{ perspective: "700px" }}
     >
       <span className="pointer-events-none absolute inset-[3px] rounded-[0.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,.06),rgba(0,0,0,.16))]" />
       <span
@@ -554,7 +548,6 @@ function GyroControl({
 
 export function FlatPad({ settings, set, press, onSettingsChange }: Props) {
   const [turbo, setTurbo] = useState(false);
-  const [rgb, setRgb] = useState(true);
   const [profile, setProfile] = useState(1);
   const [triggerMode, setTriggerMode] = useState<TriggerMode>("regular");
   const [gyroEnabled, setGyroEnabled] = useState(false);
@@ -638,11 +631,10 @@ export function FlatPad({ settings, set, press, onSettingsChange }: Props) {
 
   return (
     <div
-      className={`flat-pad-root absolute inset-0 overflow-hidden bg-[#05080d] text-slate-100 ${rgb ? "rgb-enabled" : ""}`}
-      style={{ filter: rgb ? undefined : "saturate(.65)" }}
+      className="flat-pad-root absolute inset-0 overflow-hidden bg-[#05080d] text-slate-100"
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(100%_75%_at_50%_8%,#172333_0%,#04070b_68%)]" />
-      <div className={`pointer-events-none absolute inset-2 rounded-[1.8rem] border ${rgb ? "border-cyan-300/20" : "border-white/15"} shadow-[0_0_40px_rgba(34,211,238,.08)]`} />
+      <div className="pointer-events-none absolute inset-2 rounded-[1.8rem] border border-white/15 shadow-[0_0_40px_rgba(34,211,238,.08)]" />
 
       <div className="flat-pad-top absolute inset-x-0 top-3 flex items-start justify-between px-[max(1rem,env(safe-area-inset-left))]">
         <div className="flex items-center gap-3">
@@ -678,7 +670,6 @@ export function FlatPad({ settings, set, press, onSettingsChange }: Props) {
             <button type="button" onClick={cycleJoystickTension} className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border border-violet-300/20 bg-violet-300/5 px-2 text-[7px] font-black uppercase tracking-[0.14em] text-violet-200" aria-label={`ForceFlex joystick tension ${settings.joystickTensionGf} gf. Tap to change.`} title={FORCEFLEX_DESCRIPTIONS[settings.joystickTensionGf]}>FORCEFLEX {settings.joystickTensionGf}GF</button>
             <button type="button" onClick={cycleSendRate} className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border border-cyan-300/20 bg-cyan-300/5 px-2 text-[7px] font-black uppercase tracking-[0.14em] text-cyan-200" aria-label={`Controller polling rate ${settings.sendRateHz} Hz. Tap to change.`} title="Change controller polling rate">RATE {settings.sendRateHz} HZ</button>
             <button type="button" onClick={nextTriggerMode} className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border border-white/10 bg-black/20 px-2 text-[7px] font-black uppercase tracking-[0.14em] text-slate-400">FORCEADAPT</button>
-            <button type="button" onClick={() => setRgb((v) => !v)} className={`h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border px-2 text-[7px] font-black uppercase tracking-[0.14em] ${rgb ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-200" : "border-white/10 bg-black/20 text-slate-400"}`}>RGB</button>
           </div>
         </div>
       </div>

@@ -2797,3 +2797,39 @@
     }
   }
 }
+
+
+/* STEERING METER: move right and reduce slightly. */
+@media (orientation: landscape) {
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry {
+    transform: translateX(clamp(34px, 5vw, 72px)) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry > div:first-child,
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry > div:last-child {
+    width: clamp(118px, 19svh, 164px) !important;
+    height: clamp(118px, 19svh, 164px) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry > div:nth-child(2) {
+    width: clamp(44px, 6svh, 58px) !important;
+    height: clamp(44px, 6svh, 58px) !important;
+  }
+
+  @media (max-height: 760px) {
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry {
+      transform: translateX(clamp(26px, 4.5vw, 54px)) !important;
+    }
+
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry > div:first-child,
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry > div:last-child {
+      width: clamp(108px, 17svh, 140px) !important;
+      height: clamp(108px, 17svh, 140px) !important;
+    }
+
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry > div:nth-child(2) {
+      width: clamp(40px, 5.5svh, 52px) !important;
+      height: clamp(40px, 5.5svh, 52px) !important;
+    }
+  }
+}

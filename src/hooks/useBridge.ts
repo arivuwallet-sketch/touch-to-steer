@@ -41,6 +41,10 @@ export function useBridge(
   const packetCounterRef = useRef(0);
   const lastStatsPaintRef = useRef(0);
   const lastLatencyPaintRef = useRef(0);
+  const lastSentStateRef = useRef("");
+  const lastHeartbeatRef = useRef(0);
+
+  const stateSignature = useCallback(() => JSON.stringify(stateRef.current), [stateRef]);
 
   const clearLoop = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -136,6 +140,8 @@ export function useBridge(
 
       ws.onopen = () => {
         setStatus("connected");
+        lastSentStateRef.current = "";
+        lastHeartbeatRef.current = 0;
         try {
           ws.send(
             JSON.stringify({
@@ -156,21 +162,27 @@ export function useBridge(
         const pump = () => {
           if (wsRef.current !== ws || ws.readyState !== WebSocket.OPEN) return;
 
-          const packet = {
-            type: "state",
-            t: Date.now(),
-            seq: ++packetCounterRef.current,
-            ...stateRef.current,
-          };
+          const signature = stateSignature();
+          const currentTime = nowMs();
+          const changed = signature !== lastSentStateRef.current;
+          const heartbeatDue = currentTime - lastHeartbeatRef.current >= 250;
 
           // Do not build a queue of stale controller packets. A controller is
-          // interested in the newest state, not every missed intermediate frame.
-          if (ws.bufferedAmount < 32_768) {
+          // interested in the newest state, not hundreds of identical refreshes.
+          // Input events take the immediate hot/edge lane; this loop is only a
+          // change detector and 4 Hz recovery heartbeat.
+          if ((changed || heartbeatDue) && ws.bufferedAmount < 8_192) {
             try {
-              ws.send(JSON.stringify(packet));
-              const t = nowMs();
-              if (t - lastStatsPaintRef.current >= 250) {
-                lastStatsPaintRef.current = t;
+              ws.send(JSON.stringify({
+                type: "state",
+                t: Date.now(),
+                seq: ++packetCounterRef.current,
+                ...stateRef.current,
+              }));
+              lastSentStateRef.current = signature;
+              lastHeartbeatRef.current = currentTime;
+              if (currentTime - lastStatsPaintRef.current >= 250) {
+                lastStatsPaintRef.current = currentTime;
                 setPackets(packetCounterRef.current);
               }
             } catch {
@@ -179,7 +191,6 @@ export function useBridge(
           }
 
           const period = 1000 / clampRate(rateHz);
-          const currentTime = nowMs();
           nextDue += period;
           if (nextDue < currentTime - period * 2) nextDue = currentTime + period;
           timerRef.current = setTimeout(pump, Math.max(0, nextDue - currentTime));
@@ -239,7 +250,7 @@ export function useBridge(
         }
       };
     },
-    [clearLoop, clearTelemetryTimer, disconnect, outputMode, rateHz, stateRef],
+    [clearLoop, clearTelemetryTimer, disconnect, outputMode, rateHz, stateRef, stateSignature],
   );
 
   useEffect(
@@ -292,11 +303,13 @@ export function useBridge(
           ...stateRef.current,
         }),
       );
+      lastSentStateRef.current = stateSignature();
+      lastHeartbeatRef.current = nowMs();
       return true;
     } catch {
       return false;
     }
-  }, [stateRef]);
+  }, [stateRef, stateSignature]);
 
   const sendControllerEdge = useCallback(() => {
     const ws = wsRef.current;
@@ -317,11 +330,13 @@ export function useBridge(
           ...stateRef.current,
         }),
       );
+      lastSentStateRef.current = stateSignature();
+      lastHeartbeatRef.current = nowMs();
       return true;
     } catch {
       return false;
     }
-  }, [stateRef]);
+  }, [stateRef, stateSignature]);
 
   const sendMouse = useCallback(
     (message: {

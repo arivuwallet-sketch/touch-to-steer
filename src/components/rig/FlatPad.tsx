@@ -98,19 +98,22 @@ function Stick({
   side: "left" | "right";
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const thumbRef = useRef<HTMLDivElement>(null);
   const pointer = useRef<number | null>(null);
+  const rect = useRef<DOMRect | null>(null);
   const lastHapticMagnitude = useRef(0);
   const pointMagnitude = useRef(0);
-  const [point, setPoint] = useState({ x: 0, y: 0 });
 
-  const update = (e: PointerEvent<HTMLDivElement>) => {
-    const el = ref.current;
-    if (!el) return;
+  // Zero-lag path: no React state on pointer move. Geometry is measured once
+  // per grab (no per-sample layout read) and the thumb is written straight to
+  // the compositor, so the value reaches the bridge in the same input task.
+  const apply = (clientX: number, clientY: number) => {
+    const r = rect.current;
+    if (!r) return;
 
-    const r = el.getBoundingClientRect();
     const radius = Math.max(1, Math.min(r.width, r.height) / 2);
-    let x = (e.clientX - (r.left + r.width / 2)) / radius;
-    let y = (e.clientY - (r.top + r.height / 2)) / radius;
+    let x = (clientX - (r.left + r.width / 2)) / radius;
+    let y = (clientY - (r.top + r.height / 2)) / radius;
     const m = Math.hypot(x, y);
 
     if (m > 1) {
@@ -118,35 +121,47 @@ function Stick({
       y /= m;
     }
 
-    const travel = 22 + settings.stickTension * 12;
-    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-    if (now - lastHapticMagnitude.current > 75) {
-      const magnitude = Math.hypot(x, y);
-      if (magnitude > 0.55 && Math.abs(magnitude - pointMagnitude.current) > 0.12) {
-        feelBuzz(settings.vibration, magnitude * 0.55);
-      }
-      if (magnitude >= 0.92 && pointMagnitude.current < 0.92) {
-        buzz(settings.vibration, [5, 18, 4]);
-      }
-      lastHapticMagnitude.current = now;
-    }
-    pointMagnitude.current = Math.hypot(x, y);
-    setPoint({ x, y });
     onMove(
       applyCurve(x, settings.deadzone, settings.linearity, settings.sensitivity),
       applyCurve(-y, settings.deadzone, settings.linearity, settings.sensitivity),
     );
 
-    const thumb = el.querySelector<HTMLElement>("[data-stick-thumb]");
-    if (thumb) thumb.style.transform = `translate(-50%,-50%) translate(${x * travel}px,${y * travel}px)`;
+    const travel = 22 + settings.stickTension * 12;
+    const thumb = thumbRef.current;
+    if (thumb) {
+      thumb.style.transform = `translate3d(calc(-50% + ${x * travel}px), calc(-50% + ${y * travel}px), 0)`;
+    }
+
+    // Haptics are strictly rate-limited and never block the value write above.
+    const magnitude = Math.hypot(x, y);
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    if (settings.vibration && now - lastHapticMagnitude.current > 90) {
+      if (magnitude >= 0.92 && pointMagnitude.current < 0.92) {
+        lastHapticMagnitude.current = now;
+        buzz(true, [5, 14, 4]);
+      } else if (magnitude > 0.55 && Math.abs(magnitude - pointMagnitude.current) > 0.18) {
+        lastHapticMagnitude.current = now;
+        feelBuzz(true, magnitude * 0.5);
+      }
+    }
+    pointMagnitude.current = magnitude;
+  };
+
+  const update = (e: PointerEvent<HTMLDivElement>) => {
+    const native = e.nativeEvent as globalThis.PointerEvent;
+    // Use only the newest sample of a coalesced batch: older samples are stale
+    // input and re-sending them would show up as ghosting/rubber-banding.
+    const events = native.getCoalescedEvents?.();
+    const latest = events && events.length ? events[events.length - 1]! : native;
+    apply(latest.clientX, latest.clientY);
   };
 
   const release = () => {
     pointer.current = null;
     pointMagnitude.current = 0;
-    setPoint({ x: 0, y: 0 });
-    const thumb = ref.current?.querySelector<HTMLElement>("[data-stick-thumb]");
-    if (thumb) thumb.style.transform = "translate(-50%,-50%) translate(0px,0px)";
+    rect.current = null;
+    const thumb = thumbRef.current;
+    if (thumb) thumb.style.transform = "translate3d(-50%,-50%,0)";
     onMove(0, 0);
   };
 
@@ -158,17 +173,19 @@ function Stick({
         aria-label={side === "left" ? "Left stick" : "Right stick"}
         aria-valuemin={-1}
         aria-valuemax={1}
-        aria-valuenow={point.x}
+        aria-valuenow={0}
         onPointerDown={(e) => {
           e.preventDefault();
           e.currentTarget.setPointerCapture(e.pointerId);
           pointer.current = e.pointerId;
-          buzz(settings.vibration, 8);
-          update(e);
+          rect.current = e.currentTarget.getBoundingClientRect();
+          buzz(settings.vibration, 6);
+          apply(e.clientX, e.clientY);
         }}
         onPointerMove={(e) => pointer.current === e.pointerId && update(e)}
         onPointerUp={release}
         onPointerCancel={release}
+        onLostPointerCapture={release}
         onDoubleClick={() => {
           onClick3(true);
           window.setTimeout(() => onClick3(false), 90);
@@ -177,12 +194,10 @@ function Stick({
       >
         <div className="absolute inset-[8%] rounded-full border border-[#2e3945] bg-[radial-gradient(circle_at_38%_28%,#202a35,#080c11_72%)]" />
         <div
+          ref={thumbRef}
           data-stick-thumb
-          className="absolute left-1/2 top-1/2 size-[57%] rounded-full border border-white/10 bg-[radial-gradient(circle_at_35%_25%,#626e7a,#1a222b_70%)] shadow-[0_8px_16px_rgba(0,0,0,.65),inset_0_-7px_10px_rgba(0,0,0,.58)]"
-          style={{
-            transform: `translate(-50%,-50%) translate(${point.x * 30}px,${point.y * 30}px)`,
-            transition: point.x === 0 && point.y === 0 ? "transform 140ms ease-out" : "none",
-          }}
+          className="absolute left-1/2 top-1/2 size-[57%] rounded-full border border-white/10 bg-[radial-gradient(circle_at_35%_25%,#626e7a,#1a222b_70%)] shadow-[0_8px_16px_rgba(0,0,0,.65),inset_0_-7px_10px_rgba(0,0,0,.58)] will-change-transform"
+          style={{ transform: "translate3d(-50%,-50%,0)" }}
         />
         <div className="pointer-events-none absolute left-1/2 top-[11%] h-[8%] w-[28%] -translate-x-1/2 rounded-full bg-[#0a0e13]" />
       </div>

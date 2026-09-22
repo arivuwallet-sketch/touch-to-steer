@@ -238,7 +238,7 @@ function ApexDPad({ settings, press, turbo }: { settings: Settings; press: Props
   );
 
   return (
-    <div className="flat-pad-dpad relative size-[clamp(6.75rem,22svh,10rem)]">
+    <div className="flat-pad-dpad relative size-[clamp(7.1rem,23svh,10.35rem)]">
       <div className="absolute left-1/2 top-1/2 size-12 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#11171e] shadow-inner" />
       {cell("up", "↑", "left-1/2 top-0 -translate-x-1/2")}
       {cell("left", "←", "left-0 top-1/2 -translate-y-1/2")}
@@ -250,7 +250,7 @@ function ApexDPad({ settings, press, turbo }: { settings: Settings; press: Props
 
 function ApexFaceButtons({ settings, press, turbo }: { settings: Settings; press: Props["press"]; turbo: boolean }) {
   return (
-    <div className="flat-pad-face relative size-[clamp(7.5rem,24svh,11rem)]">
+    <div className="flat-pad-face relative size-[clamp(7.9rem,25svh,11.4rem)]">
       <SurfaceButton label="Y" id="y" settings={settings} press={press} turbo={turbo} className="absolute left-1/2 top-0 size-[clamp(2.75rem,8svh,3.5rem)] -translate-x-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#ffd43b]" />
       <SurfaceButton label="X" id="x" settings={settings} press={press} turbo={turbo} className="absolute left-0 top-1/2 size-[clamp(2.75rem,8svh,3.5rem)] -translate-y-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#58b9ff]" />
       <SurfaceButton label="B" id="b" settings={settings} press={press} turbo={turbo} className="absolute right-0 top-1/2 size-[clamp(2.75rem,8svh,3.5rem)] -translate-y-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#ff5b57]" />

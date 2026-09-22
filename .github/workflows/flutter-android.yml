@@ -3,9 +3,11 @@ name: Build Flutter Android APK
 on:
   push:
     branches:
-      - flutter-native-android-2026
       - main
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build-apk:
@@ -21,26 +23,27 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Flutter
+      - name: Set up Flutter 3.47.2
         uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.47.2"
           channel: stable
           cache: true
 
-      - name: Prepare Android SDK
+      - name: Prepare Android SDK 36
         shell: bash
         env:
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
           ANDROID_HOME: /usr/local/lib/android/sdk
         run: |
           export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
+          yes | sdkmanager --licenses >/dev/null || true
           sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
-      - name: Set up Gradle 9.1.0
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "9.1.0"
+      - name: Flutter diagnostics
+        run: |
+          flutter --version
+          flutter doctor -v
 
       - name: Flutter dependencies
         env:
@@ -56,24 +59,29 @@ jobs:
           echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
           echo "flutter.sdk=$FLUTTER_ROOT" >> android/local.properties
 
+      - name: Analyze Dart code
+        run: flutter analyze
+
       - name: Build release APK
         env:
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
           ANDROID_HOME: /usr/local/lib/android/sdk
-        run: gradle -p android assembleRelease -PskipDependencyChecks=true --no-daemon --stacktrace
+        run: flutter build apk --release --verbose
 
       - name: Verify APK
         shell: bash
         run: |
-          APK="build/app/outputs/apk/release/app-release.apk"
+          APK="build/app/outputs/flutter-apk/app-release.apk"
           test -s "$APK"
+          echo "SHA256:"
           sha256sum "$APK"
+          echo "APK:"
           ls -lh "$APK"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: touch-to-steer-android-release
-          path: build/app/outputs/apk/release/app-release.apk
+          path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 30

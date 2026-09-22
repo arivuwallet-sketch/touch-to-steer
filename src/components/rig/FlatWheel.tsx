@@ -749,12 +749,40 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
         </div>
         <div className="mt-0.5 text-[6px] font-semibold uppercase tracking-[0.15em] text-slate-500 md:text-[8px] md:tracking-[0.2em]">
           {settings.steerMode === "touch"
-            ? "Touch 900° wheel • Auto-centre"
+            ? `Touch ${settings.wheelRotationDeg}° wheel • Auto-centre`
             : gyroReady
               ? "Gyro steering"
               : "Gyro permission required"}
         </div>
       </div>
+
+      <div className="flat-wheel-degrees absolute left-1/2 top-2 z-30 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-white/10 bg-black/55 p-1 backdrop-blur-md md:top-5 md:gap-1.5 md:p-1.5">
+        <span className="px-1 text-[6px] font-black uppercase tracking-[0.2em] text-slate-500 md:text-[8px]">
+          LOCK
+        </span>
+        {STEER_DEGREES.map((deg) => {
+          const active = settings.wheelRotationDeg === deg;
+          return (
+            <button
+              key={deg}
+              type="button"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                selectDegrees(deg);
+              }}
+              className={
+                "rounded-lg px-1.5 py-1 text-[7px] font-black tracking-tight transition-colors md:px-2.5 md:py-1.5 md:text-[10px] " +
+                (active
+                  ? "bg-[#e11d2e] text-white shadow-[0_0_14px_rgba(225,29,46,.55)]"
+                  : "bg-white/5 text-slate-400 active:bg-white/15")
+              }
+            >
+              {deg}°
+            </button>
+          );
+        })}
+      </div>
+
 
       {settings.steerMode === "tilt" && !gyroReady && (
         <div className="flat-wheel-gyro absolute left-1/2 top-[3.5rem] z-30 -translate-x-1/2 md:top-5">

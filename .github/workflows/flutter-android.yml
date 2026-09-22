@@ -7,13 +7,9 @@ on:
       - main
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -36,6 +32,7 @@ jobs:
         shell: bash
         env:
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+          ANDROID_HOME: /usr/local/lib/android/sdk
         run: |
           export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
           sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;36.0.0"
@@ -56,9 +53,8 @@ jobs:
         env:
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
         run: |
-          printf 'sdk.dir=%s
-flutter.sdk=%s
-' "$ANDROID_SDK_ROOT" "$FLUTTER_ROOT" > android/local.properties
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+          echo "flutter.sdk=$FLUTTER_ROOT" >> android/local.properties
 
       - name: Build release APK
         env:
@@ -69,21 +65,15 @@ flutter.sdk=%s
       - name: Verify APK
         shell: bash
         run: |
-          test -s build/app/outputs/flutter-apk/app-release.apk || test -s android/app/build/outputs/apk/release/app-release.apk
-          if [ -f build/app/outputs/flutter-apk/app-release.apk ]; then
-            sha256sum build/app/outputs/flutter-apk/app-release.apk
-            ls -lh build/app/outputs/flutter-apk/app-release.apk
-          else
-            sha256sum android/app/build/outputs/apk/release/app-release.apk
-            ls -lh android/app/build/outputs/apk/release/app-release.apk
-          fi
+          APK="android/app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          sha256sum "$APK"
+          ls -lh "$APK"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: touch-to-steer-android-release
-          path: |
-            build/app/outputs/flutter-apk/app-release.apk
-            android/app/build/outputs/apk/release/app-release.apk
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 30

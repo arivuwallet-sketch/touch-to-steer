@@ -757,6 +757,18 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
       <div className="pointer-events-none absolute inset-4 rounded-[1.4rem] border border-[#e11d2e]/15" />
 
       <div className="flat-wheel-header-stack">
+        {settings.steerMode === "tilt" && !gyroReady && (
+          <div className="flat-wheel-gyro relative z-30">
+            <button
+              type="button"
+              onClick={requestGyro}
+              className="rounded-xl border border-[#e11d2e]/40 bg-[#11151a]/90 px-3 py-2 text-[7px] font-black uppercase tracking-[0.15em] text-white shadow-[0_8px_20px_rgba(0,0,0,.5)] backdrop-blur-md active:scale-[.98] md:px-5 md:py-2.5 md:text-[9px] md:tracking-[0.2em]"
+            >
+              {gyroDenied ? "ENABLE GYRO AGAIN" : "ENABLE GYRO"}
+            </button>
+          </div>
+        )}
+
         <TelemetryCluster telemetry={telemetry} live={telemetryLive} />
 
         <div className="flat-wheel-degrees flex items-center gap-1 rounded-xl border border-white/10 bg-black/55 p-1 backdrop-blur-md md:gap-1.5 md:p-1.5">
@@ -831,18 +843,6 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
               : "Gyro permission required"} • {settings.sendRateHz} Hz
         </div>
       </div>
-
-      {settings.steerMode === "tilt" && !gyroReady && (
-        <div className="flat-wheel-gyro absolute left-1/2 top-[3.5rem] z-30 -translate-x-1/2 md:top-5">
-          <button
-            type="button"
-            onClick={requestGyro}
-            className="rounded-xl border border-[#e11d2e]/40 bg-[#11151a]/90 px-3 py-2.5 text-[8px] font-black uppercase tracking-[0.15em] text-white shadow-[0_10px_24px_rgba(0,0,0,.5)] backdrop-blur-md active:scale-[.98] md:px-5 md:py-3 md:text-[9px] md:tracking-[0.2em]"
-          >
-            {gyroDenied ? "ENABLE GYRO AGAIN" : "ENABLE GYRO"}
-          </button>
-        </div>
-      )}
 
       <div className="flat-wheel-stage absolute inset-0 px-2 pb-2 pt-16 md:px-5 md:pb-5 md:pt-20">
         <div className="relative h-full w-full">

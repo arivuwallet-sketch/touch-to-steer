@@ -252,6 +252,33 @@ function ApexFaceButtons({ settings, press, turbo }: { settings: Settings; press
   );
 }
 
+// ---- ForceAdapt engine (Flydigi Apex 5 style adaptive triggers) ----
+// Each mode defines a real trigger profile: the usable stroke window
+// (dead travel at both ends, exactly like the Apex hall-sensor stroke
+// switch), the resistance "wall" where the game action fires, and the
+// force curve applied between them.
+type ForceProfile = {
+  stroke: [number, number]; // usable travel window of the physical stroke
+  wall: number; // actuation point — haptic wall is rendered here
+  curve: (p: number) => number;
+  digital: boolean; // hair-trigger / micro-switch behaviour
+};
+
+const FORCE_PROFILES: Record<TriggerMode, ForceProfile> = {
+  // full 0-100% travel, 1:1 force, no shaping
+  regular: { stroke: [0, 1], wall: 0.5, curve: (p) => p, digital: false },
+  // racing: short stroke, heavy bottom end so throttle feathers finely
+  race: { stroke: [0.04, 0.92], wall: 0.35, curve: (p) => Math.pow(p, 0.78), digital: false },
+  // sniper: long soft pull then a hard wall right before the shot breaks
+  sniper: { stroke: [0.1, 1], wall: 0.82, curve: (p) => Math.pow(p, 1.7), digital: false },
+  // recoil: soft slack, then full pressure past the wall with pulse train
+  recoil: { stroke: [0.06, 0.96], wall: 0.42, curve: (p) => (p < 0.3 ? p * 0.45 : Math.min(1, 0.135 + (p - 0.3) * 1.24)), digital: false },
+  // vibration: linear force with continuous texture feedback
+  vibration: { stroke: [0.02, 0.98], wall: 0.5, curve: (p) => Math.pow(p, 0.92), digital: false },
+  // lock: micro-switch mode — near-zero stroke, instant 100%
+  lock: { stroke: [0, 0.2], wall: 0.12, curve: (p) => p, digital: true },
+};
+
 function Trigger({
   label,
   id,
@@ -275,6 +302,7 @@ function Trigger({
   const lastFeel = useRef(0);
   const lastBand = useRef(-1);
   const lastRecoil = useRef(0);
+  const pastWall = useRef(false);
   const pulseTimer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -296,15 +324,17 @@ function Trigger({
     [settings.vibration],
   );
 
+  const profile = FORCE_PROFILES[mode];
+
+  // Maps the raw stroke position through the active ForceAdapt profile.
   const mapValue = (v: number) => {
-    const p = Math.max(0, Math.min(1, v));
-    if (mode === "lock") return p > 0.16 ? 1 : 0;
-    if (mode === "sniper") return Math.pow(p, 1.65);
-    if (mode === "race") return Math.min(1, p * 1.2);
-    if (mode === "recoil") return p < 0.18 ? p * 0.35 : Math.min(1, p * 1.12);
-    if (mode === "vibration") return Math.pow(p, 0.92);
-    return p;
+    const raw = Math.max(0, Math.min(1, v));
+    const [lo, hi] = profile.stroke;
+    const t = Math.max(0, Math.min(1, (raw - lo) / Math.max(0.001, hi - lo)));
+    if (profile.digital) return t > 0.5 ? 1 : 0;
+    return Math.max(0, Math.min(1, profile.curve(t)));
   };
+
 
   const writeTrigger = useCallback(
     (next: number) => {
@@ -330,12 +360,24 @@ function Trigger({
   const move = (e: PointerEvent<HTMLButtonElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
     // Physical-style trigger travel: top = fully pulled, bottom = released.
-    const raw = Math.max(0, Math.min(1, (r.bottom - e.clientY) / r.height));
-    const next = mapValue(raw);
+    const travel = Math.max(0, Math.min(1, (r.bottom - e.clientY) / r.height));
+    // Real force sensing: touch/stylus digitisers report finger pressure.
+    // ForceAdapt blends actual finger force with stroke position, so pressing
+    // harder in place pulls the trigger just like the Apex hall triggers.
+    const hasForce = (e.pointerType === "touch" || e.pointerType === "pen") && e.pressure > 0 && e.pressure < 1;
+    const force = hasForce ? Math.max(0, Math.min(1, e.pressure * 1.35)) : 0;
+    const rawStroke = hasForce ? Math.max(travel, travel * 0.45 + force * 0.55) : travel;
+    const next = mapValue(rawStroke);
     const now = typeof performance !== "undefined" ? performance.now() : Date.now();
     const band = Math.min(5, Math.floor(next * 6));
 
-    if (band !== lastBand.current && now - lastFeel.current > 45) {
+    // Resistance wall — a distinct hard bump at the actuation point.
+    const beyond = next >= profile.wall;
+    if (beyond !== pastWall.current) {
+      pastWall.current = beyond;
+      pulseFeedback(beyond ? [6, 4, 18] : [3, 6, 3]);
+      lastFeel.current = now;
+    } else if (band !== lastBand.current && now - lastFeel.current > 45) {
       lastBand.current = band;
       lastFeel.current = now;
 
@@ -365,12 +407,14 @@ function Trigger({
     writeTrigger(next);
   };
 
+
   const pressToFull = (e: PointerEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
     pointer.current = e.pointerId;
     lastBand.current = -1;
+    pastWall.current = true;
     pulseFeedback([4, 9, 3]);
     writeTrigger(1);
   };
@@ -381,8 +425,10 @@ function Trigger({
     pointer.current = null;
     lastBand.current = -1;
     lastRecoil.current = 0;
+    pastWall.current = false;
     writeTrigger(0);
   };
+
 
   return (
     <button
@@ -409,10 +455,16 @@ function Trigger({
           <span className="text-[5px] tracking-[0.18em] text-cyan-100/60">FORCEADAPT</span>
         </span>
         <span
+          className="pointer-events-none absolute bottom-[1px] h-2 w-[2px] rounded-full bg-amber-300/80 shadow-[0_0_6px_rgba(252,211,77,.7)]"
+          style={{ left: `${7 + profile.wall * 86}%` }}
+          aria-hidden
+        />
+        <span
           ref={barRef}
           className="absolute bottom-1 left-1/2 h-1 -translate-x-1/2 rounded-full bg-cyan-300/70 shadow-[0_0_7px_rgba(34,211,238,.65)]"
           style={{ width: "12%" }}
         />
+
       </span>
       <span className="pointer-events-none absolute bottom-0.5 text-[5px] font-black uppercase tracking-[0.12em] text-slate-500">
         {mode === "vibration" ? "VIBRATE" : mode}

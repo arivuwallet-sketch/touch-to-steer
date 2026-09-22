@@ -155,36 +155,52 @@ function Pedal({
   set: Props["set"];
   accent: string;
 }) {
-  const [value, setValue] = useState(0);
   const active = useRef<number | null>(null);
   const lastBand = useRef(-1);
   const lastHapticAt = useRef(0);
   const pedalRef = useRef<HTMLButtonElement>(null);
+  const plateRef = useRef<HTMLSpanElement>(null);
+  const barRef = useRef<HTMLSpanElement>(null);
+  const rect = useRef<DOMRect | null>(null);
+
+  // Pedal travel is written to the bridge first and painted straight to the
+  // compositor after: no React render sits between finger and game.
+  const paint = (v: number) => {
+    const plate = plateRef.current;
+    if (plate) {
+      plate.style.height = "calc(28% + " + v * 58 + "%)";
+      plate.style.transform = "translate3d(0," + v * 3 + "px,0) rotateX(" + v * 2 + "deg)";
+      plate.style.boxShadow =
+        "0 0 " + (8 + v * 12) + "px " + accent +
+        "44, 0 10px 16px rgba(0,0,0,.58), inset 0 2px 0 rgba(255,255,255,.55), inset 0 -7px 10px rgba(0,0,0,.42)";
+    }
+    const bar = barRef.current;
+    if (bar) bar.style.width = Math.max(15, v * 80) + "%";
+  };
 
   const update = (clientY: number) => {
-    const el = pedalRef.current;
-    if (!el) return;
+    const r = rect.current ?? pedalRef.current?.getBoundingClientRect();
+    if (!r) return;
 
-    const rect = el.getBoundingClientRect();
-    const next = Math.max(0, Math.min(1, (rect.bottom - clientY) / Math.max(1, rect.height)));
+    const next = Math.max(0, Math.min(1, (r.bottom - clientY) / Math.max(1, r.height)));
+    set({ [id]: next } as Partial<ControllerState>);
+    paint(next);
+
     const band = Math.min(5, Math.floor(next * 6));
     const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-
-    if (settings.vibration && band !== lastBand.current && now - lastHapticAt.current > 45) {
+    if (settings.vibration && band !== lastBand.current && now - lastHapticAt.current > 60) {
       lastBand.current = band;
       lastHapticAt.current = now;
       buzz(true, Math.min(15, 3 + band * 2));
     }
-
-    setValue(next);
-    set({ [id]: next } as Partial<ControllerState>);
   };
 
   const release = () => {
     active.current = null;
     lastBand.current = -1;
-    setValue(0);
+    rect.current = null;
     set({ [id]: 0 } as Partial<ControllerState>);
+    paint(0);
     if (settings.vibration) buzz(true, id === "brake" ? [5, 11, 4] : 4);
   };
 

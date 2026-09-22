@@ -65,7 +65,7 @@ jobs:
       - name: Verify APK
         shell: bash
         run: |
-          APK="android/app/build/outputs/apk/release/app-release.apk"
+          APK="build/app/outputs/apk/release/app-release.apk"
           test -s "$APK"
           sha256sum "$APK"
           ls -lh "$APK"
@@ -74,6 +74,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: touch-to-steer-android-release
-          path: android/app/build/outputs/apk/release/app-release.apk
+          path: build/app/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 30

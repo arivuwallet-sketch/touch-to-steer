@@ -393,8 +393,9 @@ function Trigger({
           <span className="text-[5px] tracking-[0.18em] text-cyan-100/60">FORCEADAPT</span>
         </span>
         <span
-          className="absolute bottom-1 left-1/2 h-1 -translate-x-1/2 rounded-full bg-cyan-300/70 shadow-[0_0_7px_rgba(34,211,238,.65)] transition-[width] duration-75"
-          style={{ width: `${Math.max(12, value * 86)}%` }}
+          ref={barRef}
+          className="absolute bottom-1 left-1/2 h-1 -translate-x-1/2 rounded-full bg-cyan-300/70 shadow-[0_0_7px_rgba(34,211,238,.65)]"
+          style={{ width: "12%" }}
         />
       </span>
       <span className="pointer-events-none absolute bottom-0.5 text-[5px] font-black uppercase tracking-[0.12em] text-slate-500">

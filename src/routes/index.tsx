@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import {
   ArrowUpRight,
   BatteryCharging,
@@ -55,7 +56,7 @@ function FeatureCard({
   icon: LucideIcon;
   title: string;
   eyebrow: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <article className="landing-card landing-reveal">

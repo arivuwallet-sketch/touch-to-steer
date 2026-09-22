@@ -88,7 +88,7 @@ function SurfaceButton({
       onPointerUp={stopTurbo}
       onPointerCancel={stopTurbo}
       onClick={onClick}
-      className={`rgb-neon-button grid touch-none select-none place-items-center rounded-xl border border-white/10 bg-[linear-gradient(145deg,#3a4551,#151b22)] font-black text-slate-100 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),inset_0_-5px_9px_rgba(0,0,0,.62),0_5px_0_#06090d,0_9px_14px_rgba(0,0,0,.5)] transition-transform active:translate-y-[3px] active:shadow-[inset_0_2px_6px_rgba(0,0,0,.65),0_2px_0_#06090d] ${className}`}
+      className={`${(["dpad_up","dpad_down","dpad_left","dpad_right","y","x","b","a"].includes(id) ? "rgb-neon-button " : "")}grid touch-none select-none place-items-center rounded-xl border border-white/10 bg-[linear-gradient(145deg,#3a4551,#151b22)] font-black text-slate-100 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),inset_0_-5px_9px_rgba(0,0,0,.62),0_5px_0_#06090d,0_9px_14px_rgba(0,0,0,.5)] transition-transform active:translate-y-[3px] active:shadow-[inset_0_2px_6px_rgba(0,0,0,.65),0_2px_0_#06090d] ${className}`}
       style={style}
     >
       {label}
@@ -522,7 +522,7 @@ function ExtraButton({
       id={id}
       settings={settings}
       press={press}
-      className={`rgb-neon-button h-[clamp(2.25rem,6.5svh,2.75rem)] min-w-[clamp(4rem,7vw,4.5rem)] rounded-xl px-3 text-[9px] text-slate-300 ${className}`}
+      className={`${(id === "lm" || id === "rm" ? "rgb-neon-button " : "")}h-[clamp(2.25rem,6.5svh,2.75rem)] min-w-[clamp(4rem,7vw,4.5rem)] rounded-xl px-3 text-[9px] text-slate-300 ${className}`}
     />
   );
 }

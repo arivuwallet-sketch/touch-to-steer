@@ -2023,3 +2023,394 @@
     padding-inline: 2px !important;
   }
 }
+
+
+/* EXPLICIT MOBILE TOUCH LAYOUT: component-scoped so desktop/responsive preview cannot win. */
+.rig-shell.mobile-controller {
+  width: 100%;
+  height: 100svh;
+  min-width: 0;
+  min-height: 0;
+}
+
+.rig-shell.mobile-controller .flat-pad-root,
+.rig-shell.mobile-controller .flat-wheel-root {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* -------- mobile landscape gamepad -------- */
+@media (orientation: landscape) {
+  .rig-shell.mobile-controller.mode-pad .mode-toolbar {
+    bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    right: max(8px, env(safe-area-inset-right)) !important;
+    top: auto !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-top {
+    top: max(7px, env(safe-area-inset-top)) !important;
+    padding-inline: max(14px, env(safe-area-inset-left)) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-top > div {
+    gap: clamp(7px, 1vw, 14px) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-trigger {
+    width: clamp(84px, 10vw, 118px) !important;
+    height: clamp(44px, 7svh, 58px) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-top button {
+    min-width: clamp(58px, 7.5vw, 82px) !important;
+    height: clamp(44px, 7svh, 58px) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-left,
+  .rig-shell.mobile-controller.mode-pad .flat-pad-right {
+    bottom: max(17%, calc(env(safe-area-inset-bottom) + 17%)) !important;
+    align-items: center !important;
+    gap: clamp(28px, 3.4vw, 56px) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-left {
+    left: max(18px, env(safe-area-inset-left)) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-right {
+    right: max(18px, env(safe-area-inset-right)) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-stick {
+    width: clamp(110px, 27svh, 150px) !important;
+    height: clamp(110px, 27svh, 150px) !important;
+    flex: 0 0 auto !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-dpad {
+    width: clamp(94px, 24svh, 122px) !important;
+    height: clamp(94px, 24svh, 122px) !important;
+    flex: 0 0 auto !important;
+    transform: translateX(clamp(-12px, -1.4vw, -24px)) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-dpad button {
+    width: clamp(44px, 9svh, 54px) !important;
+    height: clamp(44px, 9svh, 54px) !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    border-radius: 10px !important;
+    font-size: clamp(19px, 4.8svh, 27px) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-face {
+    width: clamp(98px, 25svh, 124px) !important;
+    height: clamp(98px, 25svh, 124px) !important;
+    flex: 0 0 auto !important;
+    transform: translateX(clamp(12px, 1.4vw, 24px)) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-face button {
+    width: clamp(46px, 10svh, 58px) !important;
+    height: clamp(46px, 10svh, 58px) !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    font-size: clamp(20px, 5svh, 29px) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-center {
+    top: clamp(94px, 24svh, 180px) !important;
+    width: min(31vw, 360px) !important;
+    max-width: min(360px, 30vw) !important;
+    z-index: 12 !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-center-box {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding: clamp(8px, 1.2svh, 13px) !important;
+    border-radius: 18px !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-center-box > div:first-child {
+    gap: clamp(5px, .7vw, 9px) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-screen {
+    width: clamp(76px, 9.5vw, 98px) !important;
+    height: clamp(38px, 5.8svh, 48px) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-center-box button {
+    min-width: 0 !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-center-box > div:last-child {
+    margin-top: 7px !important;
+    gap: 5px !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-center-box > div:last-child > * {
+    min-width: 0 !important;
+    height: clamp(32px, 5svh, 38px) !important;
+    padding-inline: 4px !important;
+    font-size: 6.5px !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-bottom {
+    bottom: max(4%, calc(env(safe-area-inset-bottom) + 4%)) !important;
+    gap: 5px !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-bottom button {
+    min-width: clamp(50px, 7vw, 70px) !important;
+    height: clamp(34px, 5.5svh, 42px) !important;
+    padding-inline: 6px !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-left > span,
+  .rig-shell.mobile-controller.mode-pad .flat-pad-right > span {
+    flex: 0 0 auto !important;
+  }
+
+  /* 720–828px-high phones: prioritize thumb reach and vertical clearance. */
+  @media (max-height: 850px) {
+    .rig-shell.mobile-controller.mode-pad .flat-pad-left,
+    .rig-shell.mobile-controller.mode-pad .flat-pad-right {
+      bottom: max(18%, calc(env(safe-area-inset-bottom) + 18%)) !important;
+      gap: clamp(30px, 3.6vw, 50px) !important;
+    }
+
+    .rig-shell.mobile-controller.mode-pad .flat-pad-center {
+      top: clamp(92px, 23svh, 135px) !important;
+      width: min(28vw, 330px) !important;
+    }
+
+    .rig-shell.mobile-controller.mode-pad .flat-pad-center-box {
+      padding: 8px !important;
+    }
+  }
+
+  /* 1080px-high landscape phones/tablets. */
+  @media (min-height: 851px) {
+    .rig-shell.mobile-controller.mode-pad .flat-pad-left,
+    .rig-shell.mobile-controller.mode-pad .flat-pad-right {
+      bottom: 14% !important;
+      gap: clamp(42px, 3.8vw, 70px) !important;
+    }
+
+    .rig-shell.mobile-controller.mode-pad .flat-pad-stick {
+      width: clamp(125px, 27svh, 180px) !important;
+      height: clamp(125px, 27svh, 180px) !important;
+    }
+
+    .rig-shell.mobile-controller.mode-pad .flat-pad-dpad {
+      width: clamp(108px, 24svh, 142px) !important;
+      height: clamp(108px, 24svh, 142px) !important;
+    }
+
+    .rig-shell.mobile-controller.mode-pad .flat-pad-face {
+      width: clamp(114px, 25svh, 148px) !important;
+      height: clamp(114px, 25svh, 148px) !important;
+    }
+
+    .rig-shell.mobile-controller.mode-pad .flat-pad-dpad button {
+      width: clamp(50px, 9svh, 62px) !important;
+      height: clamp(50px, 9svh, 62px) !important;
+    }
+
+    .rig-shell.mobile-controller.mode-pad .flat-pad-face button {
+      width: clamp(52px, 10svh, 66px) !important;
+      height: clamp(52px, 10svh, 66px) !important;
+    }
+  }
+
+  /* -------- mobile landscape G29 wheel -------- */
+  .rig-shell.mobile-controller.mode-wheel .mode-toolbar {
+    bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    right: max(8px, env(safe-area-inset-right)) !important;
+    top: auto !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-stage {
+    inset: 0 !important;
+    padding: max(88px, calc(env(safe-area-inset-top) + 82px)) 10px max(10px, env(safe-area-inset-bottom)) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-telemetry {
+    top: max(6px, env(safe-area-inset-top)) !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    gap: 4px !important;
+    padding: 4px !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-telemetry > div:first-child,
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-telemetry > div:last-child {
+    width: clamp(58px, 8svh, 88px) !important;
+    height: clamp(58px, 8svh, 88px) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-telemetry > div:nth-child(2) {
+    width: clamp(32px, 5svh, 44px) !important;
+    height: clamp(32px, 5svh, 44px) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-degrees,
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-sens {
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    width: max-content !important;
+    max-width: calc(100vw - 20px) !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+    z-index: 35 !important;
+  }
+
+  /* The meter is at the very top; these two selectors sit immediately below it. */
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-degrees {
+    top: max(92px, calc(env(safe-area-inset-top) + 86px)) !important;
+    gap: 3px !important;
+    padding: 3px 5px !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-sens {
+    top: max(126px, calc(env(safe-area-inset-top) + 120px)) !important;
+    gap: 3px !important;
+    padding: 3px 5px !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-degrees > span,
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-sens > span {
+    display: block !important;
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-degrees button,
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-sens button {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: clamp(34px, 4.4vw, 56px) !important;
+    height: 26px !important;
+    padding: 5px 6px !important;
+    font-size: clamp(6px, .65vw, 8px) !important;
+    white-space: nowrap !important;
+    border-radius: 8px !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-root > button {
+    top: max(6px, env(safe-area-inset-top)) !important;
+    right: max(8px, env(safe-area-inset-right)) !important;
+    padding: 6px 8px !important;
+    font-size: 6.5px !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-hit {
+    left: max(8px, env(safe-area-inset-left)) !important;
+    bottom: max(5%, env(safe-area-inset-bottom)) !important;
+    width: min(58svh, 34vw, 430px) !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-pedals {
+    right: 17% !important;
+    bottom: max(6%, env(safe-area-inset-bottom)) !important;
+    gap: clamp(6px, .8vw, 10px) !important;
+    max-width: 34vw !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-pedals button {
+    width: clamp(52px, 6.2vw, 72px) !important;
+    height: min(46svh, 360px) !important;
+    min-height: 0 !important;
+    flex: 0 0 auto !important;
+    padding: 3px !important;
+    border-radius: 12px !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-aux {
+    right: max(7px, env(safe-area-inset-right)) !important;
+    bottom: max(13%, calc(env(safe-area-inset-bottom) + 13%)) !important;
+    gap: 6px !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-aux > button:first-child {
+    width: clamp(56px, 7vw, 76px) !important;
+    height: min(31svh, 230px) !important;
+    min-height: 72px !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-aux > button:last-child {
+    width: clamp(66px, 8vw, 86px) !important;
+    height: min(17svh, 120px) !important;
+    min-height: 76px !important;
+  }
+
+  @media (max-height: 850px) {
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-hit {
+      width: min(58svh, 37vw, 430px) !important;
+    }
+
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-pedals {
+      right: 17.5% !important;
+      max-width: 31vw !important;
+    }
+
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-pedals button {
+      width: clamp(48px, 6vw, 66px) !important;
+      height: min(45svh, 330px) !important;
+    }
+
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-aux > button:first-child {
+      width: clamp(52px, 6.8vw, 70px) !important;
+      height: min(29svh, 190px) !important;
+    }
+
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-aux > button:last-child {
+      width: clamp(60px, 7.6vw, 80px) !important;
+      height: min(17svh, 100px) !important;
+    }
+  }
+
+  @media (min-height: 851px) {
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-hit {
+      width: min(62svh, 42vw, 620px) !important;
+    }
+
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-pedals {
+      right: 18% !important;
+      max-width: 29vw !important;
+    }
+
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-pedals button {
+      width: clamp(58px, 6vw, 80px) !important;
+      height: min(48svh, 480px) !important;
+    }
+
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-aux > button:first-child {
+      width: clamp(62px, 7vw, 84px) !important;
+      height: min(31svh, 320px) !important;
+    }
+
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-aux > button:last-child {
+      width: clamp(72px, 8vw, 94px) !important;
+      height: min(18svh, 180px) !important;
+    }
+  }
+}

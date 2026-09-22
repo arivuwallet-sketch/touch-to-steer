@@ -2944,3 +2944,60 @@
     transform: translateX(clamp(200px, 24vw, 300px)) !important;
   }
 }
+
+
+/* GAMEPAD RGB BUTTON LIGHTING: 12 controls
+   D-pad (4) + ABXY (4) + LM/RM (2) + LT/RT (2). */
+@property --rgb-hue {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+@keyframes touch-to-steer-rgb-cycle {
+  from { --rgb-hue: 0; }
+  to { --rgb-hue: 360; }
+}
+
+.flat-pad-root.rgb-enabled .rgb-neon-button {
+  --rgb-hue: 0;
+  position: relative !important;
+  border-color: hsl(var(--rgb-hue) 100% 70% / .62) !important;
+  box-shadow:
+    0 0 7px hsl(var(--rgb-hue) 100% 64% / .72),
+    0 0 16px hsl(var(--rgb-hue) 100% 58% / .42),
+    inset 0 0 8px hsl(var(--rgb-hue) 100% 65% / .16),
+    var(--rgb-button-shadow, 0 5px 0 #06090d, 0 9px 14px rgba(0,0,0,.5)) !important;
+  animation: touch-to-steer-rgb-cycle 3.6s linear infinite !important;
+  will-change: border-color, box-shadow;
+}
+
+.flat-pad-root.rgb-enabled .rgb-neon-button::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  border: 1px solid hsl(var(--rgb-hue) 100% 72% / .48);
+  box-shadow: 0 0 9px hsl(var(--rgb-hue) 100% 62% / .55);
+  pointer-events: none;
+}
+
+.flat-pad-root.rgb-enabled .rgb-neon-button > * {
+  position: relative;
+  z-index: 1;
+}
+
+.flat-pad-root.rgb-enabled .rgb-neon-button.active,
+.flat-pad-root.rgb-enabled .rgb-neon-button:active {
+  box-shadow:
+    0 0 10px hsl(var(--rgb-hue) 100% 68% / .9),
+    0 0 22px hsl(var(--rgb-hue) 100% 60% / .65),
+    inset 0 0 10px hsl(var(--rgb-hue) 100% 70% / .24),
+    0 2px 0 #06090d !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flat-pad-root.rgb-enabled .rgb-neon-button {
+    animation: none !important;
+  }
+}

@@ -618,11 +618,13 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
         tilt = screenAngle === 90 ? beta : -beta;
       }
 
+      // Gyro: higher sensitivity reaches full lock with less tilt.
       const raw = Math.max(
         -1,
         Math.min(
           1,
-          (settings.invertTilt ? -tilt : tilt) / Math.max(1, settings.maxTiltDeg),
+          ((settings.invertTilt ? -tilt : tilt) / Math.max(1, settings.maxTiltDeg)) *
+            settings.steerSensitivity,
         ),
       );
 
@@ -677,9 +679,13 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
     while (delta < -Math.PI) delta += Math.PI * 2;
     lastAngle.current = angle;
 
+    // Touch: higher sensitivity turns the wheel more per finger sweep.
     const next = Math.max(
       -maxLockDeg,
-      Math.min(maxLockDeg, wheelAngleDeg.current + (delta * 180) / Math.PI),
+      Math.min(
+        maxLockDeg,
+        wheelAngleDeg.current + ((delta * 180) / Math.PI) * settings.steerSensitivity,
+      ),
     );
 
     paintWheel(next);

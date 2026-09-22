@@ -8,7 +8,12 @@ type Props = {
   press: (id: string, down: boolean) => void;
   telemetry: BridgeTelemetry;
   telemetryLive: boolean;
+  onSettingsChange: (p: Partial<Settings>) => void;
 };
+
+/** Selectable lock-to-lock steering ranges, matching common wheel firmware options. */
+const STEER_DEGREES = [180, 270, 360, 540, 720, 900, 1080] as const;
+
 
 // Haptics are deferred off the input task so a vibration call can never delay
 // the controller packet leaving the phone.
@@ -452,7 +457,7 @@ function G29Wheel({
   );
 }
 
-export function FlatWheel({ settings, set, press, telemetry, telemetryLive }: Props) {
+export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSettingsChange }: Props) {
   const wheelHitRef = useRef<HTMLDivElement>(null);
   const wheelVisualRef = useRef<HTMLDivElement>(null);
   const touchPointer = useRef<number | null>(null);
@@ -464,6 +469,8 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive }: Pr
   const [gyroDenied, setGyroDenied] = useState(false);
 
   const maxLockDeg = Math.max(90, settings.wheelRotationDeg / 2);
+  const prevLockRef = useRef(maxLockDeg);
+
 
   const paintWheel = useCallback((angleDeg: number) => {
     wheelAngleDeg.current = angleDeg;
@@ -707,6 +714,24 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive }: Pr
     return () => cancelCentre();
   }, [cancelCentre]);
 
+  // Changing the lock range keeps the current steering output identical:
+  // the visual angle is re-scaled into the new range instead of jumping.
+  useEffect(() => {
+    const previous = prevLockRef.current;
+    if (previous === maxLockDeg) return;
+    prevLockRef.current = maxLockDeg;
+    cancelCentre();
+    const ratio = wheelAngleDeg.current / previous;
+    setWheelRaw(ratio);
+  }, [cancelCentre, maxLockDeg, setWheelRaw]);
+
+  const selectDegrees = (deg: number) => {
+    if (deg === settings.wheelRotationDeg) return;
+    buzz(settings.vibration, 8);
+    onSettingsChange({ wheelRotationDeg: deg });
+  };
+
+
   return (
     <div className="flat-wheel-root absolute inset-0 overflow-hidden bg-[#080a0d] text-slate-100">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_95%_at_50%_6%,#1a222b_0%,#080a0d_55%,#030405_100%)]" />
@@ -724,12 +749,40 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive }: Pr
         </div>
         <div className="mt-0.5 text-[6px] font-semibold uppercase tracking-[0.15em] text-slate-500 md:text-[8px] md:tracking-[0.2em]">
           {settings.steerMode === "touch"
-            ? "Touch 900° wheel • Auto-centre"
+            ? `Touch ${settings.wheelRotationDeg}° wheel • Auto-centre`
             : gyroReady
               ? "Gyro steering"
               : "Gyro permission required"}
         </div>
       </div>
+
+      <div className="flat-wheel-degrees absolute left-1/2 top-2 z-30 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-white/10 bg-black/55 p-1 backdrop-blur-md md:top-5 md:gap-1.5 md:p-1.5">
+        <span className="px-1 text-[6px] font-black uppercase tracking-[0.2em] text-slate-500 md:text-[8px]">
+          LOCK
+        </span>
+        {STEER_DEGREES.map((deg) => {
+          const active = settings.wheelRotationDeg === deg;
+          return (
+            <button
+              key={deg}
+              type="button"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                selectDegrees(deg);
+              }}
+              className={
+                "rounded-lg px-1.5 py-1 text-[7px] font-black tracking-tight transition-colors md:px-2.5 md:py-1.5 md:text-[10px] " +
+                (active
+                  ? "bg-[#e11d2e] text-white shadow-[0_0_14px_rgba(225,29,46,.55)]"
+                  : "bg-white/5 text-slate-400 active:bg-white/15")
+              }
+            >
+              {deg}°
+            </button>
+          );
+        })}
+      </div>
+
 
       {settings.steerMode === "tilt" && !gyroReady && (
         <div className="flat-wheel-gyro absolute left-1/2 top-[3.5rem] z-30 -translate-x-1/2 md:top-5">
@@ -771,7 +824,7 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive }: Pr
           </div>
 
           <div className="flat-wheel-instructions pointer-events-none absolute bottom-1 left-[2%] hidden text-[7px] font-bold uppercase tracking-[0.16em] text-slate-500 md:bottom-3 md:left-[5%] md:block md:text-[8px] md:tracking-[0.2em]">
-            Touch the rim and release to auto-centre • 900° lock-to-lock • wheel + horn + brake + gas + handbrake + nitro
+            Touch the rim and release to auto-centre • {settings.wheelRotationDeg}° lock-to-lock • wheel + horn + brake + gas + handbrake + nitro
           </div>
         </div>
       </div>

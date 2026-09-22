@@ -212,8 +212,9 @@ function Pedal({
       onPointerDown={(e) => {
         e.currentTarget.setPointerCapture(e.pointerId);
         active.current = e.pointerId;
-        buzz(settings.vibration, 7);
+        rect.current = e.currentTarget.getBoundingClientRect();
         update(e.clientY);
+        buzz(settings.vibration, 7);
       }}
       onPointerMove={(e) => active.current === e.pointerId && update(e.clientY)}
       onPointerUp={release}

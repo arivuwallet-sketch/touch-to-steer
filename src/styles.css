@@ -3224,3 +3224,46 @@
     pointer-events: auto !important;
   }
 }
+
+
+/* ANALOG STICK RGB RINGS: L-STICK + R-STICK.
+   Uses the same 12-zone color cycle with two additional independently phased
+   analog-stick zones so both stick rings glow like the reference controller. */
+.flat-pad-root.rgb-enabled .rgb-neon-stick {
+  --rgb-index: 12;
+  position: relative;
+  border-color: rgba(255, 62, 82, .7) !important;
+  animation: touch-to-steer-rgb-12 4.8s linear infinite !important;
+  animation-delay: calc(var(--rgb-index, 12) * -0.4s) !important;
+  will-change: border-color, box-shadow;
+}
+
+.flat-pad-root.rgb-enabled .rgb-neon-stick::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 999px;
+  border: 2px solid rgba(255,255,255,.12);
+  pointer-events: none;
+  animation: touch-to-steer-rgb-12-ring 4.8s linear infinite !important;
+  animation-delay: calc(var(--rgb-index, 12) * -0.4s) !important;
+}
+
+.flat-pad-root.rgb-enabled .rgb-neon-thumb {
+  position: relative;
+  box-shadow:
+    0 0 8px rgba(255, 62, 82, .5),
+    0 8px 16px rgba(0,0,0,.65),
+    inset 0 -7px 10px rgba(0,0,0,.58) !important;
+  animation: touch-to-steer-rgb-thumb 4.8s linear infinite !important;
+  animation-delay: calc(var(--rgb-index, 12) * -0.4s) !important;
+}
+
+@keyframes touch-to-steer-rgb-thumb {
+  0%, 100% { box-shadow: 0 0 8px rgba(255, 62, 82, .5), 0 0 18px rgba(255, 62, 82, .28), 0 8px 16px rgba(0,0,0,.65), inset 0 -7px 10px rgba(0,0,0,.58) !important; }
+  16.66% { box-shadow: 0 0 8px rgba(255, 184, 48, .5), 0 0 18px rgba(255, 184, 48, .28), 0 8px 16px rgba(0,0,0,.65), inset 0 -7px 10px rgba(0,0,0,.58) !important; }
+  33.33% { box-shadow: 0 0 8px rgba(82, 255, 94, .5), 0 0 18px rgba(82, 255, 94, .28), 0 8px 16px rgba(0,0,0,.65), inset 0 -7px 10px rgba(0,0,0,.58) !important; }
+  50% { box-shadow: 0 0 8px rgba(52, 239, 255, .5), 0 0 18px rgba(52, 239, 255, .28), 0 8px 16px rgba(0,0,0,.65), inset 0 -7px 10px rgba(0,0,0,.58) !important; }
+  66.66% { box-shadow: 0 0 8px rgba(74, 126, 255, .5), 0 0 18px rgba(74, 126, 255, .28), 0 8px 16px rgba(0,0,0,.65), inset 0 -7px 10px rgba(0,0,0,.58) !important; }
+  83.33% { box-shadow: 0 0 8px rgba(218, 74, 255, .5), 0 0 18px rgba(218, 74, 255, .28), 0 8px 16px rgba(0,0,0,.65), inset 0 -7px 10px rgba(0,0,0,.58) !important; }
+}

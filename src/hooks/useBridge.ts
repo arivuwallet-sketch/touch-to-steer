@@ -41,6 +41,9 @@ export function useBridge(
   const packetCounterRef = useRef(0);
   const lastStatsPaintRef = useRef(0);
   const lastLatencyPaintRef = useRef(0);
+  const lastSentBodyRef = useRef("");
+  const lastSentAtRef = useRef(0);
+
 
   const clearLoop = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);

@@ -206,13 +206,14 @@ function Stick({
           onClick3(true);
           window.setTimeout(() => onClick3(false), 90);
         }}
-        className="flat-pad-stick relative size-[clamp(5.25rem,23svh,10.5rem)] touch-none rounded-full border border-white/10 bg-[#0c1117] shadow-[inset_0_0_22px_rgba(0,0,0,.95),0_8px_20px_rgba(0,0,0,.45)]"
+        className="flat-pad-stick rgb-neon-stick relative size-[clamp(5.25rem,23svh,10.5rem)] touch-none rounded-full border border-white/10 bg-[#0c1117] shadow-[inset_0_0_22px_rgba(0,0,0,.95),0_8px_20px_rgba(0,0,0,.45)]"
+        style={{ "--rgb-index": side === "left" ? 12 : 13 } as CSSProperties}
       >
         <div className="absolute inset-[8%] rounded-full border border-[#2e3945] bg-[radial-gradient(circle_at_38%_28%,#202a35,#080c11_72%)]" />
         <div
           ref={thumbRef}
           data-stick-thumb
-          className="absolute left-1/2 top-1/2 size-[57%] rounded-full border border-white/10 bg-[radial-gradient(circle_at_35%_25%,#626e7a,#1a222b_70%)] shadow-[0_8px_16px_rgba(0,0,0,.65),inset_0_-7px_10px_rgba(0,0,0,.58)] will-change-transform"
+          className="rgb-neon-thumb absolute left-1/2 top-1/2 size-[57%] rounded-full border border-white/10 bg-[radial-gradient(circle_at_35%_25%,#626e7a,#1a222b_70%)] shadow-[0_8px_16px_rgba(0,0,0,.65),inset_0_-7px_10px_rgba(0,0,0,.58)] will-change-transform"
           style={{ transform: "translate3d(-50%,-50%,0)" }}
         />
         <div className="pointer-events-none absolute left-1/2 top-[11%] h-[8%] w-[28%] -translate-x-1/2 rounded-full bg-[#0a0e13]" />

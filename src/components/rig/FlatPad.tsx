@@ -258,7 +258,9 @@ function Trigger({
   press: Props["press"];
   mode: TriggerMode;
 }) {
-  const [value, setValue] = useState(0);
+  const valueRef = useRef(0);
+  const plateRef = useRef<HTMLSpanElement>(null);
+  const barRef = useRef<HTMLSpanElement>(null);
   const [pulse3d, setPulse3d] = useState(false);
   const pointer = useRef<number | null>(null);
   const lastFeel = useRef(0);
@@ -298,7 +300,9 @@ function Trigger({
   const writeTrigger = useCallback(
     (next: number) => {
       const clamped = Math.max(0, Math.min(1, next));
-      setValue(clamped);
+      // Value goes to the bridge before any painting happens, so the trigger
+      // reaches the PC in the same input task with no render in between.
+      valueRef.current = clamped;
       set({ [id]: clamped } as Partial<ControllerState>);
       // Also expose a digital trigger alias so games/bindings that treat LT/RT
       // as buttons still receive a clean press while the analog value is sent.

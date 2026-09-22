@@ -176,7 +176,7 @@ function Rig() {
   }, [mode, releaseAll]);
 
   return (
-    <main className="relative h-[100dvh] overflow-hidden bg-background">
+    <main className={`rig-shell mode-${mode} relative h-[100dvh] overflow-hidden bg-background`}>
       <RotateGate mode={mode} />
 
       {/* ---------- rig fills the screen ---------- */}

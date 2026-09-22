@@ -1720,3 +1720,159 @@
     gap: 10px !important;
   }
 }
+
+
+/* Keep the global dock from obscuring controller-specific bottom controls. */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 680px) {
+  .rig-shell.mode-mouse .mode-toolbar {
+    top: max(7px, env(safe-area-inset-top)) !important;
+    right: max(8px, env(safe-area-inset-right)) !important;
+    bottom: auto !important;
+  }
+
+  .rig-shell.mode-mouse .flat-mouse-topbar {
+    padding-right: 170px !important;
+  }
+
+  .flat-wheel-aux {
+    bottom: max(18%, calc(env(safe-area-inset-bottom) + 72px)) !important;
+  }
+}
+
+/* Extra-compact landscape phones (older/smaller 16:9 devices). */
+@media (pointer: coarse) and (orientation: landscape) and (max-width: 600px) and (max-height: 520px) {
+  .flat-pad-left,
+  .flat-pad-right {
+    bottom: max(58px, calc(env(safe-area-inset-bottom) + 58px)) !important;
+    gap: 5px !important;
+  }
+
+  .flat-pad-left {
+    left: max(6px, env(safe-area-inset-left)) !important;
+  }
+
+  .flat-pad-right {
+    right: max(6px, env(safe-area-inset-right)) !important;
+  }
+
+  .flat-pad-root .flat-pad-stick {
+    width: 76px !important;
+    height: 76px !important;
+  }
+
+  .flat-pad-root .flat-pad-dpad {
+    width: 70px !important;
+    height: 70px !important;
+  }
+
+  .flat-pad-root .flat-pad-dpad button {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 18px !important;
+  }
+
+  .flat-pad-root .flat-pad-face {
+    width: 76px !important;
+    height: 76px !important;
+  }
+
+  .flat-pad-root .flat-pad-face button {
+    width: 35px !important;
+    height: 35px !important;
+    font-size: 18px !important;
+  }
+
+  .flat-pad-center {
+    top: 92px !important;
+    width: 170px !important;
+    min-width: 170px !important;
+    max-width: 170px !important;
+  }
+
+  .flat-pad-center-box {
+    padding: 7px !important;
+  }
+
+  .flat-pad-center-box > div:first-child > button {
+    height: 27px !important;
+  }
+
+  .flat-pad-root .flat-pad-screen {
+    width: 62px !important;
+    height: 34px !important;
+  }
+
+  .flat-pad-center-box > div:nth-child(2) button {
+    height: 25px !important;
+  }
+
+  .flat-pad-center-box > div:last-child > * {
+    height: 27px !important;
+    font-size: 5.5px !important;
+  }
+
+  .flat-pad-bottom {
+    left: calc(50% - 36px) !important;
+    bottom: max(58px, calc(env(safe-area-inset-bottom) + 58px)) !important;
+  }
+
+  .flat-pad-bottom button {
+    min-width: 43px !important;
+    height: 30px !important;
+    padding-inline: 4px !important;
+    font-size: 6px !important;
+  }
+
+  .flat-wheel-stage {
+    padding-top: 82px !important;
+  }
+
+  .flat-wheel-hit {
+    width: min(56svh, 31vw, 190px) !important;
+  }
+
+  .flat-wheel-pedals {
+    right: 16% !important;
+    max-width: 29vw !important;
+  }
+
+  .flat-wheel-pedals button {
+    width: 39px !important;
+    height: min(43svh, 150px) !important;
+  }
+
+  .flat-wheel-aux {
+    right: 5px !important;
+    gap: 4px !important;
+  }
+
+  .flat-wheel-aux > button:first-child {
+    width: 46px !important;
+    height: min(27svh, 92px) !important;
+  }
+
+  .flat-wheel-aux > button:last-child {
+    width: 53px !important;
+    height: min(18svh, 62px) !important;
+  }
+
+  .flat-mouse-viper-wrap {
+    height: min(66svh, 245px) !important;
+  }
+
+  .flat-mouse-control {
+    min-height: 43px !important;
+  }
+
+  .flat-mouse-control strong {
+    font-size: 7px !important;
+  }
+
+  .flat-mouse-control small {
+    font-size: 4.5px !important;
+  }
+
+  .rig-shell.mode-mouse .flat-mouse-topbar {
+    padding-right: 150px !important;
+  }
+}

@@ -665,33 +665,17 @@ export function FlatPad({ settings, set, press, onSettingsChange }: Props) {
             <SurfaceButton label="MENU" id="start" settings={settings} press={press} className="h-10 min-w-16 rounded-lg text-[8px] text-slate-300" />
           </div>
           <div className="mt-2 flex items-center justify-center gap-2">
-            <SurfaceButton label="PROFILE −" id="minus" settings={settings} press={press} onClick={() => cycleProfile(-1)} className="h-[clamp(2rem,5.4svh,2.25rem)] min-w-[clamp(4rem,5vw,5rem)] rounded-md text-[7px]" />
             <SurfaceButton label="HOME" id="home" settings={settings} press={press} className="h-9 min-w-20 rounded-md text-[7px]" />
-            <SurfaceButton label="PROFILE +" id="plus" settings={settings} press={press} onClick={() => cycleProfile(1)} className="h-9 min-w-20 rounded-md text-[7px]" />
           </div>
           <div className="mt-2 grid grid-cols-3 gap-2">
             <SurfaceButton label="FN" id="fn" settings={settings} press={press} className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg text-[7px] text-slate-300" />
             <SurfaceButton label="LOGO" id="logo" settings={settings} press={press} className="h-8 min-w-0 w-full rounded-lg text-[7px] text-slate-300" />
+  
+          <div className="mt-2 grid grid-cols-3 gap-2">
             <button type="button" onClick={() => setTurbo((v) => !v)} className={`h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border px-2 text-[7px] font-black uppercase tracking-[0.14em] ${turbo ? "border-orange-300/50 bg-orange-300/10 text-orange-200" : "border-white/10 bg-black/20 text-slate-400"}`}>TURBO</button>
             <GyroControl enabled={gyroEnabled} denied={gyroDenied} onToggle={requestGyro} />
-            <button
-              type="button"
-              onClick={cycleJoystickTension}
-              className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border border-violet-300/20 bg-violet-300/5 px-2 text-[7px] font-black uppercase tracking-[0.14em] text-violet-200"
-              aria-label={`ForceFlex joystick tension ${settings.joystickTensionGf} gf. Tap to change.`}
-              title={FORCEFLEX_DESCRIPTIONS[settings.joystickTensionGf]}
-            >
-              FORCEFLEX {settings.joystickTensionGf}GF
-            </button>
-            <button
-              type="button"
-              onClick={cycleSendRate}
-              className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border border-cyan-300/20 bg-cyan-300/5 px-2 text-[7px] font-black uppercase tracking-[0.14em] text-cyan-200"
-              aria-label={`Controller polling rate ${settings.sendRateHz} Hz. Tap to change.`}
-              title="Change controller polling rate"
-            >
-              RATE {settings.sendRateHz} HZ
-            </button>
+            <button type="button" onClick={cycleJoystickTension} className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border border-violet-300/20 bg-violet-300/5 px-2 text-[7px] font-black uppercase tracking-[0.14em] text-violet-200" aria-label={`ForceFlex joystick tension ${settings.joystickTensionGf} gf. Tap to change.`} title={FORCEFLEX_DESCRIPTIONS[settings.joystickTensionGf]}>FORCEFLEX {settings.joystickTensionGf}GF</button>
+            <button type="button" onClick={cycleSendRate} className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border border-cyan-300/20 bg-cyan-300/5 px-2 text-[7px] font-black uppercase tracking-[0.14em] text-cyan-200" aria-label={`Controller polling rate ${settings.sendRateHz} Hz. Tap to change.`} title="Change controller polling rate">RATE {settings.sendRateHz} HZ</button>
             <button type="button" onClick={nextTriggerMode} className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border border-white/10 bg-black/20 px-2 text-[7px] font-black uppercase tracking-[0.14em] text-slate-400">FORCEADAPT</button>
             <button type="button" onClick={() => setRgb((v) => !v)} className={`h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border px-2 text-[7px] font-black uppercase tracking-[0.14em] ${rgb ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-200" : "border-white/10 bg-black/20 text-slate-400"}`}>RGB</button>
           </div>
@@ -710,9 +694,6 @@ export function FlatPad({ settings, set, press, onSettingsChange }: Props) {
         <ExtraButton label="M4" id="m4" settings={settings} press={press} />
       </div>
 
-      <div className="pointer-events-none absolute left-1/2 bottom-1 -translate-x-1/2 text-[6px] font-bold uppercase tracking-[0.14em] text-slate-600">
-        FORCEFLEX {settings.joystickTensionGf}GF • FORCEADAPT MODES • 6 EXTRA • GYRO • RGB • TURBO
-      </div>
     </div>
   );
 }

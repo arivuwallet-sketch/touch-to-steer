@@ -883,9 +883,6 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
             <Nitro settings={settings} set={set} />
           </div>
 
-          <div className="flat-wheel-instructions pointer-events-none absolute bottom-1 left-[2%] hidden text-[7px] font-bold uppercase tracking-[0.16em] text-slate-500 md:bottom-3 md:left-[5%] md:block md:text-[8px] md:tracking-[0.2em]">
-            Touch the rim and release to auto-centre • {settings.wheelRotationDeg}° lock-to-lock • wheel + horn + brake + gas + handbrake + nitro
-          </div>
         </div>
       </div>
     </div>

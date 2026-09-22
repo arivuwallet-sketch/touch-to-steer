@@ -245,8 +245,9 @@ function Pedal({
         </span>
         <span className="absolute bottom-2 left-1/2 h-1.5 w-[50%] -translate-x-1/2 rounded-full bg-black/45" />
         <span
-          className="absolute bottom-1.5 left-1/2 h-1 rounded-full -translate-x-1/2 transition-all"
-          style={{ width: Math.max(15, value * 80) + "%", background: accent, boxShadow: "0 0 8px " + accent + "88" }}
+          ref={barRef}
+          className="absolute bottom-1.5 left-1/2 h-1 rounded-full -translate-x-1/2"
+          style={{ width: "15%", background: accent, boxShadow: "0 0 8px " + accent + "88" }}
         />
       </span>
 

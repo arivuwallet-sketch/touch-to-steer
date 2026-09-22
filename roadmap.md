@@ -7,3 +7,4 @@
 - [x] Simplify the controller screen and consolidate connection controls into settings.
 - [x] Improve spacing and verify phone and tablet layouts.
 - [x] Ultra-low-latency input path: sticks, triggers, pedals, handbrake and steering send before painting; haptics deferred off the input task.
+- [x] Repair wheel-mode driving controls: pedal taps engage fully, analog feathering remains available, and PC trigger/button mappings are applied immediately.

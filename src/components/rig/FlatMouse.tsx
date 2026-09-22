@@ -277,7 +277,7 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
       activePointers.current.set(e.pointerId, {
         x: e.clientX,
         y: e.clientY,
-        button,
+        ...(button ? { button } : {}),
       });
 
       if (button) {
@@ -294,8 +294,8 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
       if (!previous) return;
       e.preventDefault();
 
-      const native = e.nativeEvent as PointerEvent & {
-        getCoalescedEvents?: () => PointerEvent[];
+      const native = e.nativeEvent as globalThis.PointerEvent & {
+        getCoalescedEvents?: () => globalThis.PointerEvent[];
       };
       const events =
         settings.mouseSmartTracking && native.getCoalescedEvents
@@ -335,7 +335,7 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
   );
 
   const handleWheel = useCallback(
-    (e: WheelEvent<HTMLDivElement>) => {
+    (e: WheelEvent<HTMLElement>) => {
       e.preventDefault();
       const delta = Math.abs(e.deltaY) > 0.5 ? e.deltaY : e.deltaX;
       if (Math.abs(delta) < 0.5) return;
@@ -348,7 +348,7 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
   const cycleDpi = useCallback(() => {
     const values = [400, 800, 1200, 1600, 2400, 3200, 6400, 12800, 25600, 50000];
     const index = values.findIndex((value) => value >= settings.mouseDpi);
-    const next = values[(index >= 0 ? index + 1 : 0) % values.length];
+    const next = values[(index >= 0 ? index + 1 : 0) % values.length] ?? 800;
     onSettingsChange({ mouseDpi: next });
     setDpiFlash(true);
     phoneFeedback();

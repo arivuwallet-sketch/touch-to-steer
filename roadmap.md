@@ -6,3 +6,4 @@
 - [x] Add extended controls and bridge mappings.
 - [x] Simplify the controller screen and consolidate connection controls into settings.
 - [x] Improve spacing and verify phone and tablet layouts.
+- [x] Ultra-low-latency input path: sticks, triggers, pedals, handbrake and steering send before painting; haptics deferred off the input task.

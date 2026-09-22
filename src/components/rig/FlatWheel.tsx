@@ -10,10 +10,17 @@ type Props = {
   telemetryLive: boolean;
 };
 
+// Haptics are deferred off the input task so a vibration call can never delay
+// the controller packet leaving the phone.
 const buzz = (enabled: boolean, ms: number | number[] = 10) => {
-  if (enabled && typeof navigator !== "undefined" && "vibrate" in navigator) {
-    navigator.vibrate(ms);
-  }
+  if (!enabled || typeof navigator === "undefined" || !("vibrate" in navigator)) return;
+  setTimeout(() => {
+    try {
+      navigator.vibrate(ms);
+    } catch {
+      /* ignore */
+    }
+  }, 0);
 };
 
 function TelemetryGauge({
@@ -25,7 +32,7 @@ function TelemetryGauge({
   accent,
 }: {
   label: string;
-  value?: number;
+  value?: number | undefined;
   max: number;
   unit: string;
   live: boolean;
@@ -155,36 +162,52 @@ function Pedal({
   set: Props["set"];
   accent: string;
 }) {
-  const [value, setValue] = useState(0);
   const active = useRef<number | null>(null);
   const lastBand = useRef(-1);
   const lastHapticAt = useRef(0);
   const pedalRef = useRef<HTMLButtonElement>(null);
+  const plateRef = useRef<HTMLSpanElement>(null);
+  const barRef = useRef<HTMLSpanElement>(null);
+  const rect = useRef<DOMRect | null>(null);
+
+  // Pedal travel is written to the bridge first and painted straight to the
+  // compositor after: no React render sits between finger and game.
+  const paint = (v: number) => {
+    const plate = plateRef.current;
+    if (plate) {
+      plate.style.height = "calc(28% + " + v * 58 + "%)";
+      plate.style.transform = "translate3d(0," + v * 3 + "px,0) rotateX(" + v * 2 + "deg)";
+      plate.style.boxShadow =
+        "0 0 " + (8 + v * 12) + "px " + accent +
+        "44, 0 10px 16px rgba(0,0,0,.58), inset 0 2px 0 rgba(255,255,255,.55), inset 0 -7px 10px rgba(0,0,0,.42)";
+    }
+    const bar = barRef.current;
+    if (bar) bar.style.width = Math.max(15, v * 80) + "%";
+  };
 
   const update = (clientY: number) => {
-    const el = pedalRef.current;
-    if (!el) return;
+    const r = rect.current ?? pedalRef.current?.getBoundingClientRect();
+    if (!r) return;
 
-    const rect = el.getBoundingClientRect();
-    const next = Math.max(0, Math.min(1, (rect.bottom - clientY) / Math.max(1, rect.height)));
+    const next = Math.max(0, Math.min(1, (r.bottom - clientY) / Math.max(1, r.height)));
+    set({ [id]: next } as Partial<ControllerState>);
+    paint(next);
+
     const band = Math.min(5, Math.floor(next * 6));
     const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-
-    if (settings.vibration && band !== lastBand.current && now - lastHapticAt.current > 45) {
+    if (settings.vibration && band !== lastBand.current && now - lastHapticAt.current > 60) {
       lastBand.current = band;
       lastHapticAt.current = now;
       buzz(true, Math.min(15, 3 + band * 2));
     }
-
-    setValue(next);
-    set({ [id]: next } as Partial<ControllerState>);
   };
 
   const release = () => {
     active.current = null;
     lastBand.current = -1;
-    setValue(0);
+    rect.current = null;
     set({ [id]: 0 } as Partial<ControllerState>);
+    paint(0);
     if (settings.vibration) buzz(true, id === "brake" ? [5, 11, 4] : 4);
   };
 
@@ -196,8 +219,9 @@ function Pedal({
       onPointerDown={(e) => {
         e.currentTarget.setPointerCapture(e.pointerId);
         active.current = e.pointerId;
-        buzz(settings.vibration, 7);
+        rect.current = e.currentTarget.getBoundingClientRect();
         update(e.clientY);
+        buzz(settings.vibration, 7);
       }}
       onPointerMove={(e) => active.current === e.pointerId && update(e.clientY)}
       onPointerUp={release}
@@ -208,13 +232,12 @@ function Pedal({
       <span className="absolute left-1/2 top-3 h-2 w-1/2 -translate-x-1/2 rounded-full bg-[#20262c] shadow-[inset_0_1px_1px_rgba(255,255,255,.14)]" />
 
       <span
-        className="absolute inset-x-[13%] bottom-10 rounded-[1.05rem] border border-white/15 bg-[linear-gradient(155deg,#eef1f3_0%,#aab1b8_24%,#59616a_68%,#2b3239_100%)] shadow-[0_10px_16px_rgba(0,0,0,.58),inset_0_2px_0_rgba(255,255,255,.55),inset_0_-7px_10px_rgba(0,0,0,.42)] transition-transform duration-75"
+        ref={plateRef}
+        className="absolute inset-x-[13%] bottom-10 rounded-[1.05rem] border border-white/15 bg-[linear-gradient(155deg,#eef1f3_0%,#aab1b8_24%,#59616a_68%,#2b3239_100%)] shadow-[0_10px_16px_rgba(0,0,0,.58),inset_0_2px_0_rgba(255,255,255,.55),inset_0_-7px_10px_rgba(0,0,0,.42)] will-change-transform"
         style={{
-          height: "calc(28% + " + value * 58 + "%)",
-          transform: "translateY(" + value * 3 + "px) rotateX(" + value * 2 + "deg)",
+          height: "28%",
+          transform: "translate3d(0,0,0)",
           transformOrigin: "bottom center",
-          boxShadow:
-            "0 0 " + (8 + value * 12) + "px " + accent + "44, 0 10px 16px rgba(0,0,0,.58), inset 0 2px 0 rgba(255,255,255,.55), inset 0 -7px 10px rgba(0,0,0,.42)",
         }}
       >
         <span className="absolute inset-x-[12%] top-2 h-[2px] rounded-full bg-white/30" />
@@ -230,8 +253,9 @@ function Pedal({
         </span>
         <span className="absolute bottom-2 left-1/2 h-1.5 w-[50%] -translate-x-1/2 rounded-full bg-black/45" />
         <span
-          className="absolute bottom-1.5 left-1/2 h-1 rounded-full -translate-x-1/2 transition-all"
-          style={{ width: Math.max(15, value * 80) + "%", background: accent, boxShadow: "0 0 8px " + accent + "88" }}
+          ref={barRef}
+          className="absolute bottom-1.5 left-1/2 h-1 rounded-full -translate-x-1/2"
+          style={{ width: "15%", background: accent, boxShadow: "0 0 8px " + accent + "88" }}
         />
       </span>
 
@@ -245,20 +269,25 @@ function Pedal({
   );
 }
 function Handbrake({ settings, set }: { settings: Settings; set: Props["set"] }) {
-  const [value, setValue] = useState(0);
   const active = useRef(false);
   const startY = useRef(0);
+  const leverRef = useRef<HTMLSpanElement>(null);
+
+  const paint = (v: number) => {
+    const lever = leverRef.current;
+    if (lever) lever.style.transform = "translateX(-50%) rotate(" + (-10 - v * 42) + "deg)";
+  };
 
   const move = (y: number) => {
     const next = Math.max(0, Math.min(1, (startY.current - y) / 125));
-    setValue(next);
     set({ handbrake: next });
+    paint(next);
   };
 
   const release = () => {
     active.current = false;
-    setValue(0);
     set({ handbrake: 0 });
+    paint(0);
     if (settings.vibration) buzz(true, [5, 12, 4]);
   };
 
@@ -270,8 +299,8 @@ function Handbrake({ settings, set }: { settings: Settings; set: Props["set"] })
         e.currentTarget.setPointerCapture(e.pointerId);
         active.current = true;
         startY.current = e.clientY;
-        setValue(1);
         set({ handbrake: 1 });
+        paint(1);
         buzz(settings.vibration, [7, 16, 6]);
       }}
       onPointerMove={(e) => active.current && move(e.clientY)}
@@ -283,8 +312,9 @@ function Handbrake({ settings, set }: { settings: Settings; set: Props["set"] })
       <span className="absolute bottom-4 left-1/2 h-4 w-[72%] -translate-x-1/2 rounded-xl border border-white/10 bg-[linear-gradient(180deg,#3c444d,#171c22)] shadow-[inset_0_2px_2px_rgba(255,255,255,.1),0_5px_10px_rgba(0,0,0,.5)]" />
       <span className="absolute bottom-8 left-1/2 h-5 w-8 -translate-x-1/2 rounded-md bg-[#6e7780] shadow-[inset_0_2px_2px_rgba(255,255,255,.3),0_3px_6px_rgba(0,0,0,.45)]" />
       <span
-        className="absolute bottom-7 left-1/2 h-[74%] w-3.5 origin-bottom -translate-x-1/2 rounded-full bg-[linear-gradient(90deg,#4a525b,#d7dbe0_46%,#6f7881)] shadow-[0_8px_12px_rgba(0,0,0,.6),inset_0_1px_1px_rgba(255,255,255,.5)] transition-transform duration-75"
-        style={{ transform: "translateX(-50%) rotate(" + (-10 - value * 42) + "deg)" }}
+        ref={leverRef}
+        className="absolute bottom-7 left-1/2 h-[74%] w-3.5 origin-bottom -translate-x-1/2 rounded-full bg-[linear-gradient(90deg,#4a525b,#d7dbe0_46%,#6f7881)] shadow-[0_8px_12px_rgba(0,0,0,.6),inset_0_1px_1px_rgba(255,255,255,.5)] will-change-transform"
+        style={{ transform: "translateX(-50%) rotate(-10deg)" }}
       >
         <span className="absolute -bottom-2 left-1/2 size-7 -translate-x-1/2 rounded-full border border-white/10 bg-[radial-gradient(circle_at_35%_28%,#454c54,#171b20)] shadow-[0_5px_8px_rgba(0,0,0,.65)]" />
       </span>
@@ -301,8 +331,9 @@ function Nitro({ settings, set }: { settings: Settings; set: Props["set"] }) {
   const [down, setDown] = useState(false);
 
   const release = () => {
-    setDown(false);
+    // Input goes out first; the visual state change renders afterwards.
     set({ nitro: 0 });
+    setDown(false);
   };
 
   return (
@@ -311,8 +342,8 @@ function Nitro({ settings, set }: { settings: Settings; set: Props["set"] }) {
       aria-label="Nitro"
       onPointerDown={(e) => {
         e.currentTarget.setPointerCapture(e.pointerId);
-        setDown(true);
         set({ nitro: 1 });
+        setDown(true);
         buzz(settings.vibration, [5, 18, 5, 18, 8]);
       }}
       onPointerUp={release}

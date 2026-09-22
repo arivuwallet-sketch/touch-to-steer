@@ -72,7 +72,7 @@ function Pedal3D({
         </RoundedBox>
 
         {[[-0.16, 0.18], [0.16, 0.18], [-0.16, 0.42], [0.16, 0.42], [-0.16, 0.66], [0.16, 0.66], [-0.16, 0.9], [0.16, 0.9]].map(([x, y], i) => (
-          <mesh key={i} position={[x, y, 0.23]}>
+          <mesh key={i} position={[x ?? 0, y ?? 0, 0.23]}>
             <sphereGeometry args={[0.055, 14, 10]} />
             <meshStandardMaterial color="#30363e" roughness={0.9} />
           </mesh>

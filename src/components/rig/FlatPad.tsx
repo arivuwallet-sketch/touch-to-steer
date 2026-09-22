@@ -9,8 +9,17 @@ type Props = {
 
 type TriggerMode = "regular" | "race" | "sniper" | "recoil" | "vibration" | "lock";
 
+// Haptics are deferred off the input task so a vibration call can never delay
+// the controller packet leaving the phone.
 const buzz = (enabled: boolean, pattern: number | number[] = 10) => {
-  if (enabled && typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(pattern);
+  if (!enabled || typeof navigator === "undefined" || !("vibrate" in navigator)) return;
+  setTimeout(() => {
+    try {
+      navigator.vibrate(pattern);
+    } catch {
+      /* ignore */
+    }
+  }, 0);
 };
 
 const feelBuzz = (enabled: boolean, intensity: number) => {
@@ -98,19 +107,22 @@ function Stick({
   side: "left" | "right";
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const thumbRef = useRef<HTMLDivElement>(null);
   const pointer = useRef<number | null>(null);
+  const rect = useRef<DOMRect | null>(null);
   const lastHapticMagnitude = useRef(0);
   const pointMagnitude = useRef(0);
-  const [point, setPoint] = useState({ x: 0, y: 0 });
 
-  const update = (e: PointerEvent<HTMLDivElement>) => {
-    const el = ref.current;
-    if (!el) return;
+  // Zero-lag path: no React state on pointer move. Geometry is measured once
+  // per grab (no per-sample layout read) and the thumb is written straight to
+  // the compositor, so the value reaches the bridge in the same input task.
+  const apply = (clientX: number, clientY: number) => {
+    const r = rect.current;
+    if (!r) return;
 
-    const r = el.getBoundingClientRect();
     const radius = Math.max(1, Math.min(r.width, r.height) / 2);
-    let x = (e.clientX - (r.left + r.width / 2)) / radius;
-    let y = (e.clientY - (r.top + r.height / 2)) / radius;
+    let x = (clientX - (r.left + r.width / 2)) / radius;
+    let y = (clientY - (r.top + r.height / 2)) / radius;
     const m = Math.hypot(x, y);
 
     if (m > 1) {
@@ -118,35 +130,47 @@ function Stick({
       y /= m;
     }
 
-    const travel = 22 + settings.stickTension * 12;
-    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-    if (now - lastHapticMagnitude.current > 75) {
-      const magnitude = Math.hypot(x, y);
-      if (magnitude > 0.55 && Math.abs(magnitude - pointMagnitude.current) > 0.12) {
-        feelBuzz(settings.vibration, magnitude * 0.55);
-      }
-      if (magnitude >= 0.92 && pointMagnitude.current < 0.92) {
-        buzz(settings.vibration, [5, 18, 4]);
-      }
-      lastHapticMagnitude.current = now;
-    }
-    pointMagnitude.current = Math.hypot(x, y);
-    setPoint({ x, y });
     onMove(
       applyCurve(x, settings.deadzone, settings.linearity, settings.sensitivity),
       applyCurve(-y, settings.deadzone, settings.linearity, settings.sensitivity),
     );
 
-    const thumb = el.querySelector<HTMLElement>("[data-stick-thumb]");
-    if (thumb) thumb.style.transform = `translate(-50%,-50%) translate(${x * travel}px,${y * travel}px)`;
+    const travel = 22 + settings.stickTension * 12;
+    const thumb = thumbRef.current;
+    if (thumb) {
+      thumb.style.transform = `translate3d(calc(-50% + ${x * travel}px), calc(-50% + ${y * travel}px), 0)`;
+    }
+
+    // Haptics are strictly rate-limited and never block the value write above.
+    const magnitude = Math.hypot(x, y);
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    if (settings.vibration && now - lastHapticMagnitude.current > 90) {
+      if (magnitude >= 0.92 && pointMagnitude.current < 0.92) {
+        lastHapticMagnitude.current = now;
+        buzz(true, [5, 14, 4]);
+      } else if (magnitude > 0.55 && Math.abs(magnitude - pointMagnitude.current) > 0.18) {
+        lastHapticMagnitude.current = now;
+        feelBuzz(true, magnitude * 0.5);
+      }
+    }
+    pointMagnitude.current = magnitude;
+  };
+
+  const update = (e: PointerEvent<HTMLDivElement>) => {
+    const native = e.nativeEvent as globalThis.PointerEvent;
+    // Use only the newest sample of a coalesced batch: older samples are stale
+    // input and re-sending them would show up as ghosting/rubber-banding.
+    const events = native.getCoalescedEvents?.();
+    const latest = events && events.length ? events[events.length - 1]! : native;
+    apply(latest.clientX, latest.clientY);
   };
 
   const release = () => {
     pointer.current = null;
     pointMagnitude.current = 0;
-    setPoint({ x: 0, y: 0 });
-    const thumb = ref.current?.querySelector<HTMLElement>("[data-stick-thumb]");
-    if (thumb) thumb.style.transform = "translate(-50%,-50%) translate(0px,0px)";
+    rect.current = null;
+    const thumb = thumbRef.current;
+    if (thumb) thumb.style.transform = "translate3d(-50%,-50%,0)";
     onMove(0, 0);
   };
 
@@ -158,17 +182,19 @@ function Stick({
         aria-label={side === "left" ? "Left stick" : "Right stick"}
         aria-valuemin={-1}
         aria-valuemax={1}
-        aria-valuenow={point.x}
+        aria-valuenow={0}
         onPointerDown={(e) => {
           e.preventDefault();
           e.currentTarget.setPointerCapture(e.pointerId);
           pointer.current = e.pointerId;
-          buzz(settings.vibration, 8);
-          update(e);
+          rect.current = e.currentTarget.getBoundingClientRect();
+          buzz(settings.vibration, 6);
+          apply(e.clientX, e.clientY);
         }}
         onPointerMove={(e) => pointer.current === e.pointerId && update(e)}
         onPointerUp={release}
         onPointerCancel={release}
+        onLostPointerCapture={release}
         onDoubleClick={() => {
           onClick3(true);
           window.setTimeout(() => onClick3(false), 90);
@@ -177,12 +203,10 @@ function Stick({
       >
         <div className="absolute inset-[8%] rounded-full border border-[#2e3945] bg-[radial-gradient(circle_at_38%_28%,#202a35,#080c11_72%)]" />
         <div
+          ref={thumbRef}
           data-stick-thumb
-          className="absolute left-1/2 top-1/2 size-[57%] rounded-full border border-white/10 bg-[radial-gradient(circle_at_35%_25%,#626e7a,#1a222b_70%)] shadow-[0_8px_16px_rgba(0,0,0,.65),inset_0_-7px_10px_rgba(0,0,0,.58)]"
-          style={{
-            transform: `translate(-50%,-50%) translate(${point.x * 30}px,${point.y * 30}px)`,
-            transition: point.x === 0 && point.y === 0 ? "transform 140ms ease-out" : "none",
-          }}
+          className="absolute left-1/2 top-1/2 size-[57%] rounded-full border border-white/10 bg-[radial-gradient(circle_at_35%_25%,#626e7a,#1a222b_70%)] shadow-[0_8px_16px_rgba(0,0,0,.65),inset_0_-7px_10px_rgba(0,0,0,.58)] will-change-transform"
+          style={{ transform: "translate3d(-50%,-50%,0)" }}
         />
         <div className="pointer-events-none absolute left-1/2 top-[11%] h-[8%] w-[28%] -translate-x-1/2 rounded-full bg-[#0a0e13]" />
       </div>
@@ -243,7 +267,9 @@ function Trigger({
   press: Props["press"];
   mode: TriggerMode;
 }) {
-  const [value, setValue] = useState(0);
+  const valueRef = useRef(0);
+  const plateRef = useRef<HTMLSpanElement>(null);
+  const barRef = useRef<HTMLSpanElement>(null);
   const [pulse3d, setPulse3d] = useState(false);
   const pointer = useRef<number | null>(null);
   const lastFeel = useRef(0);
@@ -283,11 +309,20 @@ function Trigger({
   const writeTrigger = useCallback(
     (next: number) => {
       const clamped = Math.max(0, Math.min(1, next));
-      setValue(clamped);
+      // Value goes to the bridge before any painting happens, so the trigger
+      // reaches the PC in the same input task with no render in between.
+      valueRef.current = clamped;
       set({ [id]: clamped } as Partial<ControllerState>);
       // Also expose a digital trigger alias so games/bindings that treat LT/RT
       // as buttons still receive a clean press while the analog value is sent.
       press(id === "lt" ? "l2" : "r2", clamped > 0.02);
+
+      const plate = plateRef.current;
+      if (plate) {
+        plate.style.transform = `translate3d(0, ${clamped * 4}px, 0) rotateX(${clamped * 2.5}deg)`;
+      }
+      const bar = barRef.current;
+      if (bar) bar.style.width = `${Math.max(12, clamped * 86)}%`;
     },
     [id, press, set],
   );
@@ -362,13 +397,9 @@ function Trigger({
     >
       <span className="pointer-events-none absolute inset-[3px] rounded-[0.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,.06),rgba(0,0,0,.16))]" />
       <span
-        className={`flat-pad-trigger-plate pointer-events-none absolute inset-[6px] overflow-hidden rounded-[0.72rem] border border-cyan-200/20 bg-[linear-gradient(180deg,#566572,#252f38_48%,#11161c)] shadow-[inset_0_2px_1px_rgba(255,255,255,.22),inset_0_-6px_10px_rgba(0,0,0,.58),0_5px_8px_rgba(0,0,0,.5)] transition-transform duration-75 ${pulse3d ? "trigger-3d-rattle" : ""}`}
-        style={{
-          transform: `translateY(${value * 4}px) rotateX(${value * 2.5}deg) translateZ(0)`,
-          boxShadow: value
-            ? `inset 0 2px 1px rgba(255,255,255,.24), inset 0 -8px 12px rgba(0,0,0,.62), 0 ${4 + value * 7}px ${8 + value * 8}px rgba(0,0,0,.55), 0 0 ${8 + value * 12}px rgba(34,211,238,.18)`
-            : undefined,
-        }}
+        ref={plateRef}
+        className={`flat-pad-trigger-plate pointer-events-none absolute inset-[6px] overflow-hidden rounded-[0.72rem] border border-cyan-200/20 bg-[linear-gradient(180deg,#566572,#252f38_48%,#11161c)] shadow-[inset_0_2px_1px_rgba(255,255,255,.22),inset_0_-6px_10px_rgba(0,0,0,.58),0_5px_8px_rgba(0,0,0,.5)] will-change-transform ${pulse3d ? "trigger-3d-rattle" : ""}`}
+        style={{ transform: "translate3d(0,0,0)" }}
       >
         <span className="absolute inset-x-2 top-2 h-[3px] rounded-full bg-white/15" />
         <span className="absolute left-2 top-1/2 h-[62%] w-1 -translate-y-1/2 rounded-full bg-cyan-200/40 shadow-[0_0_8px_rgba(103,232,249,.25)]" />
@@ -378,8 +409,9 @@ function Trigger({
           <span className="text-[5px] tracking-[0.18em] text-cyan-100/60">FORCEADAPT</span>
         </span>
         <span
-          className="absolute bottom-1 left-1/2 h-1 -translate-x-1/2 rounded-full bg-cyan-300/70 shadow-[0_0_7px_rgba(34,211,238,.65)] transition-[width] duration-75"
-          style={{ width: `${Math.max(12, value * 86)}%` }}
+          ref={barRef}
+          className="absolute bottom-1 left-1/2 h-1 -translate-x-1/2 rounded-full bg-cyan-300/70 shadow-[0_0_7px_rgba(34,211,238,.65)]"
+          style={{ width: "12%" }}
         />
       </span>
       <span className="pointer-events-none absolute bottom-0.5 text-[5px] font-black uppercase tracking-[0.12em] text-slate-500">
@@ -520,7 +552,7 @@ export function FlatPad({ settings, set, press }: Props) {
   const nextTriggerMode = () => {
     const modes: TriggerMode[] = ["regular", "race", "sniper", "recoil", "vibration", "lock"];
     const i = modes.indexOf(triggerMode);
-    setTriggerMode(modes[(i + 1) % modes.length]);
+    setTriggerMode(modes[(i + 1) % modes.length] ?? "regular");
   };
 
   const cycleProfile = (delta: number) => {

@@ -324,8 +324,9 @@ function Nitro({ settings, set }: { settings: Settings; set: Props["set"] }) {
   const [down, setDown] = useState(false);
 
   const release = () => {
-    setDown(false);
+    // Input goes out first; the visual state change renders afterwards.
     set({ nitro: 0 });
+    setDown(false);
   };
 
   return (
@@ -334,8 +335,8 @@ function Nitro({ settings, set }: { settings: Settings; set: Props["set"] }) {
       aria-label="Nitro"
       onPointerDown={(e) => {
         e.currentTarget.setPointerCapture(e.pointerId);
-        setDown(true);
         set({ nitro: 1 });
+        setDown(true);
         buzz(settings.vibration, [5, 18, 5, 18, 8]);
       }}
       onPointerUp={release}

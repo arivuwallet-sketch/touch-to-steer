@@ -3203,3 +3203,24 @@
 .flat-pad-root.rgb-enabled .rgb-neon-button:active {
   filter: brightness(1.14) saturate(1.18);
 }
+
+
+/* CENTER GYRO CONTROL ABOVE THE STEERING METER. */
+@media (orientation: landscape) {
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-gyro {
+    position: static !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    transform: none !important;
+    width: max-content !important;
+    margin: 0 auto !important;
+    pointer-events: auto !important;
+    z-index: 1000 !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-gyro button {
+    pointer-events: auto !important;
+  }
+}

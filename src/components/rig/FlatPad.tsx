@@ -414,6 +414,7 @@ function Trigger({
     e.currentTarget.setPointerCapture(e.pointerId);
     pointer.current = e.pointerId;
     lastBand.current = -1;
+    pastWall.current = true;
     pulseFeedback([4, 9, 3]);
     writeTrigger(1);
   };
@@ -424,8 +425,10 @@ function Trigger({
     pointer.current = null;
     lastBand.current = -1;
     lastRecoil.current = 0;
+    pastWall.current = false;
     writeTrigger(0);
   };
+
 
   return (
     <button

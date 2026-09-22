@@ -307,6 +307,13 @@ function Trigger({
       // Also expose a digital trigger alias so games/bindings that treat LT/RT
       // as buttons still receive a clean press while the analog value is sent.
       press(id === "lt" ? "l2" : "r2", clamped > 0.02);
+
+      const plate = plateRef.current;
+      if (plate) {
+        plate.style.transform = `translate3d(0, ${clamped * 4}px, 0) rotateX(${clamped * 2.5}deg)`;
+      }
+      const bar = barRef.current;
+      if (bar) bar.style.width = `${Math.max(12, clamped * 86)}%`;
     },
     [id, press, set],
   );

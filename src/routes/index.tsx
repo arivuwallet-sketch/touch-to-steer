@@ -19,7 +19,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { LandingScene } from "@/components/landing/LandingScene";
+import { Apex5ControllerScene, LandingBackground } from "@/components/landing/LandingScene";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -269,17 +269,62 @@ function LandingPage() {
             </div>
           </div>
 
-          <div className="spectral-hero-stage">
+          <div className="spectral-hero-backdrop">
+            <LandingBackground />
+            <div className="spectral-hero-backdrop-sheen" />
+          </div>
+
+          <div className="spectral-hero-copy">
+            <div className="spectral-status-line">
+              <span className="spectral-status-dot" />
+              SPECTRAL CONTROL SYSTEM / ONLINE
+            </div>
+
+            <p className="spectral-kicker">PHONE → PC / LOW-LATENCY INPUT</p>
+            <h1>
+              CONTROL
+              <span>HAS A</span>
+              <em>NEW GHOST.</em>
+            </h1>
+
+            <p className="spectral-hero-description">
+              TouchToSteer turns the device already in your hand into a virtual gamepad,
+              steering wheel and precision mouse — wrapped in a living 3D signal that
+              follows your movement.
+            </p>
+
+            <div className="spectral-hero-actions">
+              <Link to="/controller" className="spectral-primary">
+                Get started
+                <ArrowUpRight size={18} />
+              </Link>
+              <a href="#features" className="spectral-secondary">
+                Explore capability <ArrowDown size={16} />
+              </a>
+            </div>
+
+            <div className="spectral-mode-readout">
+              {capabilities.map(([name, desc]) => (
+                <div key={name}>
+                  <strong>{name}</strong>
+                  <span>{desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="spectral-controller-stage">
             <div className="spectral-stage-hud hud-tl">
-              <span>TRACK / 3D SIGNAL</span>
-              <strong>TOUCH + GYRO + POINTER</strong>
+              <span>APEX 5 / REALTIME TRACK</span>
+              <strong>CURSOR FOLLOW • 3D SPRING</strong>
             </div>
             <div className="spectral-stage-hud hud-tr">
-              <span>RESPONSE</span>
-              <strong>EDGE → STATE → PC</strong>
+              <span>FLOW STATE</span>
+              <strong>TOP ↕ BOTTOM / SMOOTH</strong>
             </div>
-            <div className="spectral-stage-id">TTS / 001</div>
-            <LandingScene />
+            <div className="spectral-stage-id">APEX / 005</div>
+            <div className="spectral-controller-reticle" />
+            <Apex5ControllerScene />
           </div>
         </section>
 

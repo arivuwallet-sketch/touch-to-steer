@@ -2930,3 +2930,17 @@
     font-size: 5.5px !important;
   }
 }
+
+
+/* FINAL EXTRA RIGHT SHIFT: double the current steering telemetry offset. */
+@media (orientation: landscape) {
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry {
+    transform: translateX(clamp(240px, 28vw, 380px)) !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 760px) {
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry {
+    transform: translateX(clamp(200px, 24vw, 300px)) !important;
+  }
+}

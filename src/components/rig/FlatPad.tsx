@@ -455,10 +455,16 @@ function Trigger({
           <span className="text-[5px] tracking-[0.18em] text-cyan-100/60">FORCEADAPT</span>
         </span>
         <span
+          className="pointer-events-none absolute bottom-[1px] h-2 w-[2px] rounded-full bg-amber-300/80 shadow-[0_0_6px_rgba(252,211,77,.7)]"
+          style={{ left: `${7 + profile.wall * 86}%` }}
+          aria-hidden
+        />
+        <span
           ref={barRef}
           className="absolute bottom-1 left-1/2 h-1 -translate-x-1/2 rounded-full bg-cyan-300/70 shadow-[0_0_7px_rgba(34,211,238,.65)]"
           style={{ width: "12%" }}
         />
+
       </span>
       <span className="pointer-events-none absolute bottom-0.5 text-[5px] font-black uppercase tracking-[0.12em] text-slate-500">
         {mode === "vibration" ? "VIBRATE" : mode}

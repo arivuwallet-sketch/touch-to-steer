@@ -10,10 +10,17 @@ type Props = {
   telemetryLive: boolean;
 };
 
+// Haptics are deferred off the input task so a vibration call can never delay
+// the controller packet leaving the phone.
 const buzz = (enabled: boolean, ms: number | number[] = 10) => {
-  if (enabled && typeof navigator !== "undefined" && "vibrate" in navigator) {
-    navigator.vibrate(ms);
-  }
+  if (!enabled || typeof navigator === "undefined" || !("vibrate" in navigator)) return;
+  setTimeout(() => {
+    try {
+      navigator.vibrate(ms);
+    } catch {
+      /* ignore */
+    }
+  }, 0);
 };
 
 function TelemetryGauge({

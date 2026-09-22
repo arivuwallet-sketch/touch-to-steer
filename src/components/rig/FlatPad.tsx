@@ -9,8 +9,17 @@ type Props = {
 
 type TriggerMode = "regular" | "race" | "sniper" | "recoil" | "vibration" | "lock";
 
+// Haptics are deferred off the input task so a vibration call can never delay
+// the controller packet leaving the phone.
 const buzz = (enabled: boolean, pattern: number | number[] = 10) => {
-  if (enabled && typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(pattern);
+  if (!enabled || typeof navigator === "undefined" || !("vibrate" in navigator)) return;
+  setTimeout(() => {
+    try {
+      navigator.vibrate(pattern);
+    } catch {
+      /* ignore */
+    }
+  }, 0);
 };
 
 const feelBuzz = (enabled: boolean, intensity: number) => {

@@ -638,6 +638,7 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
     settings.invertTilt,
     settings.maxTiltDeg,
     settings.steerMode,
+    settings.steerSensitivity,
     setWheelRaw,
   ]);
 

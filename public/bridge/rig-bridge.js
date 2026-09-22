@@ -690,9 +690,12 @@ function applyToTarget(target, s, buttonMap) {
   const lt = clamp(s.lt, 0, 1);
   const rt = clamp(s.rt, 0, 1);
 
-  // Always put steering pedals on the physical-style trigger axes. This is
-  // the common representation used by XInput, DS4/HID compatibility layers,
-  // and modern gamepad APIs. The aliases also keep LT/RT button bindings alive.
+  // Steering pedals are delivered through the canonical trigger axes:
+  // accelerator -> Right Trigger (RT), brake -> Left Trigger (LT).
+  // The same analog values are mirrored to DS4 trigger buttons for legacy
+  // HID titles that bind LT/RT as digital controls. The native ViGEm binding
+  // exposes both trigger axes on X360 and DS4 targets.
+  //
   target.axis.leftTrigger.setValue(
     Math.max(brake, clutch * 0.6, lt, buttons.l2 ? 1 : 0),
   );
@@ -1295,21 +1298,30 @@ wss.on("connection", (ws) => {
     if (msg.type === "state") {
       if (!session.targets.length) return;
 
-      if (msg.priority === "edge") {
+      if (msg.priority === "edge" || msg.priority === "hot") {
         try {
-          // Digital edges bypass Claude's mailbox and update every target for
-          // this player immediately.
+          // Edge buttons AND live touch/analog events bypass the background
+          // mailbox. Pedals, steering and sticks therefore reach ViGEm in the
+          // same browser event rather than waiting for the 240 Hz safety pump.
+          // The mailbox remains intact for the continuous watchdog lane, so
+          // Claude's stale-state protection is preserved.
           applySessionState(session, msg);
         } catch (err) {
           console.warn(
-            "Failed to apply immediate controller edge:",
+            msg.priority === "edge"
+              ? "Failed to apply immediate controller edge:"
+              : "Failed to apply hot controller state:",
             err?.message || err,
           );
-          appendBridgeLog("EDGE APPLY ERROR: " + (err?.stack || err));
+          appendBridgeLog(
+            (msg.priority === "edge"
+              ? "EDGE APPLY ERROR: "
+              : "HOT APPLY ERROR: ") + (err?.stack || err),
+          );
         }
       } else {
-        // Claude's latency fix, now per player: a single latest-value mailbox
-        // means stale continuous states can never queue ahead of fresh input.
+        // Claude's latency fix, per player: one latest-value mailbox means
+        // stale background states never form a queue behind the native driver.
         session.latestState = msg;
         scheduleApply();
       }

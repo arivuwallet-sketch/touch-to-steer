@@ -224,13 +224,12 @@ function Pedal({
       <span className="absolute left-1/2 top-3 h-2 w-1/2 -translate-x-1/2 rounded-full bg-[#20262c] shadow-[inset_0_1px_1px_rgba(255,255,255,.14)]" />
 
       <span
-        className="absolute inset-x-[13%] bottom-10 rounded-[1.05rem] border border-white/15 bg-[linear-gradient(155deg,#eef1f3_0%,#aab1b8_24%,#59616a_68%,#2b3239_100%)] shadow-[0_10px_16px_rgba(0,0,0,.58),inset_0_2px_0_rgba(255,255,255,.55),inset_0_-7px_10px_rgba(0,0,0,.42)] transition-transform duration-75"
+        ref={plateRef}
+        className="absolute inset-x-[13%] bottom-10 rounded-[1.05rem] border border-white/15 bg-[linear-gradient(155deg,#eef1f3_0%,#aab1b8_24%,#59616a_68%,#2b3239_100%)] shadow-[0_10px_16px_rgba(0,0,0,.58),inset_0_2px_0_rgba(255,255,255,.55),inset_0_-7px_10px_rgba(0,0,0,.42)] will-change-transform"
         style={{
-          height: "calc(28% + " + value * 58 + "%)",
-          transform: "translateY(" + value * 3 + "px) rotateX(" + value * 2 + "deg)",
+          height: "28%",
+          transform: "translate3d(0,0,0)",
           transformOrigin: "bottom center",
-          boxShadow:
-            "0 0 " + (8 + value * 12) + "px " + accent + "44, 0 10px 16px rgba(0,0,0,.58), inset 0 2px 0 rgba(255,255,255,.55), inset 0 -7px 10px rgba(0,0,0,.42)",
         }}
       >
         <span className="absolute inset-x-[12%] top-2 h-[2px] rounded-full bg-white/30" />

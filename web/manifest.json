@@ -1,0 +1,8 @@
+{
+  "name": "touchtosteer",
+  "short_name": "touchtosteer",
+  "start_url": "https://touch-to-steer.lovable.app/",
+  "display": "standalone",
+  "background_color": "#0B0E14",
+  "theme_color": "#0B0E14"
+}

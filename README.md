@@ -1,45 +1,48 @@
-# Welcome to your Lovable project
+# touchtosteer — Flutter native app
 
-This project was built with [Lovable](https://lovable.dev).
+Generated from https://touch-to-steer.lovable.app/
 
-## Build with Lovable
+## Build the Android APK
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
-
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+```bash
+bash tool/bootstrap.sh android
+flutter pub get
+dart run flutter_launcher_icons
+dart run flutter_native_splash:create
+flutter build apk --release
+# output: build/app/outputs/flutter-apk/app-release.apk
 ```
 
-## Built with
+App bundle for Google Play:
 
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
+```bash
+flutter build appbundle --release
+```
 
+## Build for iOS (needs macOS + Xcode)
 
-## End-user Windows bridge
+```bash
+bash tool/bootstrap.sh ios
+flutter pub get
+cd ios && pod install && cd ..
+flutter build ios --release --no-codesign
+open ios/Runner.xcworkspace   # sign with your Apple team, then Archive
+```
 
-Normal users do **not** need Node.js, npm, Git Bash, Visual Studio, or C++ build tools. The repository builds a portable `TouchToSteer-Bridge.exe` automatically on pushes to `main` and publishes the current Windows build as the `bridge-latest` GitHub release.
+## One-click cloud builds
 
-Run the EXE on the Windows gaming PC. On first run it can launch the bundled official ViGEmBus installer, then restart the bridge. The bridge prints the local `ws://<PC-IP>:8787` address to use from the phone.
+- `codemagic.yaml` — push this repo to Codemagic and both platforms build automatically.
+- `.github/workflows/build.yml` — GitHub Actions builds the APK on every push and uploads it as an artifact.
 
-## Universal controller compatibility
+## Where settings live
 
-TouchToSteer can expose **Universal · XInput + DirectInput** mode. The bridge creates a synchronized Xbox 360/XInput target for modern XInput games and a DualShock/HID target for older DirectInput-style games. This is intended to cover a wider range of Windows games without changing the phone controls.
+| Area | File |
+| --- | --- |
+| All app settings | `lib/app_config.dart` |
+| Website CSS/JS overrides | `lib/web_overrides.dart` |
+| Translations | `lib/strings.dart` |
+| Android permissions & deep links | `android/app/src/main/AndroidManifest.xml` |
+| iOS permissions & deep links | `ios/Runner/Info.plist` |
+| Environment values | `.env.example`, `assets/config/app_config.json` |
 
-Windows will show the two virtual targets separately in `joy.cpl` in Universal mode. Use **XInput / Xbox 360** when a game specifically requires a single `Controller (XBOX 360 For Windows)` device.
-
-GTA San Andreas classic is a legacy compatibility case: its controller behavior differs across PC releases, and the classic/older releases use DirectInput-style paths while later digital releases have differing XInput support. TouchToSteer's Universal mode supplies both device classes; game-specific compatibility software can still be necessary for titles with their own incompatible controller implementation.
-
+Regenerate this project any time from the web console after changing settings.

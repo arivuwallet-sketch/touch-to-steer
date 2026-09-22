@@ -1,0 +1,64 @@
+workflows:
+  android-release:
+    name: touchtosteer Android
+    working_directory: .
+    instance_type: linux_x2
+    max_build_duration: 60
+    environment:
+      flutter: 3.47.3
+      java: 17
+      ndk: 28.2.13676358
+    scripts:
+      - name: Prepare current Flutter Android project
+        script: |
+          test -f pubspec.yaml
+          bash tool/bootstrap.sh android
+          flutter doctor -v
+          flutter pub get
+          dart run flutter_launcher_icons
+          dart run flutter_native_splash:create
+          flutter analyze
+      - name: Build Android release files
+        script: |
+          flutter build apk --release
+          flutter build appbundle --release
+    artifacts:
+      - build/**/outputs/**/*.apk
+      - build/**/outputs/**/*.aab
+  ios-release:
+    name: touchtosteer iOS
+    working_directory: .
+    instance_type: mac_mini_m2
+    max_build_duration: 90
+    integrations:
+      app_store_connect: codemagic
+    environment:
+      flutter: 3.47.3
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: app.lovable.touchtosteer
+    scripts:
+      - name: Prepare current Flutter iOS project
+        script: |
+          test -f pubspec.yaml
+          bash tool/bootstrap.sh ios
+          flutter doctor -v
+          flutter pub get
+          dart run flutter_launcher_icons
+          dart run flutter_native_splash:create
+          flutter analyze
+      - name: Set up signing
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "app.lovable.touchtosteer" --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles
+      - name: Install iOS dependencies and build
+        script: |
+          cd ios && pod install && cd ..
+          flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/ios/archive/*.xcarchive

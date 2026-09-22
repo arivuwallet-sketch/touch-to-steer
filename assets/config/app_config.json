@@ -1,0 +1,120 @@
+{
+  "appInfo": {
+    "appName": "touchtosteer",
+    "shortName": "touchtosteer",
+    "packageId": "app.lovable.touchtosteer",
+    "versionName": "1.0.0",
+    "versionCode": 1,
+    "websiteUrl": "https://touch-to-steer.lovable.app/",
+    "description": "touchtosteer mobile app",
+    "company": "",
+    "supportEmail": "",
+    "minSdk": 24,
+    "iosDeploymentTarget": "15.0"
+  },
+  "branding": {
+    "iconMode": "library",
+    "iconUrl": "",
+    "iconLibraryKey": "rocket",
+    "iconBackground": "#0B0E14",
+    "adaptiveIcon": true,
+    "themeColor": "#0B0E14",
+    "accentColor": "#22D3A5",
+    "statusBarStyle": "light"
+  },
+  "splash": {
+    "enabled": true,
+    "logoUrl": "",
+    "backgroundColor": "#0B0E14",
+    "durationMs": 1600,
+    "showSpinner": true,
+    "spinnerColor": "#22D3A5",
+    "tagline": "",
+    "fullscreen": true
+  },
+  "permissions": {
+    "camera": false,
+    "microphone": false,
+    "location": false,
+    "backgroundLocation": false,
+    "storage": true,
+    "notifications": true,
+    "contacts": false,
+    "calendar": false,
+    "bluetooth": false,
+    "biometric": false,
+    "rationale": "This app needs the selected permissions to work correctly."
+  },
+  "settings": {
+    "orientation": "auto",
+    "fullscreen": false,
+    "pullToRefresh": true,
+    "zoomEnabled": false,
+    "swipeNavigation": true,
+    "javascriptEnabled": true,
+    "thirdPartyCookies": true,
+    "desktopMode": false,
+    "userAgentSuffix": "touchtosteerApp",
+    "cacheMode": "default",
+    "offlineTitle": "You are offline",
+    "offlineMessage": "Check your internet connection and try again.",
+    "confirmExit": true,
+    "keepScreenOn": false,
+    "fileUploads": true,
+    "downloads": true,
+    "geolocationBridge": false
+  },
+  "linkHandling": {
+    "internalDomains": [
+      "touch-to-steer.lovable.app"
+    ],
+    "openExternalInBrowser": true,
+    "blockedUrlPatterns": [],
+    "deepLinkScheme": "touchtosteer",
+    "universalLinkHosts": [
+      "touch-to-steer.lovable.app"
+    ],
+    "handleMailto": true,
+    "handleTel": true,
+    "handleWhatsapp": true,
+    "targetBlankInApp": true
+  },
+  "overrides": {
+    "customCss": "",
+    "customJs": "",
+    "hideSelectors": [],
+    "injectTiming": "documentEnd",
+    "blockAds": false,
+    "disableTextSelection": false,
+    "disableContextMenu": false
+  },
+  "addons": {
+    "pushEnabled": false,
+    "firebaseSenderId": "",
+    "firebaseProjectId": "",
+    "analyticsEnabled": false,
+    "analyticsId": "",
+    "admobEnabled": false,
+    "admobAppId": "",
+    "admobBannerId": "",
+    "biometricLock": false,
+    "ratingPrompt": false,
+    "shareButton": true,
+    "qrScanner": false,
+    "bottomNav": false,
+    "bottomNavItems": []
+  },
+  "localization": {
+    "defaultLocale": "en",
+    "locales": [
+      {
+        "code": "en",
+        "label": "English",
+        "appName": "touchtosteer"
+      }
+    ],
+    "rtlSupport": false,
+    "followSystemLocale": true
+  },
+  "env": []
+}

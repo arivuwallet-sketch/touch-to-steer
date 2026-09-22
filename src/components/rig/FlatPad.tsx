@@ -668,10 +668,6 @@ export function FlatPad({ settings, set, press, onSettingsChange }: Props) {
             <SurfaceButton label="HOME" id="home" settings={settings} press={press} className="h-9 min-w-20 rounded-md text-[7px]" />
           </div>
           <div className="mt-2 grid grid-cols-3 gap-2">
-            <SurfaceButton label="FN" id="fn" settings={settings} press={press} className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg text-[7px] text-slate-300" />
-            <SurfaceButton label="LOGO" id="logo" settings={settings} press={press} className="h-8 min-w-0 w-full rounded-lg text-[7px] text-slate-300" />
-  
-          <div className="mt-2 grid grid-cols-3 gap-2">
             <button type="button" onClick={() => setTurbo((v) => !v)} className={`h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border px-2 text-[7px] font-black uppercase tracking-[0.14em] ${turbo ? "border-orange-300/50 bg-orange-300/10 text-orange-200" : "border-white/10 bg-black/20 text-slate-400"}`}>TURBO</button>
             <GyroControl enabled={gyroEnabled} denied={gyroDenied} onToggle={requestGyro} />
             <button type="button" onClick={cycleJoystickTension} className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border border-violet-300/20 bg-violet-300/5 px-2 text-[7px] font-black uppercase tracking-[0.14em] text-violet-200" aria-label={`ForceFlex joystick tension ${settings.joystickTensionGf} gf. Tap to change.`} title={FORCEFLEX_DESCRIPTIONS[settings.joystickTensionGf]}>FORCEFLEX {settings.joystickTensionGf}GF</button>
@@ -681,7 +677,6 @@ export function FlatPad({ settings, set, press, onSettingsChange }: Props) {
           </div>
         </div>
       </div>
-
       <div className="flat-pad-right absolute bottom-[17%] right-[7%] flex items-center gap-[clamp(1rem,3vw,2.5rem)]">
         <ApexFaceButtons settings={settings} press={press} turbo={turbo} />
         <Stick side="right" settings={settings} onMove={(x, y) => set({ rx: x, ry: settings.invertLookY ? y : -y })} onClick3={(d) => press("r3", d)} />

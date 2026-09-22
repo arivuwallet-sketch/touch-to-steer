@@ -10,7 +10,7 @@ export type BridgeTelemetry = {
   speed?: number;
   source?: string;
   /** -1..1 force-feedback request from a compatible PC/game bridge. */
-  ffb?: number;
+  ffb?: number | undefined;
 };
 
 const clampRate = (hz: number) => Math.max(60, Math.min(240, Math.round(hz)));

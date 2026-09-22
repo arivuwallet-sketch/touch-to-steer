@@ -25,7 +25,7 @@ function TelemetryGauge({
   accent,
 }: {
   label: string;
-  value?: number;
+  value?: number | undefined;
   max: number;
   unit: string;
   live: boolean;

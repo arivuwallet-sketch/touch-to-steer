@@ -494,8 +494,13 @@ function MiniScreen({
 
   return (
     <div className="flat-pad-screen flex h-[clamp(2.75rem,7.8svh,3.5rem)] w-[clamp(5rem,7vw,7rem)] flex-col items-center justify-center rounded-lg border border-cyan-300/25 bg-[#071018] shadow-[inset_0_0_14px_rgba(34,211,238,.12),0_0_12px_rgba(34,211,238,.1)]">
-      <span className="text-[7px] font-black tracking-[0.25em] text-cyan-400/70">APEX 5 • FORCEADAPT</span>
-      <span className="mt-1 text-[10px] font-mono font-bold text-cyan-200">
+      <span className="max-w-full overflow-hidden text-center text-[4.5px] font-black leading-none tracking-[0.09em] text-cyan-400/70 whitespace-nowrap">
+        APEX 5
+      </span>
+      <span className="mt-0.5 max-w-full overflow-hidden text-center text-[4.5px] font-black leading-none tracking-[0.07em] text-cyan-300/65 whitespace-nowrap">
+        FORCEADAPT
+      </span>
+      <span className="mt-1 max-w-full overflow-hidden text-center text-[9px] font-mono font-bold leading-none text-cyan-200 whitespace-nowrap">
         {tick === 0 ? `P${profile}` : tick === 1 ? triggerMode.toUpperCase() : tick === 2 ? (motion ? "GYRO ON" : "GYRO OFF") : (turbo ? "TURBO ON" : "READY")}
       </span>
     </div>

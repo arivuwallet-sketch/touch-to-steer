@@ -1929,3 +1929,97 @@
   .flat-wheel-degrees button, .flat-wheel-sens button { height: 24px !important; padding: 4px 2px !important; font-size: 6px !important; }
   .flat-wheel-sens { top: 57px !important; }
 }
+
+/* FINAL LANDSCAPE MOBILE PLACEMENT: thumb-safe gamepad spacing + centered steering selectors. */
+@media (pointer: coarse) and (orientation: landscape) {
+  .flat-pad-left {
+    left: max(12px, env(safe-area-inset-left)) !important;
+    gap: clamp(18px, 3vw, 44px) !important;
+  }
+  .flat-pad-right {
+    right: max(12px, env(safe-area-inset-right)) !important;
+    gap: clamp(18px, 3vw, 44px) !important;
+  }
+  .flat-pad-left .flat-pad-dpad {
+    transform: translateX(clamp(-10px, -1.5vw, -22px)) !important;
+  }
+  .flat-pad-right .flat-pad-face {
+    transform: translateX(clamp(10px, 1.5vw, 22px)) !important;
+  }
+
+  .flat-wheel-degrees,
+  .flat-wheel-sens {
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    width: max-content !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: visible !important;
+    white-space: nowrap !important;
+  }
+  .flat-wheel-degrees::-webkit-scrollbar,
+  .flat-wheel-sens::-webkit-scrollbar {
+    display: none !important;
+  }
+  .flat-wheel-degrees {
+    top: clamp(11rem, 33svh, 15rem) !important;
+    gap: 3px !important;
+    padding: 3px 5px !important;
+  }
+  .flat-wheel-sens {
+    top: clamp(13.4rem, 38.5svh, 17.5rem) !important;
+    gap: 3px !important;
+    padding: 3px 5px !important;
+  }
+  .flat-wheel-degrees > span,
+  .flat-wheel-sens > span {
+    display: block !important;
+    flex: 0 0 auto !important;
+  }
+  .flat-wheel-degrees button,
+  .flat-wheel-sens button {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: clamp(40px, 4.2vw, 56px) !important;
+    height: 27px !important;
+    padding: 5px 7px !important;
+    font-size: 7px !important;
+    white-space: nowrap !important;
+    border-radius: 8px !important;
+  }
+}
+@media (pointer: coarse) and (orientation: landscape) and (max-width: 900px) {
+  .flat-pad-left { left: 7px !important; gap: 14px !important; }
+  .flat-pad-right { right: 7px !important; gap: 14px !important; }
+  .flat-pad-left .flat-pad-dpad { transform: translateX(-8px) !important; }
+  .flat-pad-right .flat-pad-face { transform: translateX(8px) !important; }
+
+  .flat-wheel-degrees {
+    top: 31svh !important;
+    gap: 2px !important;
+    padding-inline: 3px !important;
+  }
+  .flat-wheel-sens {
+    top: 36.5svh !important;
+    gap: 2px !important;
+    padding-inline: 3px !important;
+  }
+  .flat-wheel-degrees button,
+  .flat-wheel-sens button {
+    min-width: 34px !important;
+    height: 24px !important;
+    padding: 4px !important;
+    font-size: 6px !important;
+  }
+  .flat-wheel-degrees > span,
+  .flat-wheel-sens > span {
+    font-size: 5px !important;
+    padding-inline: 2px !important;
+  }
+}

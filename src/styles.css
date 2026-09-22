@@ -2833,3 +2833,17 @@
     }
   }
 }
+
+
+/* STEERING METER: stronger right-side offset, size unchanged. */
+@media (orientation: landscape) {
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry {
+    transform: translateX(clamp(72px, 9vw, 130px)) !important;
+  }
+
+  @media (max-height: 760px) {
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry {
+      transform: translateX(clamp(60px, 8vw, 100px)) !important;
+    }
+  }
+}

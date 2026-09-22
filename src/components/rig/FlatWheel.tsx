@@ -714,6 +714,24 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
     return () => cancelCentre();
   }, [cancelCentre]);
 
+  // Changing the lock range keeps the current steering output identical:
+  // the visual angle is re-scaled into the new range instead of jumping.
+  useEffect(() => {
+    const previous = prevLockRef.current;
+    if (previous === maxLockDeg) return;
+    prevLockRef.current = maxLockDeg;
+    cancelCentre();
+    const ratio = wheelAngleDeg.current / previous;
+    setWheelRaw(ratio);
+  }, [cancelCentre, maxLockDeg, setWheelRaw]);
+
+  const selectDegrees = (deg: number) => {
+    if (deg === settings.wheelRotationDeg) return;
+    buzz(settings.vibration, 8);
+    onSettingsChange({ wheelRotationDeg: deg });
+  };
+
+
   return (
     <div className="flat-wheel-root absolute inset-0 overflow-hidden bg-[#080a0d] text-slate-100">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_95%_at_50%_6%,#1a222b_0%,#080a0d_55%,#030405_100%)]" />

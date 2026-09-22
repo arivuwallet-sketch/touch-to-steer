@@ -535,7 +535,7 @@ export function FlatPad({ settings, set, press }: Props) {
   const nextTriggerMode = () => {
     const modes: TriggerMode[] = ["regular", "race", "sniper", "recoil", "vibration", "lock"];
     const i = modes.indexOf(triggerMode);
-    setTriggerMode(modes[(i + 1) % modes.length]);
+    setTriggerMode(modes[(i + 1) % modes.length] ?? "regular");
   };
 
   const cycleProfile = (delta: number) => {

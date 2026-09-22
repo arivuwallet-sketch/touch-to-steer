@@ -639,10 +639,10 @@ export function FlatPad({ settings, set, press, onSettingsChange }: Props) {
       <div className="flat-pad-top absolute inset-x-0 top-3 flex items-start justify-between px-[max(1rem,env(safe-area-inset-left))]">
         <div className="flex items-center gap-3">
           <Trigger label="LT" id="lt" settings={settings} set={set} press={press} mode={triggerMode} />
-          <ExtraButton label="LM" id="lm" settings={settings} press={press} />
+          <ExtraButton label="LB" id="lb" settings={settings} press={press} />
         </div>
         <div className="flex items-center gap-3">
-          <ExtraButton label="RM" id="rm" settings={settings} press={press} />
+          <ExtraButton label="RB" id="rb" settings={settings} press={press} />
           <Trigger label="RT" id="rt" settings={settings} set={set} press={press} mode={triggerMode} />
         </div>
       </div>

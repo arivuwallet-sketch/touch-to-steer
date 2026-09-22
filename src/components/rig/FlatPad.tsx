@@ -50,6 +50,9 @@ function SurfaceButton({
 }) {
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastHapticAt = useRef(0);
+  const rgbIds = ["dpad_up","dpad_down","dpad_left","dpad_right","y","x","b","a","lm","rm","lt","rt"];
+  const rgbIndex = rgbIds.indexOf(id);
+  const isRgb = rgbIndex >= 0;
 
   const stopTurbo = useCallback(() => {
     if (timer.current) clearInterval(timer.current);
@@ -88,8 +91,8 @@ function SurfaceButton({
       onPointerUp={stopTurbo}
       onPointerCancel={stopTurbo}
       onClick={onClick}
-      className={`${(["dpad_up","dpad_down","dpad_left","dpad_right","y","x","b","a"].includes(id) ? "rgb-neon-button " : "")}grid touch-none select-none place-items-center rounded-xl border border-white/10 bg-[linear-gradient(145deg,#3a4551,#151b22)] font-black text-slate-100 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),inset_0_-5px_9px_rgba(0,0,0,.62),0_5px_0_#06090d,0_9px_14px_rgba(0,0,0,.5)] transition-transform active:translate-y-[3px] active:shadow-[inset_0_2px_6px_rgba(0,0,0,.65),0_2px_0_#06090d] ${className}`}
-      style={style}
+      className={`${isRgb ? "rgb-neon-button " : ""}grid touch-none select-none place-items-center rounded-xl border border-white/10 bg-[linear-gradient(145deg,#3a4551,#151b22)] font-black text-slate-100 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),inset_0_-5px_9px_rgba(0,0,0,.62),0_5px_0_#06090d,0_9px_14px_rgba(0,0,0,.5)] transition-transform active:translate-y-[3px] active:shadow-[inset_0_2px_6px_rgba(0,0,0,.65),0_2px_0_#06090d] ${className}`}
+      style={isRgb ? { ...style, "--rgb-index": rgbIndex } as CSSProperties : style}
     >
       {label}
     </button>
@@ -442,8 +445,9 @@ function Trigger({
       onPointerMove={(e) => pointer.current === e.pointerId && (e.preventDefault(), move(e))}
       onPointerUp={release}
       onPointerCancel={release}
-      className="flat-pad-trigger group relative grid h-[clamp(2.75rem,7.8svh,3.5rem)] w-[clamp(4.5rem,8vw,6rem)] touch-none select-none place-items-center overflow-hidden rounded-[1rem] border border-white/10 bg-[linear-gradient(180deg,#394754,#11171e)] text-[10px] font-black tracking-[0.25em] text-cyan-200 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),inset_0_-7px_14px_rgba(0,0,0,.72),0_7px_0_#05080b,0_11px_18px_rgba(0,0,0,.58)]"
-      style={{ perspective: "700px" }}
+      className={`flat-pad-trigger group relative grid h-[clamp(2.75rem,7.8svh,3.5rem)] w-[clamp(4.5rem,8vw,6rem)] touch-none select-none place-items-center overflow-hidden rounded-[1rem] border border-white/10 bg-[linear-gradient(180deg,#394754,#11171e)] text-[10px] font-black tracking-[0.25em] text-cyan-200 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),inset_0_-7px_14px_rgba(0,0,0,.72),0_7px_0_#05080b,0_11px_18px_rgba(0,0,0,.58)] ${id === "lt" ? "rgb-neon-button" : "rgb-neon-button"}`}
+      data-rgb-index={id === "lt" ? 10 : 11}
+      style={{ perspective: "700px", "--rgb-index": id === "lt" ? 10 : 11 } as CSSProperties}
     >
       <span className="pointer-events-none absolute inset-[3px] rounded-[0.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,.06),rgba(0,0,0,.16))]" />
       <span
@@ -522,7 +526,7 @@ function ExtraButton({
       id={id}
       settings={settings}
       press={press}
-      className={`${(id === "lm" || id === "rm" ? "rgb-neon-button " : "")}h-[clamp(2.25rem,6.5svh,2.75rem)] min-w-[clamp(4rem,7vw,4.5rem)] rounded-xl px-3 text-[9px] text-slate-300 ${className}`}
+      className={`h-[clamp(2.25rem,6.5svh,2.75rem)] min-w-[clamp(4rem,7vw,4.5rem)] rounded-xl px-3 text-[9px] text-slate-300 ${className}`}
     />
   );
 }

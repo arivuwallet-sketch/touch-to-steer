@@ -291,9 +291,14 @@ export function useBridge(
     if (!ws || ws.readyState !== WebSocket.OPEN) return false;
 
     // Live analog controls use a dedicated hot lane. The bridge applies these
-    // snapshots immediately; the 240 Hz pump remains as a safety/refresh lane.
-    // This matters most for steering, accelerator, brake and other pedal axes.
-    if (ws.bufferedAmount >= 32_768) return false;
+    // snapshots immediately; the pump remains as a safety/refresh lane.
+    // A small buffer ceiling keeps steering from queueing behind stale frames:
+    // when the link is momentarily busy, dropping one sample is better than
+    // delivering a second-old wheel angle.
+    if (ws.bufferedAmount >= 4_096) return false;
+
+    const body = JSON.stringify(stateRef.current);
+    if (body === lastSentBodyRef.current) return true;
 
     try {
       ws.send(
@@ -305,11 +310,14 @@ export function useBridge(
           ...stateRef.current,
         }),
       );
+      lastSentBodyRef.current = body;
+      lastSentAtRef.current = nowMs();
       return true;
     } catch {
       return false;
     }
   }, [stateRef]);
+
 
   const sendControllerEdge = useCallback(() => {
     const ws = wsRef.current;

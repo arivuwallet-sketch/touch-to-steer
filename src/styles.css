@@ -1269,3 +1269,454 @@
     font-size: 4px !important;
   }
 }
+
+
+/* ==========================================================================
+   FINAL MOBILE RESPONSIVE PASS
+   Uses the current controller class names and stable small viewport units.
+   ========================================================================== */
+
+@media (pointer: coarse) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  button,
+  input,
+  select {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mode-toolbar {
+    right: max(8px, env(safe-area-inset-right)) !important;
+    bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    gap: 4px !important;
+  }
+
+  .mode-toolbar > .flex {
+    gap: 2px !important;
+    padding: 3px !important;
+  }
+
+  .mode-toolbar button {
+    min-width: 0 !important;
+    min-height: 0 !important;
+  }
+}
+
+/* ---------- landscape phone/tablet controller surfaces ---------- */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 680px) {
+  .flat-pad-root {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .flat-pad-root > .absolute.inset-2 {
+    inset: 5px !important;
+    border-radius: 1.35rem !important;
+  }
+
+  .flat-pad-top {
+    top: max(7px, env(safe-area-inset-top)) !important;
+    padding-left: max(10px, env(safe-area-inset-left)) !important;
+    padding-right: max(10px, env(safe-area-inset-right)) !important;
+  }
+
+  .flat-pad-top > div {
+    gap: clamp(5px, 1vw, 10px) !important;
+  }
+
+  .flat-pad-root .flat-pad-top button {
+    height: clamp(40px, 12svh, 48px) !important;
+    min-width: clamp(54px, 8vw, 72px) !important;
+  }
+
+  .flat-pad-root .flat-pad-trigger {
+    width: clamp(76px, 13vw, 98px) !important;
+    height: clamp(40px, 12svh, 48px) !important;
+  }
+
+  .flat-pad-left,
+  .flat-pad-right {
+    bottom: max(62px, calc(env(safe-area-inset-bottom) + 62px)) !important;
+    gap: clamp(6px, 1.1vw, 14px) !important;
+    align-items: center !important;
+  }
+
+  .flat-pad-left {
+    left: max(10px, env(safe-area-inset-left)) !important;
+  }
+
+  .flat-pad-right {
+    right: max(10px, env(safe-area-inset-right)) !important;
+  }
+
+  .flat-pad-root .flat-pad-stick {
+    width: clamp(88px, 24svh, 122px) !important;
+    height: clamp(88px, 24svh, 122px) !important;
+    flex: 0 0 auto !important;
+  }
+
+  .flat-pad-root .flat-pad-dpad {
+    width: clamp(78px, 22svh, 104px) !important;
+    height: clamp(78px, 22svh, 104px) !important;
+    flex: 0 0 auto !important;
+  }
+
+  .flat-pad-root .flat-pad-dpad button {
+    width: clamp(35px, 8svh, 43px) !important;
+    height: clamp(35px, 8svh, 43px) !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    border-radius: 10px !important;
+  }
+
+  .flat-pad-root .flat-pad-face {
+    width: clamp(84px, 23svh, 110px) !important;
+    height: clamp(84px, 23svh, 110px) !important;
+    flex: 0 0 auto !important;
+  }
+
+  .flat-pad-root .flat-pad-face button {
+    width: clamp(38px, 9svh, 47px) !important;
+    height: clamp(38px, 9svh, 47px) !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+  }
+
+  .flat-pad-center {
+    top: clamp(90px, 25svh, 110px) !important;
+    z-index: 12 !important;
+    width: min(32vw, 236px) !important;
+    max-width: calc(100% - 360px) !important;
+    min-width: 188px !important;
+  }
+
+  .flat-pad-center-box {
+    width: 100% !important;
+    max-width: 236px !important;
+    padding: 9px !important;
+    border-radius: 16px !important;
+  }
+
+  .flat-pad-center-box > div:first-child {
+    gap: 5px !important;
+  }
+
+  .flat-pad-center-box > div:first-child > button {
+    min-width: 44px !important;
+    height: 30px !important;
+  }
+
+  .flat-pad-root .flat-pad-screen {
+    width: clamp(68px, 12vw, 84px) !important;
+    height: 38px !important;
+    flex: 0 0 auto !important;
+  }
+
+  .flat-pad-center-box > div:nth-child(2) {
+    margin-top: 6px !important;
+    gap: 5px !important;
+  }
+
+  .flat-pad-center-box > div:nth-child(2) button {
+    min-width: 0 !important;
+    width: 100% !important;
+    height: 28px !important;
+    padding-inline: 5px !important;
+  }
+
+  .flat-pad-center-box > div:last-child {
+    margin-top: 6px !important;
+    gap: 5px !important;
+  }
+
+  .flat-pad-center-box > div:last-child > * {
+    min-width: 0 !important;
+    height: 29px !important;
+    padding-inline: 3px !important;
+  }
+
+  .flat-pad-bottom {
+    bottom: max(62px, calc(env(safe-area-inset-bottom) + 62px)) !important;
+    gap: 5px !important;
+    z-index: 18 !important;
+  }
+
+  .flat-pad-bottom button {
+    min-width: clamp(46px, 8vw, 60px) !important;
+    height: 32px !important;
+    padding-inline: 6px !important;
+    border-radius: 9px !important;
+  }
+
+  .flat-pad-footer {
+    display: none !important;
+  }
+
+  /* G29: top controls occupy compact non-overlapping lanes. */
+  .flat-wheel-root {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .flat-wheel-root-title {
+    display: none !important;
+  }
+
+  .flat-wheel-stage {
+    inset: 0 !important;
+    padding: 88px max(8px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-bottom)) !important;
+  }
+
+  .flat-wheel-telemetry {
+    top: max(5px, env(safe-area-inset-top)) !important;
+    left: 50% !important;
+    right: auto !important;
+    gap: 3px !important;
+    padding: 3px !important;
+    border-radius: 14px !important;
+  }
+
+  .flat-wheel-telemetry > div:first-child,
+  .flat-wheel-telemetry > div:last-child {
+    width: clamp(58px, 12vw, 78px) !important;
+    height: clamp(58px, 12vw, 78px) !important;
+  }
+
+  .flat-wheel-telemetry > div:nth-child(2) {
+    width: clamp(32px, 6vw, 40px) !important;
+    height: clamp(32px, 6vw, 40px) !important;
+  }
+
+  .flat-wheel-degrees,
+  .flat-wheel-sens {
+    left: max(7px, env(safe-area-inset-left)) !important;
+    transform: none !important;
+    max-width: 29vw !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: none !important;
+    white-space: nowrap !important;
+  }
+
+  .flat-wheel-degrees::-webkit-scrollbar,
+  .flat-wheel-sens::-webkit-scrollbar {
+    display: none;
+  }
+
+  .flat-wheel-degrees {
+    top: max(5px, env(safe-area-inset-top)) !important;
+    gap: 2px !important;
+    padding: 3px !important;
+  }
+
+  .flat-wheel-sens {
+    top: 45px !important;
+    gap: 2px !important;
+    padding: 3px !important;
+  }
+
+  .flat-wheel-degrees > span,
+  .flat-wheel-sens > span {
+    display: none !important;
+  }
+
+  .flat-wheel-degrees button,
+  .flat-wheel-sens button {
+    flex: 0 0 auto !important;
+    padding: 5px 6px !important;
+    min-width: 0 !important;
+    border-radius: 7px !important;
+    font-size: 6.5px !important;
+  }
+
+  .flat-wheel-root > button {
+    top: max(5px, env(safe-area-inset-top)) !important;
+    right: max(7px, env(safe-area-inset-right)) !important;
+    padding: 6px 8px !important;
+    border-radius: 9px !important;
+    font-size: 6.5px !important;
+  }
+
+  .flat-wheel-gyro {
+    top: 43px !important;
+    right: max(7px, env(safe-area-inset-right)) !important;
+    left: auto !important;
+    transform: none !important;
+  }
+
+  .flat-wheel-gyro button {
+    max-width: 108px !important;
+    padding: 6px 8px !important;
+    font-size: 6px !important;
+    white-space: nowrap !important;
+  }
+
+  .flat-wheel-hit {
+    left: max(5px, env(safe-area-inset-left)) !important;
+    bottom: 6% !important;
+    width: min(58svh, 32vw, 240px) !important;
+  }
+
+  .flat-wheel-pedals {
+    right: 15.5% !important;
+    bottom: 7% !important;
+    gap: clamp(5px, .8vw, 8px) !important;
+    max-width: 31vw !important;
+  }
+
+  .flat-wheel-pedals button {
+    width: clamp(42px, 5.8vw, 56px) !important;
+    height: min(46svh, 182px) !important;
+    min-height: 0 !important;
+    padding: 3px !important;
+    border-radius: 11px !important;
+  }
+
+  .flat-wheel-aux {
+    right: max(6px, env(safe-area-inset-right)) !important;
+    bottom: 12% !important;
+    gap: 5px !important;
+  }
+
+  .flat-wheel-aux > button:first-child {
+    width: clamp(50px, 7vw, 64px) !important;
+    height: min(31svh, 112px) !important;
+    min-height: 0 !important;
+  }
+
+  .flat-wheel-aux > button:last-child {
+    width: clamp(58px, 7.8vw, 70px) !important;
+    height: min(20svh, 78px) !important;
+    min-height: 0 !important;
+  }
+
+  /* Vertical Viper surface: size by height, not a desktop minimum width. */
+  .flat-mouse-stage {
+    inset: 0 !important;
+  }
+
+  .flat-mouse-viper-wrap {
+    height: min(68svh, 290px) !important;
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    aspect-ratio: 63.9 / 127.1 !important;
+  }
+
+  .flat-mouse-topbar {
+    top: max(7px, env(safe-area-inset-top)) !important;
+    max-width: 92vw !important;
+    gap: 5px !important;
+    padding: 5px 8px !important;
+    font-size: 6.5px !important;
+    white-space: nowrap !important;
+  }
+
+  .flat-mouse-bottom-ui {
+    left: max(8px, env(safe-area-inset-left)) !important;
+    right: max(8px, env(safe-area-inset-right)) !important;
+    bottom: max(7px, env(safe-area-inset-bottom)) !important;
+  }
+
+  .flat-mouse-toolbar {
+    width: 100% !important;
+    max-width: 560px !important;
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 4px !important;
+    padding: 5px !important;
+    border-radius: 13px !important;
+  }
+
+  .flat-mouse-control {
+    min-width: 0 !important;
+    width: 100% !important;
+    min-height: 46px !important;
+    padding: 5px 4px !important;
+    column-gap: 3px !important;
+    border-radius: 9px !important;
+  }
+
+  .flat-mouse-control svg {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  .flat-mouse-control strong {
+    font-size: 8px !important;
+  }
+
+  .flat-mouse-control small {
+    font-size: 5px !important;
+  }
+
+  .flat-mouse-help {
+    display: none !important;
+  }
+}
+
+/* ---------- narrow portrait settings / browser UI ---------- */
+@media (pointer: coarse) and (orientation: portrait) and (max-width: 720px) {
+  .rig-settings-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 0 !important;
+    padding-left: max(14px, env(safe-area-inset-left)) !important;
+    padding-right: max(14px, env(safe-area-inset-right)) !important;
+  }
+
+  .rig-settings-panel label {
+    grid-template-columns: minmax(0, 1fr) minmax(92px, 43vw) !important;
+    gap: 10px !important;
+    padding-block: 9px !important;
+  }
+
+  .rig-settings-panel label > span:last-child {
+    max-width: 43vw !important;
+    justify-self: end !important;
+  }
+
+  .rig-settings-panel select {
+    width: min(43vw, 182px) !important;
+    max-width: 100% !important;
+  }
+
+  .rig-settings-panel input[type="range"] {
+    width: min(41vw, 170px) !important;
+    max-width: 100% !important;
+  }
+
+  .rig-settings-panel .flex.items-center.justify-between {
+    flex-wrap: wrap !important;
+    row-gap: 8px !important;
+  }
+
+  .rig-settings-panel input[aria-label="PC bridge address"] {
+    min-width: 0 !important;
+    font-size: 13px !important;
+  }
+}
+
+@media (pointer: coarse) and (max-width: 720px) {
+  .rig-settings-panel {
+    padding-top: max(14px, env(safe-area-inset-top)) !important;
+    padding-bottom: max(18px, env(safe-area-inset-bottom)) !important;
+  }
+
+  .rig-settings-panel .grid.grid-cols-\[minmax\(0\,1fr\)_auto\] {
+    gap: 10px !important;
+  }
+}

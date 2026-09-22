@@ -77,7 +77,7 @@ export function SettingsPanel({
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-background/70 backdrop-blur-sm">
-      <div className="panel h-full w-full max-w-sm overflow-y-auto rounded-none p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+      <div className="rig-settings-panel panel h-full w-full max-w-sm overflow-y-auto rounded-none p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
           <h2 className="min-w-0 truncate text-lg font-bold">Rig setup</h2>
           <Button onClick={onClose} variant="ghost" size="icon" aria-label="Close settings">

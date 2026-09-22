@@ -262,20 +262,25 @@ function Pedal({
   );
 }
 function Handbrake({ settings, set }: { settings: Settings; set: Props["set"] }) {
-  const [value, setValue] = useState(0);
   const active = useRef(false);
   const startY = useRef(0);
+  const leverRef = useRef<HTMLSpanElement>(null);
+
+  const paint = (v: number) => {
+    const lever = leverRef.current;
+    if (lever) lever.style.transform = "translateX(-50%) rotate(" + (-10 - v * 42) + "deg)";
+  };
 
   const move = (y: number) => {
     const next = Math.max(0, Math.min(1, (startY.current - y) / 125));
-    setValue(next);
     set({ handbrake: next });
+    paint(next);
   };
 
   const release = () => {
     active.current = false;
-    setValue(0);
     set({ handbrake: 0 });
+    paint(0);
     if (settings.vibration) buzz(true, [5, 12, 4]);
   };
 

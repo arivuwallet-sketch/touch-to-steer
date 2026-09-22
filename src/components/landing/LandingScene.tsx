@@ -1,551 +1,702 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { ContactShadows, PerspectiveCamera, RoundedBox, Sparkles } from "@react-three/drei";
+import {
+  ContactShadows,
+  Float,
+  PerspectiveCamera,
+  RoundedBox,
+  Sparkles,
+} from "@react-three/drei";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 
-const backdropVertexShader = \`
-  varying vec2 vUv;
-  void main() {
-    vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-\`;
-
-const backdropFragmentShader = \`
+const analogFragmentShader = \`
+  uniform sampler2D tDiffuse;
   uniform float uTime;
+  uniform vec2 uResolution;
+  uniform float uVelocity;
   varying vec2 vUv;
-  float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+
+  float random(vec2 p) {
+    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
   }
-  float glow(vec2 uv, vec2 p, float size) {
-    float d = length(uv - p);
-    return exp(-d * d / size);
-  }
+
   void main() {
     vec2 uv = vUv;
-    vec3 color = vec3(0.002, 0.007, 0.013);
-    color += vec3(0.018, 0.14, 0.18) * glow(uv, vec2(0.24, 0.46), 0.15);
-    color += vec3(0.05, 0.018, 0.15) * glow(uv, vec2(0.78, 0.56), 0.18);
-    color += vec3(0.01, 0.15, 0.22) * glow(uv, vec2(0.53, 0.16), 0.2);
-    vec2 grid = fract(uv * vec2(42.0, 25.0) + vec2(uTime * 0.01, -uTime * 0.005));
-    float lines = smoothstep(0.03, 0.0, min(grid.x, grid.y));
-    color += vec3(0.015, 0.08, 0.11) * lines * 0.28;
-    float star = step(0.9973, hash(floor(uv * 180.0)));
-    color += vec3(0.12, 0.62, 0.76) * star * (0.55 + 0.45 * sin(uTime * 2.0 + uv.x * 40.0));
-    float vignette = smoothstep(0.8, 0.12, length((uv - 0.5) * vec2(1.28, 1.0)));
-    color *= 0.74 + vignette * 0.46;
-    gl_FragColor = vec4(color, 1.0);
+    float speed = clamp(uVelocity, 0.0, 1.5);
+    float jitter = (random(vec2(floor(uTime * 60.0))) - 0.5) * (0.001 + speed * 0.003);
+    uv.x += jitter;
+
+    float line = floor(uv.y * uResolution.y);
+    float roll = step(0.988, random(vec2(floor(uTime * 3.0) + line * 0.002)));
+    uv.y += sin(uTime * 16.0 + line * 0.06) * 0.004 * roll * (0.25 + speed);
+
+    vec2 chroma = vec2(0.0012 + speed * 0.0035, 0.0);
+    vec4 center = texture2D(tDiffuse, uv);
+    float r = texture2D(tDiffuse, uv + chroma).r;
+    float b = texture2D(tDiffuse, uv - chroma).b;
+    vec3 color = vec3(r, center.g, b);
+
+    float scan = 0.965 + 0.035 * sin(uv.y * uResolution.y * 1.25);
+    float vignette = smoothstep(1.18, 0.2, length((uv - 0.5) * vec2(1.18, 1.0)));
+    float grain = (random(uv * uResolution.xy + uTime * 15.0) - 0.5) * 0.012;
+
+    color *= scan;
+    color += grain;
+    color *= 0.9 + vignette * 0.1;
+
+    gl_FragColor = vec4(color, center.a);
   }
 \`;
 
-const spectralVertexShader = \`
-  varying vec3 vNormal;
+const controllerPulseVertexShader = \`
   varying vec3 vWorld;
+  varying vec3 vNormal;
   void main() {
     vNormal = normalize(normalMatrix * normal);
-    vWorld = (modelMatrix * vec4(position, 1.0)).xyz;
+    vec4 world = modelMatrix * vec4(position, 1.0);
+    vWorld = world.xyz;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 \`;
 
-const spectralFragmentShader = \`
+const controllerPulseFragmentShader = \`
   uniform float uTime;
-  uniform float uOpacity;
-  uniform float uOffset;
-  varying vec3 vNormal;
   varying vec3 vWorld;
-  float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-  }
+  varying vec3 vNormal;
+
   void main() {
     vec3 viewDir = normalize(cameraPosition - vWorld);
-    float fresnel = pow(1.0 - abs(dot(normalize(vNormal), viewDir)), 2.12);
-    float scan = 0.5 + 0.5 * sin(vWorld.y * 32.0 - uTime * 7.5 + uOffset * 4.0);
-    float glitch = step(0.84, fract(vWorld.y * 10.0 + uTime * 0.45 + uOffset));
-    float noise = hash(floor(vWorld.xy * 12.0 + uTime * 4.0 + uOffset * 6.0));
-    vec3 cyan = vec3(0.08, 0.87, 1.0);
-    vec3 violet = vec3(0.5, 0.18, 1.0);
-    vec3 color = mix(cyan, violet, 0.5 + 0.5 * sin(uTime * 1.2 + uOffset * 3.0));
-    color += vec3(0.15, 0.95, 0.65) * glitch * 0.15;
-    float alpha = uOpacity * (0.08 + fresnel * 0.88);
-    alpha *= 0.72 + scan * 0.28;
-    alpha *= 0.72 + noise * 0.28;
-    gl_FragColor = vec4(color, alpha);
+    float fresnel = pow(1.0 - abs(dot(normalize(vNormal), viewDir)), 2.8);
+    float wave = 0.5 + 0.5 * sin(vWorld.x * 9.0 + uTime * 3.0);
+    vec3 cyan = vec3(0.12, 0.9, 1.0);
+    vec3 violet = vec3(0.58, 0.2, 1.0);
+    vec3 color = mix(cyan, violet, wave * 0.28);
+    gl_FragColor = vec4(color, fresnel * 0.42);
   }
 \`;
 
-const particleVertexShader = \`
-  attribute float aSize;
-  attribute float aAlpha;
-  varying float vAlpha;
-  void main() {
-    vAlpha = aAlpha;
-    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-    gl_PointSize = aSize * (230.0 / -mvPosition.z);
-    gl_Position = projectionMatrix * mvPosition;
-  }
-\`;
-
-const particleFragmentShader = \`
-  varying float vAlpha;
-  void main() {
-    vec2 uv = gl_PointCoord - 0.5;
-    float soft = smoothstep(0.5, 0.02, length(uv));
-    vec3 color = mix(vec3(0.22, 0.95, 1.0), vec3(0.64, 0.26, 1.0), uv.x + 0.5);
-    gl_FragColor = vec4(color, soft * vAlpha);
-  }
-\`;
-
-function BackdropPlane() {
-  const uniforms = useMemo(() => ({ uTime: { value: 0 } }), []);
-  useFrame((state) => {
-    uniforms.uTime.value = state.clock.elapsedTime;
-  });
-  return (
-    <mesh position={[0, 0, -5.2]}>
-      <planeGeometry args={[18, 11]} />
-      <shaderMaterial uniforms={uniforms} vertexShader={backdropVertexShader} fragmentShader={backdropFragmentShader} depthWrite={false} />
-    </mesh>
-  );
-}
-
-function GhostShell({ offset, scale, opacity }: { offset: number; scale: number; opacity: number }) {
-  const ref = useRef<THREE.Mesh>(null);
-  const uniforms = useMemo(() => ({
-    uTime: { value: 0 },
-    uOpacity: { value: opacity },
-    uOffset: { value: offset },
-  }), [offset, opacity]);
-
-  useFrame((state) => {
-    const material = ref.current?.material as THREE.ShaderMaterial | undefined;
-    if (!material) return;
-    material.uniforms.uTime.value = state.clock.elapsedTime;
-    material.uniforms.uOpacity.value = opacity * (0.82 + Math.sin(state.clock.elapsedTime * 2.1 + offset) * 0.12);
-  });
-
-  return (
-    <RoundedBox ref={ref} args={[4.08, 0.76, 2.16]} radius={0.34} smoothness={10} scale={scale}>
-      <shaderMaterial
-        uniforms={uniforms}
-        vertexShader={spectralVertexShader}
-        fragmentShader={spectralFragmentShader}
-        transparent
-        depthWrite={false}
-        blending={THREE.AdditiveBlending}
-        side={THREE.DoubleSide}
-      />
-    </RoundedBox>
-  );
-}
-
-function SpectralGhost() {
-  const group = useRef<THREE.Group>(null);
-  const { pointer } = useThree();
-
-  useFrame((state, delta) => {
-    if (!group.current) return;
-    const t = state.clock.elapsedTime;
-    group.current.rotation.y = THREE.MathUtils.damp(group.current.rotation.y, pointer.x * 0.18 + Math.sin(t * 0.33) * 0.035, 1.7, delta);
-    group.current.rotation.x = THREE.MathUtils.damp(group.current.rotation.x, -pointer.y * 0.09, 1.7, delta);
-    group.current.rotation.z += delta * 0.018;
-  });
-
-  return (
-    <group ref={group} position={[0, -0.2, -0.4]}>
-      <GhostShell offset={0.2} scale={1.05} opacity={0.18} />
-      <GhostShell offset={1.15} scale={1.085} opacity={0.11} />
-      <GhostShell offset={2.55} scale={1.13} opacity={0.06} />
-      {[2.45, 3.15, 3.95].map((radius, index) => (
-        <mesh key={radius} position={[0, -0.82, -1]} rotation={[-Math.PI / 2, 0, index * 0.18]}>
-          <torusGeometry args={[radius, index === 0 ? 0.012 : 0.006, 8, 160]} />
-          <meshBasicMaterial color={index === 2 ? "#8e68ff" : "#34e8ff"} transparent opacity={index === 0 ? 0.24 : 0.11} blending={THREE.AdditiveBlending} />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
-function SpectralParticles() {
-  const count = 300;
-  const ref = useRef<THREE.Points>(null);
-  const geometry = useMemo(() => {
-    const positions = new Float32Array(count * 3);
-    const sizes = new Float32Array(count);
-    const alphas = new Float32Array(count);
-    for (let i = 0; i < count; i += 1) {
-      const angle = Math.random() * Math.PI * 2;
-      const radius = 1.9 + Math.pow(Math.random(), 0.58) * 4.1;
-      positions[i * 3] = Math.cos(angle) * radius;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 3.4;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 3.2 - 1.3;
-      sizes[i] = 0.016 + Math.random() * 0.04;
-      alphas[i] = 0.18 + Math.random() * 0.75;
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    g.setAttribute("aSize", new THREE.BufferAttribute(sizes, 1));
-    g.setAttribute("aAlpha", new THREE.BufferAttribute(alphas, 1));
-    return g;
-  }, []);
-
-  const material = useMemo(() => new THREE.ShaderMaterial({
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-    vertexShader: particleVertexShader,
-    fragmentShader: particleFragmentShader,
-  }), []);
-
-  useFrame((state) => {
-    if (!ref.current) return;
-    ref.current.rotation.y = state.clock.elapsedTime * 0.012;
-    ref.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.16) * 0.025;
-  });
-
-  useEffect(() => () => geometry.dispose(), [geometry]);
-  useEffect(() => () => material.dispose(), [material]);
-
-  return <points ref={ref} geometry={geometry} material={material} />;
-}
-
-function SignalArcs() {
-  const ref = useRef<THREE.Group>(null);
-  useFrame((state, delta) => {
-    if (!ref.current) return;
-    ref.current.rotation.z += delta * 0.008;
-    ref.current.position.y = Math.sin(state.clock.elapsedTime * 0.21) * 0.045;
-  });
-  return (
-    <group ref={ref} position={[0, -1.65, -1.4]} rotation={[Math.PI / 2.72, 0, 0]}>
-      {[2.7, 3.45, 4.25].map((radius, index) => (
-        <mesh key={radius}>
-          <torusGeometry args={[radius, 0.004, 6, 128]} />
-          <meshBasicMaterial color={index === 2 ? "#7a5cff" : "#49e8ff"} transparent opacity={0.05 + index * 0.015} />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
-function BackgroundPostFX() {
-  const composerRef = useRef<EffectComposer | null>(null);
-  const { gl, scene, camera, size } = useThree();
-
-  useEffect(() => {
-    const composer = new EffectComposer(gl);
-    composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
-    composer.setSize(size.width, size.height);
-    composer.addPass(new RenderPass(scene, camera));
-    composer.addPass(new UnrealBloomPass(new THREE.Vector2(size.width, size.height), 0.72, 0.7, 0.08));
-    composer.addPass(new OutputPass());
-    composerRef.current = composer;
-    return () => {
-      composerRef.current = null;
-      composer.dispose();
-    };
-  }, [camera, gl, scene]);
-
-  useEffect(() => {
-    composerRef.current?.setSize(size.width, size.height);
-  }, [size.height, size.width]);
-
-  useFrame(() => composerRef.current?.render(), 1);
-  return null;
-}
-
-function BackgroundScene() {
-  return (
-    <>
-      <PerspectiveCamera makeDefault position={[0, 0.32, 7.4]} fov={36} />
-      <ambientLight intensity={0.18} />
-      <hemisphereLight args={["#b9fbff", "#02050b", 0.42]} />
-      <directionalLight position={[4, 5, 4]} intensity={1.65} color="#dffcff" />
-      <pointLight position={[-3, 1.5, 1]} intensity={2.8} distance={8} color="#21dfff" />
-      <pointLight position={[3, -1, 0]} intensity={1.7} distance={7} color="#7555ff" />
-      <BackdropPlane />
-      <Sparkles count={140} scale={[9, 5, 8]} size={2} speed={0.18} color="#65efff" />
-      <SignalArcs />
-      <SpectralParticles />
-      <SpectralGhost />
-      <mesh position={[0, -1.92, -2.4]}>
-        <ringGeometry args={[2.8, 2.815, 160]} />
-        <meshBasicMaterial color="#39e8ff" transparent opacity={0.1} side={THREE.DoubleSide} />
-      </mesh>
-      <BackgroundPostFX />
-    </>
-  );
-}
-
-function createApexShellGeometry() {
+function makeControllerBody() {
   const shape = new THREE.Shape();
-  shape.moveTo(-2.7, 0.82);
-  shape.bezierCurveTo(-2.5, 1.2, -1.88, 1.42, -1.2, 1.36);
-  shape.bezierCurveTo(-0.58, 1.32, -0.36, 1.05, 0, 1.02);
-  shape.bezierCurveTo(0.36, 1.05, 0.58, 1.32, 1.2, 1.36);
-  shape.bezierCurveTo(1.88, 1.42, 2.5, 1.2, 2.7, 0.82);
-  shape.bezierCurveTo(2.88, 0.36, 2.82, -0.12, 2.76, -0.48);
-  shape.bezierCurveTo(2.66, -1.12, 2.48, -1.75, 2.05, -2.0);
-  shape.bezierCurveTo(1.66, -2.23, 1.3, -1.92, 1.05, -1.55);
-  shape.bezierCurveTo(0.76, -1.12, 0.42, -0.97, 0, -0.97);
-  shape.bezierCurveTo(-0.42, -0.97, -0.76, -1.12, -1.05, -1.55);
-  shape.bezierCurveTo(-1.3, -1.92, -1.66, -2.23, -2.05, -2.0);
-  shape.bezierCurveTo(-2.48, -1.75, -2.66, -1.12, -2.76, -0.48);
-  shape.bezierCurveTo(-2.82, -0.12, -2.88, 0.36, -2.7, 0.82);
+  shape.moveTo(-3.15, 1.18);
+  shape.bezierCurveTo(-2.85, 1.62, -2.05, 1.78, -1.2, 1.68);
+  shape.bezierCurveTo(-0.5, 1.58, 0.5, 1.58, 1.2, 1.68);
+  shape.bezierCurveTo(2.05, 1.78, 2.85, 1.62, 3.15, 1.18);
+  shape.bezierCurveTo(3.38, 0.82, 3.36, 0.26, 3.18, -0.18);
+  shape.bezierCurveTo(3.0, -0.62, 2.65, -1.35, 2.25, -1.74);
+  shape.bezierCurveTo(1.93, -2.03, 1.5, -2.12, 1.16, -1.78);
+  shape.bezierCurveTo(0.86, -1.48, 0.7, -1.07, 0.47, -0.8);
+  shape.bezierCurveTo(0.1, -0.48, -0.1, -0.48, -0.47, -0.8);
+  shape.bezierCurveTo(-0.7, -1.07, -0.86, -1.48, -1.16, -1.78);
+  shape.bezierCurveTo(-1.5, -2.12, -1.93, -2.03, -2.25, -1.74);
+  shape.bezierCurveTo(-2.65, -1.35, -3.0, -0.62, -3.18, -0.18);
+  shape.bezierCurveTo(-3.36, 0.26, -3.38, 0.82, -3.15, 1.18);
+
   const geometry = new THREE.ExtrudeGeometry(shape, {
-    depth: 0.58,
+    depth: 0.72,
+    steps: 3,
     bevelEnabled: true,
-    bevelSegments: 8,
-    bevelSize: 0.12,
-    bevelThickness: 0.1,
-    curveSegments: 18,
+    bevelThickness: 0.12,
+    bevelSize: 0.11,
+    bevelSegments: 7,
   });
-  geometry.translate(0, 0, -0.29);
+  geometry.center();
+  geometry.rotateX(-Math.PI / 2);
   geometry.computeVertexNormals();
   return geometry;
 }
 
-function ApexStick({ position, phase }: { position: [number, number, number]; phase: number }) {
-  const ref = useRef<THREE.Group>(null);
-  useFrame((state, delta) => {
-    if (!ref.current) return;
-    const t = state.clock.elapsedTime;
-    ref.current.rotation.x = THREE.MathUtils.damp(ref.current.rotation.x, Math.sin(t * 1.0 + phase) * 0.055, 5, delta);
-    ref.current.rotation.z = THREE.MathUtils.damp(ref.current.rotation.z, Math.cos(t * 0.92 + phase) * 0.07, 5, delta);
-  });
+function AccentTube({
+  path,
+  color,
+  opacity = 0.9,
+  radius = 0.018,
+}: {
+  path: THREE.Curve<THREE.Vector3>;
+  color: string;
+  opacity?: number;
+  radius?: number;
+}) {
+  const geometry = useMemo(
+    () => new THREE.TubeGeometry(path, 100, radius, 8, false),
+    [path, radius],
+  );
+
+  useEffect(() => () => geometry.dispose(), [geometry]);
+
   return (
-    <group ref={ref} position={position}>
+    <mesh geometry={geometry}>
+      <meshBasicMaterial color={color} transparent opacity={opacity} blending={THREE.AdditiveBlending} />
+    </mesh>
+  );
+}
+
+function AnalogStick({
+  position,
+  accent,
+  phase = 0,
+}: {
+  position: [number, number, number];
+  accent: string;
+  phase?: number;
+}) {
+  const root = useRef<THREE.Group>(null);
+
+  useFrame((state) => {
+    if (!root.current) return;
+    const t = state.clock.elapsedTime;
+    const sway = 0.025 + Math.sin(t * 0.9 + phase) * 0.008;
+    root.current.rotation.x = Math.sin(t * 1.15 + phase) * sway;
+    root.current.rotation.z = Math.cos(t * 0.94 + phase) * sway;
+  });
+
+  return (
+    <group ref={root} position={position}>
       <mesh castShadow>
-        <cylinderGeometry args={[0.26, 0.3, 0.095, 56]} />
-        <meshPhysicalMaterial color="#d7e1e8" metalness={0.48} roughness={0.2} clearcoat={0.85} />
+        <cylinderGeometry args={[0.31, 0.35, 0.1, 56]} />
+        <meshPhysicalMaterial color="#d6dce1" metalness={0.12} roughness={0.3} clearcoat={0.7} clearcoatRoughness={0.12} />
       </mesh>
-      <mesh position={[0, 0.1, 0]} castShadow>
-        <cylinderGeometry args={[0.175, 0.21, 0.14, 56]} />
-        <meshPhysicalMaterial color="#ffffff" metalness={0.2} roughness={0.15} clearcoat={1} clearcoatRoughness={0.06} />
+      <mesh position={[0, 0.09, 0]} castShadow>
+        <cylinderGeometry args={[0.24, 0.2, 0.18, 48]} />
+        <meshPhysicalMaterial color="#555d66" metalness={0.74} roughness={0.24} clearcoat={0.55} />
       </mesh>
-      <mesh position={[0, 0.21, 0]} castShadow>
-        <sphereGeometry args={[0.185, 48, 34]} />
-        <meshPhysicalMaterial color="#d8e1e7" metalness={0.55} roughness={0.24} clearcoat={0.94} clearcoatRoughness={0.08} />
+      <mesh position={[0, 0.19, 0]} castShadow>
+        <cylinderGeometry args={[0.26, 0.22, 0.2, 48]} />
+        <meshPhysicalMaterial color="#dfe4e7" metalness={0.16} roughness={0.25} clearcoat={0.78} />
       </mesh>
-      <mesh position={[0, 0.33, 0]}>
-        <torusGeometry args={[0.175, 0.015, 10, 48]} />
-        <meshBasicMaterial color="#3ddfff" transparent opacity={0.92} />
+      <mesh position={[0, 0.296, 0]}>
+        <torusGeometry args={[0.24, 0.024, 10, 64]} />
+        <meshBasicMaterial color={accent} transparent opacity={0.98} blending={THREE.AdditiveBlending} />
       </mesh>
-      <mesh position={[0, 0.255, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.055, 0.064, 36]} />
-        <meshBasicMaterial color="#ffffff" transparent opacity={0.68} />
+      <mesh position={[0, 0.36, 0]}>
+        <torusGeometry args={[0.205, 0.012, 8, 56]} />
+        <meshBasicMaterial color="#ffffff" transparent opacity={0.82} />
       </mesh>
     </group>
   );
 }
 
-function ApexButton({ position, accent }: { position: [number, number, number]; accent: string }) {
+function FaceButton({
+  position,
+  accent,
+  size = 0.26,
+}: {
+  position: [number, number, number];
+  accent: string;
+  size?: number;
+}) {
   return (
     <group position={position}>
       <mesh castShadow>
-        <cylinderGeometry args={[0.175, 0.21, 0.12, 46]} />
-        <meshPhysicalMaterial color="#dbe4eb" metalness={0.18} roughness={0.22} clearcoat={0.95} clearcoatRoughness={0.08} />
+        <cylinderGeometry args={[size * 1.16, size * 1.2, 0.105, 48]} />
+        <meshPhysicalMaterial color="#aeb8c1" metalness={0.28} roughness={0.28} clearcoat={0.78} />
       </mesh>
-      <mesh position={[0, 0.075, 0]}>
-        <cylinderGeometry args={[0.13, 0.16, 0.08, 46]} />
-        <meshPhysicalMaterial color="#f7fbff" metalness={0.12} roughness={0.18} clearcoat={1} clearcoatRoughness={0.07} />
+      <mesh position={[0, 0.058, 0]} castShadow>
+        <cylinderGeometry args={[size, size * 0.94, 0.085, 48]} />
+        <meshPhysicalMaterial color="#f0f3f4" metalness={0.1} roughness={0.22} clearcoat={0.92} />
       </mesh>
-      <mesh position={[0, 0.12, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.128, 0.142, 44]} />
-        <meshBasicMaterial color={accent} transparent opacity={0.8} />
-      </mesh>
-      <mesh position={[0, 0.125, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.043, 0.051, 24]} />
-        <meshBasicMaterial color={accent} transparent opacity={0.45} />
+      <mesh position={[0, 0.104, 0]}>
+        <torusGeometry args={[size * 0.86, 0.012, 8, 40]} />
+        <meshBasicMaterial color={accent} transparent opacity={0.58} />
       </mesh>
     </group>
   );
 }
 
-function ApexDPad() {
+function DPad() {
   return (
-    <group position={[-1.55, -0.23, 0.42]}>
-      <RoundedBox args={[0.22, 0.68, 0.17]} radius={0.08} smoothness={7} castShadow>
-        <meshPhysicalMaterial color="#dce5eb" metalness={0.18} roughness={0.19} clearcoat={0.95} />
+    <group position={[-1.92, 0.48, 0.02]}>
+      <RoundedBox args={[0.34, 0.12, 0.94]} radius={0.08} smoothness={6} castShadow>
+        <meshPhysicalMaterial color="#e4e8ea" metalness={0.08} roughness={0.24} clearcoat={0.84} />
       </RoundedBox>
-      <RoundedBox args={[0.68, 0.22, 0.17]} radius={0.08} smoothness={7} castShadow>
-        <meshPhysicalMaterial color="#e8eef2" metalness={0.14} roughness={0.2} clearcoat={0.95} />
+      <RoundedBox args={[0.94, 0.12, 0.34]} radius={0.08} smoothness={6} castShadow>
+        <meshPhysicalMaterial color="#e4e8ea" metalness={0.08} roughness={0.24} clearcoat={0.84} />
       </RoundedBox>
-      <mesh position={[0, 0, 0.092]}>
-        <ringGeometry args={[0.07, 0.09, 40]} />
-        <meshBasicMaterial color="#62dcff" transparent opacity={0.3} />
+      <mesh position={[0, 0.073, 0]}>
+        <ringGeometry args={[0.22, 0.29, 32]} />
+        <meshBasicMaterial color="#aeb6bd" transparent opacity={0.3} />
       </mesh>
     </group>
   );
 }
 
-function Apex5Controller() {
-  const root = useRef<THREE.Group>(null);
-  const shellGroup = useRef<THREE.Group>(null);
-  const glowRef = useRef<THREE.Mesh>(null);
-  const motion = useRef({ x: 0, y: 0, scroll: 0 });
-  const target = useRef(new THREE.Vector3());
-  const targetRotation = useRef(new THREE.Vector3());
-  const shellGeometry = useMemo(() => createApexShellGeometry(), []);
-  const accentCurve = useMemo(() => new THREE.TubeGeometry(
-    new THREE.CatmullRomCurve3([
-      new THREE.Vector3(-2.02, -0.82, 0.31),
-      new THREE.Vector3(-1.18, -1.15, 0.33),
-      new THREE.Vector3(0, -1.34, 0.34),
-      new THREE.Vector3(1.18, -1.15, 0.33),
-      new THREE.Vector3(2.02, -0.82, 0.31),
-    ]),
-    96, 0.028, 10, false,
-  ), []);
+function ShoulderCluster() {
+  return (
+    <group>
+      {[
+        [-2.05, 0.49, -0.82, 0.42],
+        [-1.42, 0.5, -0.92, 0.38],
+        [1.42, 0.5, -0.92, 0.38],
+        [2.05, 0.49, -0.82, 0.42],
+      ].map(([x, y, z, width], index) => (
+        <RoundedBox
+          key={index}
+          args={[width, 0.14, 0.26]}
+          radius={0.09}
+          smoothness={7}
+          position={[x, y, z]}
+          rotation={[0, index < 2 ? -0.08 : 0.08, 0]}
+          castShadow
+        >
+          <meshPhysicalMaterial color="#f2f4f5" metalness={0.08} roughness={0.22} clearcoat={0.82} />
+        </RoundedBox>
+      ))}
+    </group>
+  );
+}
 
-  useEffect(() => {
-    const handlePointer = (event: PointerEvent) => {
-      motion.current.x = THREE.MathUtils.clamp((event.clientX / Math.max(window.innerWidth, 1)) * 2 - 1, -1, 1);
-      motion.current.y = THREE.MathUtils.clamp(1 - (event.clientY / Math.max(window.innerHeight, 1)) * 2, -1, 1);
-    };
-    const handleScroll = () => {
-      const range = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
-      motion.current.scroll = THREE.MathUtils.clamp(window.scrollY / range, 0, 1);
-    };
-    window.addEventListener("pointermove", handlePointer, { passive: true });
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll();
-    return () => {
-      window.removeEventListener("pointermove", handlePointer);
-      window.removeEventListener("scroll", handleScroll);
-    };
+function APEXBadge() {
+  return (
+    <group position={[0, 0.56, 0.07]}>
+      <RoundedBox args={[1.42, 0.09, 0.64]} radius={0.12} smoothness={7}>
+        <meshPhysicalMaterial color="#d6dce0" metalness={0.08} roughness={0.3} clearcoat={0.68} />
+      </RoundedBox>
+      <RoundedBox args={[1.12, 0.035, 0.32]} radius={0.07} smoothness={6} position={[0, 0.06, -0.015]}>
+        <meshStandardMaterial color="#8f99a1" metalness={0.28} roughness={0.3} />
+      </RoundedBox>
+      <mesh position={[0, 0.086, -0.09]}>
+        <planeGeometry args={[0.78, 0.11]} />
+        <meshBasicMaterial color="#f8fbfd" transparent opacity={0.88} />
+      </mesh>
+    </group>
+  );
+}
+
+function ControllerLightBand() {
+  const leftPath = useMemo(
+    () =>
+      new THREE.CatmullRomCurve3([
+        new THREE.Vector3(-2.7, 0.1, -1.62),
+        new THREE.Vector3(-2.42, 0.08, -1.72),
+        new THREE.Vector3(-1.75, 0.06, -1.76),
+        new THREE.Vector3(-1.05, 0.06, -1.74),
+      ]),
+    [],
+  );
+  const rightPath = useMemo(
+    () =>
+      new THREE.CatmullRomCurve3([
+        new THREE.Vector3(1.05, 0.06, -1.74),
+        new THREE.Vector3(1.75, 0.06, -1.76),
+        new THREE.Vector3(2.42, 0.08, -1.72),
+        new THREE.Vector3(2.7, 0.1, -1.62),
+      ]),
+    [],
+  );
+
+  return (
+    <>
+      <AccentTube path={leftPath} color="#3fe8ff" radius={0.023} opacity={0.9} />
+      <AccentTube path={rightPath} color="#49bfff" radius={0.023} opacity={0.9} />
+      <mesh position={[0, 0.08, -1.73]}>
+        <boxGeometry args={[0.7, 0.035, 0.035]} />
+        <meshBasicMaterial color="#82f6ff" transparent opacity={0.62} blending={THREE.AdditiveBlending} />
+      </mesh>
+    </>
+  );
+}
+
+function ControllerMicroDetails() {
+  const vents = useMemo(() => {
+    const result: Array<[number, number, number]> = [];
+    for (let row = 0; row < 2; row += 1) {
+      for (let col = 0; col < 8; col += 1) {
+        result.push([-0.72 + col * 0.205, 0.55, -1.1 - row * 0.06]);
+      }
+    }
+    return result;
   }, []);
 
-  useEffect(() => () => shellGeometry.dispose(), [shellGeometry]);
-  useEffect(() => () => accentCurve.dispose(), [accentCurve]);
+  return (
+    <>
+      {vents.map((position, index) => (
+        <RoundedBox key={index} args={[0.11, 0.025, 0.025]} radius={0.01} smoothness={3} position={position}>
+          <meshStandardMaterial color="#7b8790" metalness={0.38} roughness={0.36} />
+        </RoundedBox>
+      ))}
+      {[
+        [-2.58, 0.58, 0.46],
+        [-1.58, 0.58, 0.44],
+        [1.58, 0.58, 0.44],
+        [2.58, 0.58, 0.46],
+      ].map((position, index) => (
+        <mesh key={index} position={position}>
+          <sphereGeometry args={[0.035, 18, 18]} />
+          <meshBasicMaterial color="#87939d" transparent opacity={0.8} />
+        </mesh>
+      ))}
+    </>
+  );
+}
+
+function Apex5Model() {
+  const root = useRef<THREE.Group>(null);
+  const shellRef = useRef<THREE.Mesh>(null);
+  const { pointer, viewport } = useThree();
+  const body = useMemo(makeControllerBody, []);
+
+  const pulseUniforms = useMemo(
+    () => ({
+      uTime: { value: 0 },
+    }),
+    [],
+  );
+
+  useEffect(() => () => body.dispose(), [body]);
 
   useFrame((state, delta) => {
     if (!root.current) return;
-    const { x, y, scroll } = motion.current;
-    target.current.set(x * 1.48, y * 1.12 + (0.22 - scroll) * 0.2, -0.2 + Math.abs(x) * 0.14);
-    targetRotation.current.set(-y * 0.18, x * 0.42, x * 0.12);
 
-    root.current.position.x = THREE.MathUtils.damp(root.current.position.x, target.current.x, 4.8, delta);
-    root.current.position.y = THREE.MathUtils.damp(root.current.position.y, target.current.y, 4.8, delta);
-    root.current.position.z = THREE.MathUtils.damp(root.current.position.z, target.current.z, 3.6, delta);
-    root.current.rotation.x = THREE.MathUtils.damp(root.current.rotation.x, targetRotation.current.x, 4.2, delta);
-    root.current.rotation.y = THREE.MathUtils.damp(root.current.rotation.y, targetRotation.current.y, 4.2, delta);
-    root.current.rotation.z = THREE.MathUtils.damp(root.current.rotation.z, targetRotation.current.z, 5.0, delta);
+    const t = state.clock.elapsedTime;
+    const safeScale = THREE.MathUtils.clamp(viewport.width / 9.2, 0.62, 1.08);
+    const targetX = pointer.x * 1.28;
+    const targetY = -pointer.y * 0.78 + Math.sin(t * 0.6) * 0.045;
+    const targetZ = Math.sin(t * 0.8) * 0.08;
 
-    if (shellGroup.current) shellGroup.current.rotation.z += delta * 0.012;
-    if (glowRef.current) {
-      (glowRef.current.material as THREE.MeshBasicMaterial).opacity = 0.58 + Math.sin(state.clock.elapsedTime * 2.4) * 0.16;
+    root.current.position.x = THREE.MathUtils.damp(root.current.position.x, targetX, 3.25, delta);
+    root.current.position.y = THREE.MathUtils.damp(root.current.position.y, targetY, 3.15, delta);
+    root.current.position.z = THREE.MathUtils.damp(root.current.position.z, targetZ, 2.9, delta);
+
+    root.current.rotation.y = THREE.MathUtils.damp(root.current.rotation.y, pointer.x * 0.34, 2.9, delta);
+    root.current.rotation.x = THREE.MathUtils.damp(
+      root.current.rotation.x,
+      -0.12 - pointer.y * 0.19,
+      2.8,
+      delta,
+    );
+    root.current.rotation.z = THREE.MathUtils.damp(
+      root.current.rotation.z,
+      pointer.x * -0.11 + Math.sin(t * 0.34) * 0.018,
+      2.4,
+      delta,
+    );
+    root.current.scale.x = THREE.MathUtils.damp(root.current.scale.x, safeScale, 2.6, delta);
+    root.current.scale.y = THREE.MathUtils.damp(root.current.scale.y, safeScale, 2.6, delta);
+    root.current.scale.z = THREE.MathUtils.damp(root.current.scale.z, safeScale, 2.6, delta);
+
+    pulseUniforms.uTime.value = t;
+
+    if (shellRef.current) {
+      shellRef.current.rotation.z = Math.sin(t * 0.44) * 0.01;
     }
   });
 
   return (
-    <group ref={root} position={[0.15, 0, 0]} scale={1.18}>
-      <group ref={shellGroup}>
-        <mesh geometry={shellGeometry} castShadow receiveShadow>
-          <meshPhysicalMaterial color="#edf3f7" metalness={0.14} roughness={0.19} clearcoat={1} clearcoatRoughness={0.07} reflectivity={0.8} envMapIntensity={1.5} />
-        </mesh>
+    <group ref={root} position={[0.8, 0.08, 0]} rotation={[-0.12, 0.18, -0.04]}>
+      <mesh ref={shellRef} geometry={body} castShadow receiveShadow>
+        <meshPhysicalMaterial
+          color="#edf1f3"
+          metalness={0.07}
+          roughness={0.22}
+          clearcoat={0.95}
+          clearcoatRoughness={0.08}
+          reflectivity={0.78}
+        />
+      </mesh>
 
-        <RoundedBox args={[3.12, 0.1, 1.32]} radius={0.14} smoothness={10} position={[0, 0.5, 0.36]} castShadow>
-          <meshPhysicalMaterial color="#f8fbfd" metalness={0.1} roughness={0.14} clearcoat={1} clearcoatRoughness={0.05} />
-        </RoundedBox>
-        <RoundedBox args={[1.06, 0.1, 0.67]} radius={0.13} smoothness={8} position={[0, 0.69, 0.43]}>
-          <meshPhysicalMaterial color="#f3f8fa" metalness={0.24} roughness={0.13} clearcoat={1} clearcoatRoughness={0.04} />
-        </RoundedBox>
-        <RoundedBox args={[0.72, 0.035, 0.33]} radius={0.06} smoothness={6} position={[0, 0.742, 0.48]}>
-          <meshPhysicalMaterial color="#0b141c" metalness={0.55} roughness={0.17} clearcoat={0.85} />
-        </RoundedBox>
+      <mesh geometry={body} scale={0.986} position={[0, 0.01, 0]}>
+        <meshPhysicalMaterial
+          color="#ffffff"
+          metalness={0.025}
+          roughness={0.33}
+          clearcoat={0.72}
+          clearcoatRoughness={0.12}
+          transparent
+          opacity={0.72}
+        />
+      </mesh>
 
-        {[-1.58, -0.76, 0.76, 1.58].map((x) => (
-          <RoundedBox key={x} args={[0.44, 0.12, 0.18]} radius={0.07} smoothness={6} position={[x, 0.99, 0.27]} rotation={[0, x < 0 ? 0.04 : -0.04, x * 0.035]} castShadow>
-            <meshPhysicalMaterial color="#d6e0e7" metalness={0.25} roughness={0.19} clearcoat={0.94} />
-          </RoundedBox>
-        ))}
-        {[-1, 1].map((side) => (
-          <RoundedBox key={side} args={[0.74, 0.13, 0.32]} radius={0.08} smoothness={7} position={[side * 1.45, 1.08, 0.08]} rotation={[0, side * 0.04, side * -0.08]} castShadow>
-            <meshPhysicalMaterial color="#eaf1f5" metalness={0.17} roughness={0.2} clearcoat={0.96} />
-          </RoundedBox>
-        ))}
+      <RoundedBox args={[3.58, 0.12, 1.44]} radius={0.32} smoothness={10} position={[0, 0.42, 0.12]}>
+        <meshPhysicalMaterial color="#dce1e4" metalness={0.07} roughness={0.3} clearcoat={0.84} clearcoatRoughness={0.1} />
+      </RoundedBox>
 
-        <ApexStick position={[-1.05, 0.2, 0.52]} phase={0.4} />
-        <ApexStick position={[0.9, -0.14, 0.53]} phase={1.15} />
-        <ApexDPad />
+      <RoundedBox args={[2.88, 0.075, 0.94]} radius={0.2} smoothness={9} position={[0, 0.49, 0.19]}>
+        <meshPhysicalMaterial color="#f3f5f6" metalness={0.06} roughness={0.26} clearcoat={0.9} />
+      </RoundedBox>
 
-        <group position={[1.55, 0.25, 0.47]}>
-          <ApexButton position={[0, 0.33, 0]} accent="#5ac8ff" />
-          <ApexButton position={[-0.33, 0, 0]} accent="#ff6a84" />
-          <ApexButton position={[0.33, 0, 0]} accent="#ffd66a" />
-          <ApexButton position={[0, -0.33, 0]} accent="#74e8a6" />
-        </group>
+      <RoundedBox args={[1.05, 0.055, 0.42]} radius={0.12} smoothness={7} position={[0, 0.535, -0.06]}>
+        <meshPhysicalMaterial color="#b9c2c9" metalness={0.16} roughness={0.24} clearcoat={0.75} />
+      </RoundedBox>
 
-        <mesh position={[0, -0.04, 0.51]}>
-          <boxGeometry args={[0.035, 0.56, 0.035]} />
-          <meshBasicMaterial color="#8a9ca9" transparent opacity={0.38} />
-        </mesh>
-        <mesh position={[0, 0.29, 0.52]}>
-          <torusGeometry args={[0.44, 0.018, 12, 64]} />
-          <meshBasicMaterial color="#62eaff" transparent opacity={0.18} />
-        </mesh>
+      <APEXBadge />
+      <DPad />
 
-        <mesh ref={glowRef} geometry={accentCurve} position={[0, 0, 0]}>
-          <meshBasicMaterial color="#31ddff" transparent opacity={0.72} blending={THREE.AdditiveBlending} />
-        </mesh>
-        <mesh position={[0, -1.02, 0.47]}>
-          <boxGeometry args={[1.35, 0.025, 0.18]} />
-          <meshBasicMaterial color="#6aeaff" transparent opacity={0.32} />
-        </mesh>
-
-        {[[-2.18, 0.12, 0.37], [2.18, 0.12, 0.37], [-1.9, -0.93, 0.38], [1.9, -0.93, 0.38]].map(([x, y, z], index) => (
-          <mesh key={index} position={[x, y, z]}>
-            <cylinderGeometry args={[0.035, 0.035, 0.018, 20]} />
-            <meshBasicMaterial color="#7f909d" transparent opacity={0.72} />
-          </mesh>
-        ))}
+      <group position={[1.98, 0.54, 0.05]}>
+        <FaceButton position={[0, 0.38, 0]} accent="#d8eaff" size={0.245} />
+        <FaceButton position={[-0.36, 0, 0]} accent="#6deaff" size={0.245} />
+        <FaceButton position={[0.36, 0, 0]} accent="#ff7da0" size={0.245} />
+        <FaceButton position={[0, -0.38, 0]} accent="#86ffce" size={0.245} />
       </group>
 
-      <mesh position={[0, -0.08, -0.62]} rotation={[-Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[2.85, 0.018, 8, 150]} />
-        <meshBasicMaterial color="#36e7ff" transparent opacity={0.11} blending={THREE.AdditiveBlending} />
-      </mesh>
-      <mesh position={[0, -0.1, -0.9]} rotation={[-Math.PI / 2, 0, Math.PI / 9]}>
-        <torusGeometry args={[3.1, 0.009, 8, 150]} />
-        <meshBasicMaterial color="#8b62ff" transparent opacity={0.08} blending={THREE.AdditiveBlending} />
+      <AnalogStick position={[-1.05, 0.59, 0.25]} accent="#2f97ff" phase={0.4} />
+      <AnalogStick position={[0.88, 0.59, 0.26]} accent="#34e7ff" phase={1.1} />
+
+      <group position={[0, 0.55, 0.7]}>
+        <FaceButton position={[-0.46, 0, 0]} accent="#dce7ff" size={0.13} />
+        <FaceButton position={[0.46, 0, 0]} accent="#dce7ff" size={0.13} />
+      </group>
+
+      <ShoulderCluster />
+      <ControllerLightBand />
+      <ControllerMicroDetails />
+
+      <mesh position={[0, 0.63, -0.22]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[2.36, 2.44, 120]} />
+        <shaderMaterial
+          uniforms={pulseUniforms}
+          vertexShader={controllerPulseVertexShader}
+          fragmentShader={controllerPulseFragmentShader}
+          transparent
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          side={THREE.DoubleSide}
+        />
       </mesh>
     </group>
   );
 }
 
-function ControllerBloom() {
-  const composerRef = useRef<EffectComposer | null>(null);
+function ControllerGhostEcho() {
+  const group = useRef<THREE.Group>(null);
+  const body = useMemo(makeControllerBody, []);
+  const { pointer } = useThree();
+
+  useEffect(() => () => body.dispose(), [body]);
+
+  useFrame((state, delta) => {
+    if (!group.current) return;
+    const t = state.clock.elapsedTime;
+    group.current.rotation.y = THREE.MathUtils.damp(group.current.rotation.y, pointer.x * 0.26, 1.8, delta);
+    group.current.rotation.x = THREE.MathUtils.damp(group.current.rotation.x, -pointer.y * 0.11, 1.8, delta);
+    group.current.position.x = THREE.MathUtils.damp(group.current.position.x, pointer.x * 1.02, 1.75, delta);
+    group.current.position.y = THREE.MathUtils.damp(group.current.position.y, -pointer.y * 0.63, 1.75, delta);
+    group.current.position.z = Math.sin(t * 0.7) * 0.03;
+  });
+
+  return (
+    <group ref={group} position={[0.8, 0, -0.72]} scale={1.03} rotation={[-0.1, 0.1, 0]}>
+      <mesh geometry={body} scale={1.01}>
+        <meshBasicMaterial color="#62eaff" transparent opacity={0.08} blending={THREE.AdditiveBlending} wireframe />
+      </mesh>
+    </group>
+  );
+}
+
+function ControllerSceneFX() {
   const { gl, scene, camera, size } = useThree();
+  const composerRef = useRef<EffectComposer | null>(null);
+
   useEffect(() => {
     const composer = new EffectComposer(gl);
-    composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.65));
+    composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.45));
     composer.setSize(size.width, size.height);
-    composer.addPass(new RenderPass(scene, camera));
-    composer.addPass(new UnrealBloomPass(new THREE.Vector2(size.width, size.height), 0.3, 0.42, 0.18));
-    composer.addPass(new OutputPass());
+
+    const renderPass = new RenderPass(scene, camera);
+    const bloom = new UnrealBloomPass(
+      new THREE.Vector2(size.width, size.height),
+      0.58,
+      0.62,
+      0.12,
+    );
+    const output = new OutputPass();
+
+    composer.addPass(renderPass);
+    composer.addPass(bloom);
+    composer.addPass(output);
     composerRef.current = composer;
+
     return () => {
       composerRef.current = null;
       composer.dispose();
     };
-  }, [camera, gl, scene]);
+  }, [camera, gl, scene, size.height, size.width]);
+
   useEffect(() => {
     composerRef.current?.setSize(size.width, size.height);
   }, [size.height, size.width]);
-  useFrame(() => composerRef.current?.render(), 1);
+
+  useFrame(() => {
+    composerRef.current?.render();
+  }, 1);
+
   return null;
 }
 
-export function LandingBackground() {
+function BackgroundWorld() {
+  const world = useRef<THREE.Group>(null);
+
+  useFrame((state, delta) => {
+    if (!world.current) return;
+    const t = state.clock.elapsedTime;
+    world.current.rotation.y = THREE.MathUtils.damp(world.current.rotation.y, state.pointer.x * 0.035, 0.8, delta);
+    world.current.rotation.x = THREE.MathUtils.damp(world.current.rotation.x, -state.pointer.y * 0.018, 0.8, delta);
+    world.current.position.y = Math.sin(t * 0.18) * 0.04;
+  });
+
   return (
-    <div className="landing-3d-background" aria-hidden="true">
-      <Canvas dpr={[1, 1.65]} gl={{ antialias: true, alpha: true, powerPreference: "high-performance", toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.08 }}>
-        <BackgroundScene />
+    <group ref={world}>
+      <mesh position={[0, 1.25, -4.1]} scale={[2.65, 2.65, 2.65]}>
+        <sphereGeometry args={[1, 64, 64]} />
+        <meshStandardMaterial
+          color="#07121f"
+          emissive="#0e2a46"
+          emissiveIntensity={0.6}
+          metalness={0.16}
+          roughness={0.58}
+        />
+      </mesh>
+
+      <Float speed={0.34} floatIntensity={0.16} rotationIntensity={0.04}>
+        <mesh position={[0, 1.25, -3.87]} rotation={[0.18, 0.2, -0.25]}>
+          <torusGeometry args={[2.86, 0.018, 10, 160]} />
+          <meshBasicMaterial color="#54e9ff" transparent opacity={0.5} blending={THREE.AdditiveBlending} />
+        </mesh>
+        <mesh position={[0, 1.25, -3.9]} rotation={[0.18, -0.12, -0.25]}>
+          <torusGeometry args={[3.12, 0.008, 8, 160]} />
+          <meshBasicMaterial color="#8c63ff" transparent opacity={0.3} blending={THREE.AdditiveBlending} />
+        </mesh>
+      </Float>
+
+      {[
+        [-4.5, -1.2, -2.0],
+        [-3.2, -1.45, -2.8],
+        [3.8, -1.25, -2.4],
+        [4.8, -0.9, -3.6],
+        [-0.8, -1.55, -2.9],
+        [1.8, -1.45, -2.7],
+      ].map(([x, y, z], index) => (
+        <mesh key={index} position={[x, y, z]} rotation={[0.1 * index, 0.14 * index, -0.08 * index]}>
+          <icosahedronGeometry args={[0.38 + (index % 3) * 0.12, 2]} />
+          <meshStandardMaterial color="#08111a" emissive="#061d2a" emissiveIntensity={0.42} roughness={0.84} metalness={0.22} />
+        </mesh>
+      ))}
+
+      <mesh position={[0, -1.52, -2.65]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[15, 7, 64, 32]} />
+        <meshStandardMaterial color="#03080d" emissive="#041622" emissiveIntensity={0.32} metalness={0.18} roughness={0.96} />
+      </mesh>
+
+      <mesh position={[0, -1.47, -2.55]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[2.5, 2.56, 128]} />
+        <meshBasicMaterial color="#2fe7ff" transparent opacity={0.26} blending={THREE.AdditiveBlending} />
+      </mesh>
+
+      <mesh position={[0, -1.44, -2.42]} rotation={[-Math.PI / 2, 0, Math.PI / 8]}>
+        <ringGeometry args={[3.2, 3.205, 128]} />
+        <meshBasicMaterial color="#7f66ff" transparent opacity={0.17} blending={THREE.AdditiveBlending} />
+      </mesh>
+
+      <Sparkles count={170} scale={[10, 5.8, 9]} size={2.5} speed={0.18} color="#66e9ff" />
+      <Sparkles count={55} scale={[8, 4.6, 7]} size={4} speed={0.08} color="#b9a8ff" />
+    </group>
+  );
+}
+
+function BackgroundSignalFX() {
+  const { gl, scene, camera, size, pointer } = useThree();
+  const composerRef = useRef<EffectComposer | null>(null);
+  const analogPassRef = useRef<ShaderPass | null>(null);
+  const lastPointer = useRef(new THREE.Vector2());
+  const velocity = useRef(0);
+
+  useEffect(() => {
+    const composer = new EffectComposer(gl);
+    composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    composer.setSize(size.width, size.height);
+
+    const renderPass = new RenderPass(scene, camera);
+    const bloom = new UnrealBloomPass(
+      new THREE.Vector2(size.width, size.height),
+      0.64,
+      0.7,
+      0.08,
+    );
+
+    const analog = new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        uTime: { value: 0 },
+        uResolution: { value: new THREE.Vector2(size.width, size.height) },
+        uVelocity: { value: 0 },
+      },
+      vertexShader: \`
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      \`,
+      fragmentShader: analogFragmentShader,
+    });
+
+    const output = new OutputPass();
+
+    composer.addPass(renderPass);
+    composer.addPass(bloom);
+    composer.addPass(analog);
+    composer.addPass(output);
+
+    composerRef.current = composer;
+    analogPassRef.current = analog;
+
+    return () => {
+      composerRef.current = null;
+      analogPassRef.current = null;
+      composer.dispose();
+    };
+  }, [camera, gl, scene, size.height, size.width]);
+
+  useEffect(() => {
+    composerRef.current?.setSize(size.width, size.height);
+    analogPassRef.current?.uniforms.uResolution.value.set(size.width, size.height);
+  }, [size.height, size.width]);
+
+  useFrame((state, delta) => {
+    const p = new THREE.Vector2(pointer.x, pointer.y);
+    const deltaPointer = p.distanceTo(lastPointer.current);
+    lastPointer.current.lerp(p, 0.55);
+    velocity.current = THREE.MathUtils.damp(velocity.current, deltaPointer * 4.4, 4.6, delta);
+
+    const uniforms = analogPassRef.current?.uniforms;
+    if (uniforms) {
+      uniforms.uTime.value = state.clock.elapsedTime;
+      uniforms.uVelocity.value = velocity.current;
+    }
+
+    composerRef.current?.render();
+  }, 1);
+
+  return null;
+}
+
+export function LandingScene() {
+  return (
+    <div className="landing-3d-canvas landing-3d-canvas-spectral" aria-hidden="true">
+      <div className="landing-scanline-overlay" />
+      <Canvas
+        dpr={[1, 1.6]}
+        gl={{
+          antialias: true,
+          alpha: true,
+          powerPreference: "high-performance",
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 1.1,
+        }}
+      >
+        <PerspectiveCamera makeDefault position={[0, 0.3, 8.8]} fov={35} />
+        <ambientLight intensity={0.12} />
+        <hemisphereLight args={["#7cecff", "#020509", 0.5]} />
+        <directionalLight position={[4, 6, 5]} intensity={2.3} color="#d9f8ff" />
+        <directionalLight position={[-4, 2, 2]} intensity={1.2} color="#3ee7ff" />
+        <pointLight position={[0, -0.7, 2.8]} intensity={3.8} distance={9} color="#1ccfff" />
+        <pointLight position={[2.5, 1.8, -1.6]} intensity={2.6} distance={7} color="#7156ff" />
+
+        <BackgroundWorld />
+        <BackgroundSignalFX />
       </Canvas>
     </div>
   );
@@ -553,20 +704,30 @@ export function LandingBackground() {
 
 export function Apex5ControllerScene() {
   return (
-    <div className="landing-3d-controller" aria-hidden="true">
-      <Canvas dpr={[1, 1.7]} gl={{ antialias: true, alpha: true, powerPreference: "high-performance", toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.15 }} shadows>
-        <PerspectiveCamera makeDefault position={[0, 0.18, 7.8]} fov={30} />
-        <ambientLight intensity={0.24} />
-        <hemisphereLight args={["#f4fdff", "#081018", 0.85]} />
-        <directionalLight position={[4.5, 5.3, 6]} intensity={3.8} color="#ffffff" castShadow />
-        <directionalLight position={[-4.2, 2.0, 3.5]} intensity={1.75} color="#d9f9ff" />
-        <pointLight position={[-2.4, 0.6, 3.4]} intensity={4.4} distance={8} color="#4edfff" />
-        <pointLight position={[2.8, 1.4, 1.2]} intensity={2.3} distance={6.5} color="#7a5cff" />
-        <pointLight position={[0, -1.6, 2.8]} intensity={1.8} distance={5.5} color="#bfefff" />
-        <Apex5Controller />
-        <ContactShadows position={[0, -1.96, 0.15]} opacity={0.34} scale={5.7} blur={2.9} far={4.7} resolution={512} />
-        <Sparkles count={28} scale={[6.4, 4.8, 5.4]} size={1.3} speed={0.12} color="#8cefff" />
-        <ControllerBloom />
+    <div className="apex5-controller-canvas" aria-hidden="true">
+      <Canvas
+        dpr={[1, 1.7]}
+        gl={{
+          antialias: true,
+          alpha: true,
+          powerPreference: "high-performance",
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 1.16,
+        }}
+      >
+        <PerspectiveCamera makeDefault position={[0, 0.05, 8.2]} fov={31} />
+        <ambientLight intensity={0.75} />
+        <hemisphereLight args={["#ffffff", "#071018", 0.72]} />
+        <directionalLight position={[4.5, 7.2, 5.4]} intensity={3.8} color="#ffffff" castShadow />
+        <directionalLight position={[-5, 3, 4]} intensity={1.65} color="#74dcff" />
+        <pointLight position={[0, 1.5, 3.2]} intensity={2.8} distance={8} color="#ffffff" />
+        <pointLight position={[-2.8, 0.2, 1.8]} intensity={2.4} distance={7} color="#3ce3ff" />
+        <pointLight position={[2.7, -0.7, 1.8]} intensity={1.8} distance={7} color="#6f52ff" />
+
+        <ControllerGhostEcho />
+        <Apex5Model />
+        <ContactShadows position={[0.6, -1.48, 0]} scale={6.1} opacity={0.3} blur={2.8} far={5.2} resolution={512} />
+        <ControllerSceneFX />
       </Canvas>
     </div>
   );

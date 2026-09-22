@@ -3093,3 +3093,17 @@
     animation: none !important;
   }
 }
+
+
+/* STEERING METER: move another 0.5x right from the current position. */
+@media (orientation: landscape) {
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry {
+    transform: translateX(clamp(180px, 21vw, 285px)) !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 760px) {
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry {
+    transform: translateX(clamp(150px, 18vw, 225px)) !important;
+  }
+}

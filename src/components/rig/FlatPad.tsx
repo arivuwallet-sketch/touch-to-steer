@@ -662,7 +662,7 @@ export function FlatPad({ settings, set, press }: Props) {
 
       <div className="flat-pad-right absolute bottom-[17%] right-[7%] flex items-center gap-[clamp(1rem,3vw,2.5rem)]">
         <ApexFaceButtons settings={settings} press={press} turbo={turbo} />
-        <Stick side="right" settings={settings} onMove={(x, y) => set({ rx: x, ry: settings.invertLookY ? -y : y })} onClick3={(d) => press("r3", d)} />
+        <Stick side="right" settings={settings} onMove={(x, y) => set({ rx: x, ry: settings.invertLookY ? y : -y })} onClick3={(d) => press("r3", d)} />
       </div>
 
       <div className="flat-pad-bottom absolute bottom-[4%] left-1/2 flex -translate-x-1/2 gap-2">

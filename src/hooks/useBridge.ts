@@ -338,7 +338,10 @@ export function useBridge(
           ...stateRef.current,
         }),
       );
+      lastSentBodyRef.current = JSON.stringify(stateRef.current);
+      lastSentAtRef.current = nowMs();
       return true;
+
     } catch {
       return false;
     }

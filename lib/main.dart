@@ -708,7 +708,7 @@ class _RigScreenState extends State<RigScreen> {
     bool statusDot = false,
   }) {
     return Material(
-      color: active ? _red : Colors.black.withOpacity(.55),
+      color: active ? _red : Colors.black.withValues(alpha: .55),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
@@ -745,7 +745,7 @@ class _RigScreenState extends State<RigScreen> {
         : (bridge.status == 'Error' ? _red : _muted);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(.48),
+        color: Colors.black.withValues(alpha: .48),
         border: Border.all(color: Colors.white12),
         borderRadius: BorderRadius.circular(12),
       ),
@@ -1257,17 +1257,17 @@ class _ABXYButton extends StatelessWidget {
           height: 62,
           decoration: BoxDecoration(
             color: Color.alphaBlend(
-              color.withOpacity(.18),
+              color.withValues(alpha: .18),
               _panel2,
             ),
             shape: BoxShape.circle,
             border: Border.all(
-              color: color.withOpacity(.55),
+              color: color.withValues(alpha: .55),
               width: 2,
             ),
             boxShadow: [
               BoxShadow(
-                color: color.withOpacity(.14),
+                color: color.withValues(alpha: .14),
                 blurRadius: 18,
               ),
             ],
@@ -1525,7 +1525,7 @@ class _WheelRigState extends State<WheelRig>
       padding: const EdgeInsets.all(12),
       width: 190,
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(.42),
+        color: Colors.black.withValues(alpha: .42),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.white10),
       ),
@@ -1656,7 +1656,7 @@ class _PedalState extends State<_Pedal> {
                 height: 220 * value,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: widget.color.withOpacity(.80),
+                    color: widget.color.withValues(alpha: .80),
                     borderRadius: BorderRadius.circular(18),
                   ),
                 ),
@@ -1716,10 +1716,10 @@ class _Action extends StatelessWidget {
           width: 120,
           height: 58,
           decoration: BoxDecoration(
-            color: color.withOpacity(.12),
+            color: color.withValues(alpha: .12),
             borderRadius: BorderRadius.circular(13),
             border: Border.all(
-              color: color.withOpacity(.45),
+              color: color.withValues(alpha: .45),
             ),
           ),
           alignment: Alignment.center,
@@ -1851,7 +1851,7 @@ class GridPainter extends CustomPainter {
   @override
   void paint(Canvas c, Size s) {
     final p = Paint()
-      ..color = Colors.white.withOpacity(.025)
+      ..color = Colors.white.withValues(alpha: .025)
       ..strokeWidth = 1;
     for (double x = 0; x < s.width; x += 34) {
       c.drawLine(Offset(x, 0), Offset(x, s.height), p);

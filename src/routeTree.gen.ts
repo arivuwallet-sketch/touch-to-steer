@@ -47,10 +47,10 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/setup'
+  fullPaths: '/' | '/setup' | '/controller'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/setup'
-  id: '__root__' | '/' | '/setup'
+  to: '/' | '/setup' | '/controller'
+  id: '__root__' | '/' | '/setup' | '/controller'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {

@@ -832,20 +832,6 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
         </div>
       </div>
 
-      <button
-        type="button"
-        onPointerDown={(e) => {
-          e.preventDefault();
-          cycleSendRate();
-        }}
-        className="absolute right-2 top-[4.65rem] z-30 rounded-xl border border-white/10 bg-black/55 px-2.5 py-1.5 text-[7px] font-black uppercase tracking-[0.16em] text-cyan-200 backdrop-blur-md md:right-5 md:top-[5.9rem] md:px-3 md:py-2 md:text-[9px]"
-        aria-label={`Controller polling rate ${settings.sendRateHz} Hz. Tap to change.`}
-        title="Change controller polling rate"
-      >
-        RATE {settings.sendRateHz} HZ
-      </button>
-
-
       {settings.steerMode === "tilt" && !gyroReady && (
         <div className="flat-wheel-gyro absolute left-1/2 top-[3.5rem] z-30 -translate-x-1/2 md:top-5">
           <button
@@ -881,6 +867,18 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
           </div>
 
           <div className="flat-wheel-aux absolute bottom-[5%] right-[1.5%] flex flex-col items-center gap-2 md:bottom-[12%] md:right-[4%] md:gap-3">
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                cycleSendRate();
+              }}
+              className="flat-wheel-rate relative z-30 self-center rounded-xl border border-white/10 bg-black/55 px-2.5 py-1.5 text-[7px] font-black uppercase tracking-[0.16em] text-cyan-200 backdrop-blur-md md:px-3 md:py-2 md:text-[9px]"
+              aria-label={`Controller polling rate ${settings.sendRateHz} Hz. Tap to change.`}
+              title="Change controller polling rate"
+            >
+              RATE {settings.sendRateHz} HZ
+            </button>
             <Handbrake settings={settings} set={set} />
             <Nitro settings={settings} set={set} />
           </div>

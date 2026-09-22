@@ -2847,3 +2847,41 @@
     }
   }
 }
+
+
+/* FINAL STEERING HUD PLACEMENT: move the telemetry meter farther right
+   while keeping LOCK/SENS centered below it, and stack the polling-rate control
+   directly above the handbrake so it stays with the right-side driving controls. */
+@media (orientation: landscape) {
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry {
+    transform: translateX(clamp(90px, 11vw, 160px)) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-aux .flat-wheel-rate {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    transform: none !important;
+    width: max-content !important;
+    min-width: 0 !important;
+    margin: 0 auto !important;
+    pointer-events: auto !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 760px) {
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry {
+    transform: translateX(clamp(72px, 10vw, 120px)) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-aux .flat-wheel-rate {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    transform: none !important;
+  }
+}

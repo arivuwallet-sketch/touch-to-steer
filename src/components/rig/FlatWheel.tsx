@@ -783,6 +783,37 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
         })}
       </div>
 
+      <div className="flat-wheel-sens absolute left-1/2 top-[2.3rem] z-30 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-white/10 bg-black/55 p-1 backdrop-blur-md md:top-[4.3rem] md:gap-1.5 md:p-1.5">
+        <span className="px-1 text-[6px] font-black uppercase tracking-[0.2em] text-slate-500 md:text-[8px]">
+          SENS
+        </span>
+        {STEER_SENS.map((s) => {
+          const active = Math.abs(settings.steerSensitivity - s) < 0.001;
+          return (
+            <button
+              key={s}
+              type="button"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                if (active) return;
+                buzz(settings.vibration, 8);
+                onSettingsChange({ steerSensitivity: s });
+              }}
+              className={
+                "rounded-lg px-1.5 py-1 text-[7px] font-black tracking-tight transition-colors md:px-2.5 md:py-1.5 md:text-[10px] " +
+                (active
+                  ? "bg-[#e11d2e] text-white shadow-[0_0_14px_rgba(225,29,46,.55)]"
+                  : "bg-white/5 text-slate-400 active:bg-white/15")
+              }
+            >
+              {s.toFixed(2)}×
+            </button>
+          );
+        })}
+      </div>
+
+
+
 
       {settings.steerMode === "tilt" && !gyroReady && (
         <div className="flat-wheel-gyro absolute left-1/2 top-[3.5rem] z-30 -translate-x-1/2 md:top-5">

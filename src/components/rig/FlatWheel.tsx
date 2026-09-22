@@ -165,6 +165,7 @@ function Pedal({
   const active = useRef<number | null>(null);
   const lastBand = useRef(-1);
   const lastHapticAt = useRef(0);
+  const startY = useRef(0);
   const pedalRef = useRef<HTMLButtonElement>(null);
   const plateRef = useRef<HTMLSpanElement>(null);
   const barRef = useRef<HTMLSpanElement>(null);
@@ -189,7 +190,13 @@ function Pedal({
     const r = rect.current ?? pedalRef.current?.getBoundingClientRect();
     if (!r) return;
 
-    const next = Math.max(0, Math.min(1, (r.bottom - clientY) / Math.max(1, r.height)));
+    // A pedal is fully engaged as soon as it is pressed. Dragging down then
+    // feathers it back toward zero, which preserves analog control without
+    // making a normal tap near the bottom of the pedal report 0% input.
+    const next = Math.max(
+      0,
+      Math.min(1, 1 - (clientY - startY.current) / Math.max(1, r.height * 0.72)),
+    );
     set({ [id]: next } as Partial<ControllerState>);
     paint(next);
 
@@ -220,6 +227,7 @@ function Pedal({
         e.currentTarget.setPointerCapture(e.pointerId);
         active.current = e.pointerId;
         rect.current = e.currentTarget.getBoundingClientRect();
+        startY.current = e.clientY;
         update(e.clientY);
         buzz(settings.vibration, 7);
       }}

@@ -130,7 +130,9 @@ export function SettingsPanel({
           <div className="mt-3 rounded-lg border border-emerald-300/15 bg-emerald-300/5 p-3 text-[11px] leading-relaxed text-muted-foreground">
             <strong className="text-emerald-200">Universal compatibility</strong> keeps one
             synchronized Xbox 360/XInput target for modern games and one DualShock/HID target
-            for legacy DirectInput-style games. Windows may therefore show both devices in
+            for legacy DirectInput-style games. Steering accelerator/brake are sent on RT/LT
+            analog axes and mirrored to legacy HID trigger/button paths; handbrake and nitro also
+            have legacy vehicle-button mappings. Windows may therefore show both devices in
             <code className="mx-1 text-slate-300">joy.cpl</code>.
             For local co-op and split-screen, use <strong className="text-slate-200">XInput-only</strong>
             on each phone when the game expects Xbox controllers; the bridge assigns each phone

@@ -3135,3 +3135,71 @@
     transform: translateX(clamp(141px, 16.875vw, 216px)) !important;
   }
 }
+
+
+/* REAL-TIME 12-ZONE GAMEPAD RGB
+   4x D-pad + 4x face + LM/RM + LT/RT = exactly 12 independently phased lights. */
+@keyframes touch-to-steer-rgb-12 {
+  0%, 100% {
+    border-color: rgba(255, 62, 82, .98) !important;
+    background-image: radial-gradient(circle at 50% 45%, rgba(255, 62, 82, .18), transparent 68%), linear-gradient(145deg, #3a4551, #151b22) !important;
+    box-shadow: 0 0 8px rgba(255, 62, 82, .98), 0 0 20px rgba(255, 62, 82, .68), inset 0 0 11px rgba(255, 62, 82, .18), var(--rgb-button-shadow, 0 5px 0 #06090d, 0 9px 14px rgba(0,0,0,.5)) !important;
+  }
+  16.66% {
+    border-color: rgba(255, 184, 48, .98) !important;
+    background-image: radial-gradient(circle at 50% 45%, rgba(255, 184, 48, .18), transparent 68%), linear-gradient(145deg, #3a4551, #151b22) !important;
+    box-shadow: 0 0 8px rgba(255, 184, 48, .98), 0 0 20px rgba(255, 184, 48, .68), inset 0 0 11px rgba(255, 184, 48, .18), var(--rgb-button-shadow, 0 5px 0 #06090d, 0 9px 14px rgba(0,0,0,.5)) !important;
+  }
+  33.33% {
+    border-color: rgba(82, 255, 94, .98) !important;
+    background-image: radial-gradient(circle at 50% 45%, rgba(82, 255, 94, .18), transparent 68%), linear-gradient(145deg, #3a4551, #151b22) !important;
+    box-shadow: 0 0 8px rgba(82, 255, 94, .98), 0 0 20px rgba(82, 255, 94, .68), inset 0 0 11px rgba(82, 255, 94, .18), var(--rgb-button-shadow, 0 5px 0 #06090d, 0 9px 14px rgba(0,0,0,.5)) !important;
+  }
+  50% {
+    border-color: rgba(52, 239, 255, .98) !important;
+    background-image: radial-gradient(circle at 50% 45%, rgba(52, 239, 255, .18), transparent 68%), linear-gradient(145deg, #3a4551, #151b22) !important;
+    box-shadow: 0 0 8px rgba(52, 239, 255, .98), 0 0 20px rgba(52, 239, 255, .68), inset 0 0 11px rgba(52, 239, 255, .18), var(--rgb-button-shadow, 0 5px 0 #06090d, 0 9px 14px rgba(0,0,0,.5)) !important;
+  }
+  66.66% {
+    border-color: rgba(74, 126, 255, .98) !important;
+    background-image: radial-gradient(circle at 50% 45%, rgba(74, 126, 255, .18), transparent 68%), linear-gradient(145deg, #3a4551, #151b22) !important;
+    box-shadow: 0 0 8px rgba(74, 126, 255, .98), 0 0 20px rgba(74, 126, 255, .68), inset 0 0 11px rgba(74, 126, 255, .18), var(--rgb-button-shadow, 0 5px 0 #06090d, 0 9px 14px rgba(0,0,0,.5)) !important;
+  }
+  83.33% {
+    border-color: rgba(218, 74, 255, .98) !important;
+    background-image: radial-gradient(circle at 50% 45%, rgba(218, 74, 255, .18), transparent 68%), linear-gradient(145deg, #3a4551, #151b22) !important;
+    box-shadow: 0 0 8px rgba(218, 74, 255, .98), 0 0 20px rgba(218, 74, 255, .68), inset 0 0 11px rgba(218, 74, 255, .18), var(--rgb-button-shadow, 0 5px 0 #06090d, 0 9px 14px rgba(0,0,0,.5)) !important;
+  }
+}
+
+.flat-pad-root.rgb-enabled .rgb-neon-button {
+  --rgb-index: 0;
+  position: relative !important;
+  animation: touch-to-steer-rgb-12 4.8s linear infinite !important;
+  animation-delay: calc(var(--rgb-index, 0) * -0.4s) !important;
+  will-change: border-color, background-image, box-shadow;
+}
+
+.flat-pad-root.rgb-enabled .rgb-neon-button::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 1px solid rgba(255,255,255,.18);
+  pointer-events: none;
+  animation: touch-to-steer-rgb-12-ring 4.8s linear infinite !important;
+  animation-delay: calc(var(--rgb-index, 0) * -0.4s) !important;
+}
+
+@keyframes touch-to-steer-rgb-12-ring {
+  0%, 100% { border-color: rgba(255, 62, 82, .82); box-shadow: 0 0 10px rgba(255, 62, 82, .72), 0 0 24px rgba(255, 62, 82, .35); }
+  16.66% { border-color: rgba(255, 184, 48, .82); box-shadow: 0 0 10px rgba(255, 184, 48, .72), 0 0 24px rgba(255, 184, 48, .35); }
+  33.33% { border-color: rgba(82, 255, 94, .82); box-shadow: 0 0 10px rgba(82, 255, 94, .72), 0 0 24px rgba(82, 255, 94, .35); }
+  50% { border-color: rgba(52, 239, 255, .82); box-shadow: 0 0 10px rgba(52, 239, 255, .72), 0 0 24px rgba(52, 239, 255, .35); }
+  66.66% { border-color: rgba(74, 126, 255, .82); box-shadow: 0 0 10px rgba(74, 126, 255, .72), 0 0 24px rgba(74, 126, 255, .35); }
+  83.33% { border-color: rgba(218, 74, 255, .82); box-shadow: 0 0 10px rgba(218, 74, 255, .72), 0 0 24px rgba(218, 74, 255, .35); }
+}
+
+.flat-pad-root.rgb-enabled .rgb-neon-button:active {
+  filter: brightness(1.14) saturate(1.18);
+}

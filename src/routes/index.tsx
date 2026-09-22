@@ -184,7 +184,7 @@ function Rig() {
         {mode === "pad" ? (
           <FlatPad settings={settings} set={set} press={press} />
         ) : mode === "wheel" ? (
-          <FlatWheel settings={settings} set={set} press={press} telemetry={telemetry} telemetryLive={telemetryLive} />
+          <FlatWheel settings={settings} set={set} press={press} telemetry={telemetry} telemetryLive={telemetryLive} onSettingsChange={patch} />
         ) : (
           <FlatMouse settings={settings} onSettingsChange={patch} sendMouse={sendMouse} />
         )}

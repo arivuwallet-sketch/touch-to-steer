@@ -20,7 +20,7 @@ function HoloRing({ radius, y, speed = 0.25, opacity = 0.28 }: { radius: number;
   );
 }
 
-function Button({ position, color, label }: { position: [number, number, number]; color: string; label: string }) {
+function Button({ position, color }: { position: [number, number, number]; color: string }) {
   return (
     <group position={position}>
       <mesh castShadow>
@@ -123,10 +123,10 @@ function ControllerModel() {
         <Stick position={[0.96, 0.5, 0.2]} tilt={1.3} />
 
         <group position={[1.4, 0.48, 0.22]}>
-          <Button position={[0, 0.33, 0]} color="#f0c93d" label="Y" />
-          <Button position={[-0.3, 0, 0]} color="#61b7ff" label="X" />
-          <Button position={[0.3, 0, 0]} color="#ff5e69" label="B" />
-          <Button position={[0, -0.33, 0]} color="#63e68a" label="A" />
+          <Button position={[0, 0.33, 0]} color="#f0c93d" />
+          <Button position={[-0.3, 0, 0]} color="#61b7ff" />
+          <Button position={[0.3, 0, 0]} color="#ff5e69" />
+          <Button position={[0, -0.33, 0]} color="#63e68a" />
         </group>
 
         <group position={[-1.35, 0.48, 0.15]}>

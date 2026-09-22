@@ -55,7 +55,7 @@ const steps = [
 function Setup() {
   return (
     <main className="mx-auto min-h-screen max-w-2xl px-4 py-8">
-      <Link to="/" className="text-xs font-semibold uppercase tracking-widest text-primary">
+      <Link to="/controller" className="text-xs font-semibold uppercase tracking-widest text-primary">
         ← Back to controller
       </Link>
       <h1 className="mt-4 text-3xl font-bold">Connect to your PC</h1>

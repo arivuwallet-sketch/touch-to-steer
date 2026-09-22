@@ -2885,3 +2885,48 @@
     transform: none !important;
   }
 }
+
+
+/* EXTRA MOBILE STEERING PLACEMENT: push the telemetry cluster farther right
+   and compact the polling-rate control above the handbrake. */
+@media (orientation: landscape) {
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry {
+    transform: translateX(clamp(120px, 14vw, 190px)) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-aux {
+    gap: 5px !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-aux .flat-wheel-rate {
+    width: clamp(82px, 9vw, 104px) !important;
+    min-width: clamp(82px, 9vw, 104px) !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    padding: 0 6px !important;
+    border-radius: 9px !important;
+    font-size: 6px !important;
+    letter-spacing: .12em !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 760px) {
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry {
+    transform: translateX(clamp(100px, 12vw, 150px)) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-aux .flat-wheel-rate {
+    width: clamp(76px, 8.5vw, 94px) !important;
+    min-width: clamp(76px, 8.5vw, 94px) !important;
+    height: 25px !important;
+    min-height: 25px !important;
+    padding: 0 5px !important;
+    font-size: 5.5px !important;
+  }
+}

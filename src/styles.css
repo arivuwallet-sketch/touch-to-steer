@@ -2714,3 +2714,86 @@
     }
   }
 }
+
+
+/* FINAL STEERING HEADER SCALE:
+   Enlarge the telemetry meter and nudge only the meter slightly right.
+   Keep degree/sensitivity centered but more compact. */
+@media (orientation: landscape) {
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry {
+    transform: translateX(clamp(12px, 2.2vw, 32px)) !important;
+    gap: 5px !important;
+    padding: 4px !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry > div:first-child,
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry > div:last-child {
+    width: clamp(132px, 22svh, 182px) !important;
+    height: clamp(132px, 22svh, 182px) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry > div:nth-child(2) {
+    width: clamp(48px, 7svh, 66px) !important;
+    height: clamp(48px, 7svh, 66px) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-degrees,
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-sens {
+    gap: 2px !important;
+    padding: 2px 4px !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-degrees button,
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-sens button {
+    min-width: 28px !important;
+    height: 21px !important;
+    padding: 2px 4px !important;
+    font-size: 5.5px !important;
+    border-radius: 6px !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-degrees > span,
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-sens > span {
+    padding-inline: 3px !important;
+    font-size: 5.5px !important;
+  }
+
+  @media (max-height: 760px) {
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry {
+      transform: translateX(clamp(10px, 2vw, 24px)) !important;
+      gap: 3px !important;
+      padding: 3px !important;
+    }
+
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry > div:first-child,
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry > div:last-child {
+      width: clamp(118px, 19svh, 156px) !important;
+      height: clamp(118px, 19svh, 156px) !important;
+    }
+
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry > div:nth-child(2) {
+      width: clamp(42px, 6svh, 56px) !important;
+      height: clamp(42px, 6svh, 56px) !important;
+    }
+
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-degrees,
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-sens {
+      gap: 1px !important;
+      padding: 1px 3px !important;
+    }
+
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-degrees button,
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-sens button {
+      min-width: 26px !important;
+      height: 19px !important;
+      padding: 2px 3px !important;
+      font-size: 5px !important;
+    }
+
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-degrees > span,
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-sens > span {
+      padding-inline: 2px !important;
+      font-size: 5px !important;
+    }
+  }
+}

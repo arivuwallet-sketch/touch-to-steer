@@ -360,12 +360,24 @@ function Trigger({
   const move = (e: PointerEvent<HTMLButtonElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
     // Physical-style trigger travel: top = fully pulled, bottom = released.
-    const raw = Math.max(0, Math.min(1, (r.bottom - e.clientY) / r.height));
-    const next = mapValue(raw);
+    const travel = Math.max(0, Math.min(1, (r.bottom - e.clientY) / r.height));
+    // Real force sensing: touch/stylus digitisers report finger pressure.
+    // ForceAdapt blends actual finger force with stroke position, so pressing
+    // harder in place pulls the trigger just like the Apex hall triggers.
+    const hasForce = (e.pointerType === "touch" || e.pointerType === "pen") && e.pressure > 0 && e.pressure < 1;
+    const force = hasForce ? Math.max(0, Math.min(1, e.pressure * 1.35)) : 0;
+    const rawStroke = hasForce ? Math.max(travel, travel * 0.45 + force * 0.55) : travel;
+    const next = mapValue(rawStroke);
     const now = typeof performance !== "undefined" ? performance.now() : Date.now();
     const band = Math.min(5, Math.floor(next * 6));
 
-    if (band !== lastBand.current && now - lastFeel.current > 45) {
+    // Resistance wall — a distinct hard bump at the actuation point.
+    const beyond = next >= profile.wall;
+    if (beyond !== pastWall.current) {
+      pastWall.current = beyond;
+      pulseFeedback(beyond ? [6, 4, 18] : [3, 6, 3]);
+      lastFeel.current = now;
+    } else if (band !== lastBand.current && now - lastFeel.current > 45) {
       lastBand.current = band;
       lastFeel.current = now;
 
@@ -394,6 +406,7 @@ function Trigger({
 
     writeTrigger(next);
   };
+
 
   const pressToFull = (e: PointerEvent<HTMLButtonElement>) => {
     e.preventDefault();

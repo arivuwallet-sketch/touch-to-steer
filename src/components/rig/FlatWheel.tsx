@@ -292,8 +292,8 @@ function Handbrake({ settings, set }: { settings: Settings; set: Props["set"] })
         e.currentTarget.setPointerCapture(e.pointerId);
         active.current = true;
         startY.current = e.clientY;
-        setValue(1);
         set({ handbrake: 1 });
+        paint(1);
         buzz(settings.vibration, [7, 16, 6]);
       }}
       onPointerMove={(e) => active.current && move(e.clientY)}

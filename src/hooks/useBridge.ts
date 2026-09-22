@@ -277,9 +277,9 @@ export function useBridge(
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return false;
 
-    // Analog controls use the same newest-state mailbox as the 240 Hz safety
-    // pump, but the first available frame is sent directly from the touch/
-    // pointer event. This removes the extra wait for the periodic scheduler.
+    // Live analog controls use a dedicated hot lane. The bridge applies these
+    // snapshots immediately; the 240 Hz pump remains as a safety/refresh lane.
+    // This matters most for steering, accelerator, brake and other pedal axes.
     if (ws.bufferedAmount >= 32_768) return false;
 
     try {

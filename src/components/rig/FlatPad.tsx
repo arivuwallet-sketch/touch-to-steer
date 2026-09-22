@@ -381,13 +381,9 @@ function Trigger({
     >
       <span className="pointer-events-none absolute inset-[3px] rounded-[0.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,.06),rgba(0,0,0,.16))]" />
       <span
-        className={`flat-pad-trigger-plate pointer-events-none absolute inset-[6px] overflow-hidden rounded-[0.72rem] border border-cyan-200/20 bg-[linear-gradient(180deg,#566572,#252f38_48%,#11161c)] shadow-[inset_0_2px_1px_rgba(255,255,255,.22),inset_0_-6px_10px_rgba(0,0,0,.58),0_5px_8px_rgba(0,0,0,.5)] transition-transform duration-75 ${pulse3d ? "trigger-3d-rattle" : ""}`}
-        style={{
-          transform: `translateY(${value * 4}px) rotateX(${value * 2.5}deg) translateZ(0)`,
-          boxShadow: value
-            ? `inset 0 2px 1px rgba(255,255,255,.24), inset 0 -8px 12px rgba(0,0,0,.62), 0 ${4 + value * 7}px ${8 + value * 8}px rgba(0,0,0,.55), 0 0 ${8 + value * 12}px rgba(34,211,238,.18)`
-            : undefined,
-        }}
+        ref={plateRef}
+        className={`flat-pad-trigger-plate pointer-events-none absolute inset-[6px] overflow-hidden rounded-[0.72rem] border border-cyan-200/20 bg-[linear-gradient(180deg,#566572,#252f38_48%,#11161c)] shadow-[inset_0_2px_1px_rgba(255,255,255,.22),inset_0_-6px_10px_rgba(0,0,0,.58),0_5px_8px_rgba(0,0,0,.5)] will-change-transform ${pulse3d ? "trigger-3d-rattle" : ""}`}
+        style={{ transform: "translate3d(0,0,0)" }}
       >
         <span className="absolute inset-x-2 top-2 h-[3px] rounded-full bg-white/15" />
         <span className="absolute left-2 top-1/2 h-[62%] w-1 -translate-y-1/2 rounded-full bg-cyan-200/40 shadow-[0_0_8px_rgba(103,232,249,.25)]" />

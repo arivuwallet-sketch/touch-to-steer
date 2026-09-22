@@ -457,7 +457,7 @@ function G29Wheel({
   );
 }
 
-export function FlatWheel({ settings, set, press, telemetry, telemetryLive }: Props) {
+export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSettingsChange }: Props) {
   const wheelHitRef = useRef<HTMLDivElement>(null);
   const wheelVisualRef = useRef<HTMLDivElement>(null);
   const touchPointer = useRef<number | null>(null);
@@ -469,6 +469,8 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive }: Pr
   const [gyroDenied, setGyroDenied] = useState(false);
 
   const maxLockDeg = Math.max(90, settings.wheelRotationDeg / 2);
+  const prevLockRef = useRef(maxLockDeg);
+
 
   const paintWheel = useCallback((angleDeg: number) => {
     wheelAngleDeg.current = angleDeg;

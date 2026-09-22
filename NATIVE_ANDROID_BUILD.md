@@ -2,8 +2,11 @@
 
 Flutter stable 3.47.2
 Android compile/target SDK 36 (Android 16)
-Android Gradle Plugin 9.1.1
-Gradle 9.3.1
+Android Gradle Plugin 9.0.1
+Gradle 9.1.0
+Kotlin Gradle Plugin 2.3.20
 Java 17
 
-Release build: `flutter build apk --release`
+The project uses Flutter's AGP 9 legacy-DSL compatibility mode while dependencies are migrated to newer Android build tooling.
+
+Release build: `gradle -p android assembleRelease`

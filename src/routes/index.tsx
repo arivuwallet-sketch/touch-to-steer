@@ -63,7 +63,16 @@ function Rig() {
 
     if (raw) {
       try {
-        const saved = { ...defaultSettings, ...JSON.parse(raw) } as Settings;
+        const parsed = JSON.parse(raw) as Partial<Settings>;
+        if (parsed.joystickTensionGf === undefined) {
+          const legacy = Number(parsed.stickTension);
+          parsed.joystickTensionGf =
+            legacy <= 0.42 ? 30 :
+            legacy <= 0.62 ? 50 :
+            legacy <= 0.82 ? 80 :
+            100;
+        }
+        const saved = { ...defaultSettings, ...parsed } as Settings;
 
         // Use the broad compatibility target for existing installs unless the
         // user explicitly chose it as DS4-only. Universal keeps one mirrored

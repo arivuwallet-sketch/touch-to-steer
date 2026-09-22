@@ -181,17 +181,26 @@ export function SettingsPanel({
               className="w-40 accent-[var(--primary)]"
             />
           </Row>
-          <Row label={`Stick tension ${(settings.stickTension * 100).toFixed(0)}%`}>
-            <input
-              type="range"
-              min={0.3}
-              max={1}
-              step={0.05}
-              value={settings.stickTension}
-              onChange={(e) => onChange({ stickTension: Number(e.target.value) })}
-              className="w-40 accent-[var(--primary)]"
-            />
+          <Row label={`FORCEFLEX joystick tension ${settings.joystickTensionGf}gf`}>
+            <select
+              value={settings.joystickTensionGf}
+              onChange={(e) =>
+                onChange({
+                  joystickTensionGf: Number(e.target.value) as Settings["joystickTensionGf"],
+                })
+              }
+              className="rounded-lg border border-input bg-background px-2 py-1.5 text-xs"
+            >
+              <option value={30}>30 gf · Feather / Open world</option>
+              <option value={50}>50 gf · Balanced</option>
+              <option value={80}>80 gf · Firm / Precision</option>
+              <option value={100}>100 gf · Heavy / FPS</option>
+            </select>
           </Row>
+          <div className="rounded-lg border border-violet-300/15 bg-violet-300/5 p-3 text-[11px] leading-relaxed text-muted-foreground">
+            <strong className="text-violet-200">FORCEFLEX response</strong> changes the virtual Hall-stick response curve using the selected 30/50/80/100 gf profile.
+            The touchscreen cannot physically change spring force, so this is the software equivalent of lighter or heavier stick resistance.
+          </div>
           <Row label="Invert aim Y">
             <input
               type="checkbox"

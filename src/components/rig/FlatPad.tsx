@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
-import { applyCurve, type ControllerState, type Settings } from "@/lib/controller-types";
+import { applyCurve, applyForceFlex, FORCEFLEX_DESCRIPTIONS, type ControllerState, type JoystickTensionGf, type Settings } from "@/lib/controller-types";
 
 type Props = {
   settings: Settings;
@@ -131,12 +131,15 @@ function Stick({
       y /= m;
     }
 
+    const forceFlexX = applyForceFlex(x, settings.joystickTensionGf);
+    const forceFlexY = applyForceFlex(-y, settings.joystickTensionGf);
+
     onMove(
-      applyCurve(x, settings.deadzone, settings.linearity, settings.sensitivity),
-      applyCurve(-y, settings.deadzone, settings.linearity, settings.sensitivity),
+      applyCurve(forceFlexX, settings.deadzone, settings.linearity, settings.sensitivity),
+      applyCurve(forceFlexY, settings.deadzone, settings.linearity, settings.sensitivity),
     );
 
-    const travel = 22 + settings.stickTension * 12;
+    const travel = 22 + (settings.joystickTensionGf / 100) * 12;
     const thumb = thumbRef.current;
     if (thumb) {
       thumb.style.transform = `translate3d(calc(-50% + ${x * travel}px), calc(-50% + ${y * travel}px), 0)`;
@@ -212,7 +215,7 @@ function Stick({
         <div className="pointer-events-none absolute left-1/2 top-[11%] h-[8%] w-[28%] -translate-x-1/2 rounded-full bg-[#0a0e13]" />
       </div>
       <span className="text-[8px] font-black tracking-[0.18em] text-slate-500">
-        {side === "left" ? "L-STICK" : "R-STICK"}
+        {side === "left" ? "L-STICK" : "R-STICK"} • {settings.joystickTensionGf}GF
       </span>
     </div>
   );
@@ -552,6 +555,14 @@ export function FlatPad({ settings, set, press, onSettingsChange }: Props) {
   const [gyroEnabled, setGyroEnabled] = useState(false);
   const [gyroDenied, setGyroDenied] = useState(false);
 
+  const cycleJoystickTension = useCallback(() => {
+    const values: JoystickTensionGf[] = [30, 50, 80, 100];
+    const index = values.indexOf(settings.joystickTensionGf);
+    const next = values[(index >= 0 ? index + 1 : 0) % values.length] ?? 50;
+    onSettingsChange({ joystickTensionGf: next });
+    buzz(settings.vibration, 8);
+  }, [onSettingsChange, settings.joystickTensionGf, settings.vibration]);
+
   const cycleSendRate = useCallback(() => {
     const values: Settings["sendRateHz"][] = [60, 120, 144, 180, 240];
     const index = values.indexOf(settings.sendRateHz);
@@ -665,6 +676,15 @@ export function FlatPad({ settings, set, press, onSettingsChange }: Props) {
             <GyroControl enabled={gyroEnabled} denied={gyroDenied} onToggle={requestGyro} />
             <button
               type="button"
+              onClick={cycleJoystickTension}
+              className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border border-violet-300/20 bg-violet-300/5 px-2 text-[7px] font-black uppercase tracking-[0.14em] text-violet-200"
+              aria-label={`ForceFlex joystick tension ${settings.joystickTensionGf} gf. Tap to change.`}
+              title={FORCEFLEX_DESCRIPTIONS[settings.joystickTensionGf]}
+            >
+              FORCEFLEX {settings.joystickTensionGf}GF
+            </button>
+            <button
+              type="button"
               onClick={cycleSendRate}
               className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border border-cyan-300/20 bg-cyan-300/5 px-2 text-[7px] font-black uppercase tracking-[0.14em] text-cyan-200"
               aria-label={`Controller polling rate ${settings.sendRateHz} Hz. Tap to change.`}
@@ -691,7 +711,7 @@ export function FlatPad({ settings, set, press, onSettingsChange }: Props) {
       </div>
 
       <div className="pointer-events-none absolute left-1/2 bottom-1 -translate-x-1/2 text-[6px] font-bold uppercase tracking-[0.14em] text-slate-600">
-        FORCEFLEX TENSION • FORCEADAPT MODES • 6 EXTRA • GYRO • RGB • TURBO
+        FORCEFLEX {settings.joystickTensionGf}GF • FORCEADAPT MODES • 6 EXTRA • GYRO • RGB • TURBO
       </div>
     </div>
   );

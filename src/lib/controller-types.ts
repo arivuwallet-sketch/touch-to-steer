@@ -44,6 +44,28 @@ export const emptyState = (): ControllerState => ({
   buttons: {},
 });
 
+export type JoystickTensionGf = 30 | 50 | 80 | 100;
+
+export const FORCEFLEX_TENSIONS: JoystickTensionGf[] = [30, 50, 80, 100];
+
+export const FORCEFLEX_DESCRIPTIONS: Record<JoystickTensionGf, string> = {
+  30: "FEATHER • OPEN WORLD / RPG",
+  50: "BALANCED • MARKET TENSION",
+  80: "FIRM • PRECISION CONTROL",
+  100: "HEAVY • FPS / COMPETITIVE",
+};
+
+/** Software ForceFlex response curve for the virtual stick. */
+export function applyForceFlex(v: number, tensionGf: JoystickTensionGf) {
+  const magnitude = Math.max(0, Math.min(1, Math.abs(v)));
+  const exponent =
+    tensionGf === 30 ? 0.82 :
+    tensionGf === 50 ? 0.94 :
+    tensionGf === 80 ? 1.12 :
+    1.26;
+  return Math.sign(v) * Math.pow(magnitude, exponent);
+}
+
 export type Settings = {
   bridgeUrl: string;
   /** Virtual PC controller output. Universal creates synchronized XInput + DirectInput/HID-compatible targets for broad legacy/modern coverage. */
@@ -66,7 +88,9 @@ export type Settings = {
   invertLookY: boolean;
   /** visual wheel lock, matching a G29 at 900 degrees lock-to-lock */
   wheelRotationDeg: number;
-  /** simulated stick tension for thumb travel */
+  /** Virtual ForceFlex tension detent. Touchscreen cannot change physical spring force. */
+  joystickTensionGf: JoystickTensionGf;
+  /** Legacy scalar retained for saved-setting compatibility. */
   stickTension: number;
   /** Virtual mouse profile. Values are software output scaling, not physical sensor characteristics. */
   mouseDpi: number;
@@ -101,6 +125,7 @@ export const defaultSettings: Settings = {
   invertTilt: false,
   invertLookY: false,
   wheelRotationDeg: 900,
+  joystickTensionGf: 50,
   stickTension: 0.7,
   mouseDpi: 1600,
   mousePollingRate: 8000,

@@ -156,18 +156,27 @@ export function useBridge(
         const pump = () => {
           if (wsRef.current !== ws || ws.readyState !== WebSocket.OPEN) return;
 
-          const packet = {
-            type: "state",
-            t: Date.now(),
-            seq: ++packetCounterRef.current,
-            ...stateRef.current,
-          };
+          const body = JSON.stringify(stateRef.current);
+          const t0 = nowMs();
+          const unchanged = body === lastSentBodyRef.current;
+          const heartbeatDue = t0 - lastSentAtRef.current >= 100;
 
-          // Do not build a queue of stale controller packets. A controller is
-          // interested in the newest state, not every missed intermediate frame.
-          if (ws.bufferedAmount < 32_768) {
+          // The hot lane already sends every live analog/button change from the
+          // input event itself. Re-sending an identical snapshot 240x/second only
+          // fills the socket buffer, which is what made steering arrive late.
+          // Keep a slow heartbeat so the bridge still sees a live controller.
+          if ((!unchanged || heartbeatDue) && ws.bufferedAmount < 4_096) {
             try {
-              ws.send(JSON.stringify(packet));
+              ws.send(
+                JSON.stringify({
+                  type: "state",
+                  t: Date.now(),
+                  seq: ++packetCounterRef.current,
+                  ...stateRef.current,
+                }),
+              );
+              lastSentBodyRef.current = body;
+              lastSentAtRef.current = t0;
               const t = nowMs();
               if (t - lastStatsPaintRef.current >= 250) {
                 lastStatsPaintRef.current = t;
@@ -184,6 +193,7 @@ export function useBridge(
           if (nextDue < currentTime - period * 2) nextDue = currentTime + period;
           timerRef.current = setTimeout(pump, Math.max(0, nextDue - currentTime));
         };
+
 
         pump();
       };

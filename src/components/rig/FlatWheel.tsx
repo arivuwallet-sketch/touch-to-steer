@@ -13,7 +13,7 @@ type Props = {
 
 /** Selectable lock-to-lock steering ranges, matching common wheel firmware options. */
 const STEER_DEGREES = [180, 270, 360, 540, 720, 900, 1080] as const;
-const STEER_SENS = [0.6, 0.8, 1, 1.25, 1.5, 2] as const;
+const STEER_SENS = [0.6, 0.8, 1, 1.25, 1.5, 2, 2.5, 3] as const;
 
 
 // Haptics are deferred off the input task so a vibration call can never delay

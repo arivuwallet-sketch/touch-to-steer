@@ -159,11 +159,11 @@ export function SettingsPanel({
               className="w-40 accent-[var(--primary)]"
             />
           </Row>
-          <Row label={`Steering sensitivity ${settings.steerSensitivity.toFixed(2)}`}>
+          <Row label={`Steering sensitivity ${settings.steerSensitivity.toFixed(2)}×`}>
             <input
               type="range"
               min={0.5}
-              max={2}
+              max={3}
               step={0.05}
               value={settings.steerSensitivity}
               onChange={(e) => onChange({ steerSensitivity: Number(e.target.value) })}

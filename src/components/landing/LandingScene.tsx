@@ -1,6 +1,9 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Float, RoundedBox, Sparkles, ContactShadows, PerspectiveCamera } from "@react-three/drei";
-import { useMemo, useRef } from "react";
+import { AdaptiveDpr, ContactShadows, Float, PerspectiveCamera, RoundedBox, Sparkles } from "@react-three/drei";
+import { useEffect, useMemo, useRef } from "react";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import * as THREE from "three";
 
 function HoloRing({ radius, y, speed = 0.25, opacity = 0.28 }: { radius: number; y: number; speed?: number; opacity?: number }) {
@@ -73,6 +76,189 @@ function Stick({ position, tilt = 0 }: { position: [number, number, number]; til
       </mesh>
     </group>
   );
+}
+
+const spectralVertexShader = `
+  varying vec3 vNormal;
+  varying vec3 vWorld;
+  varying vec2 vUv;
+
+  void main() {
+    vUv = uv;
+    vNormal = normalize(normalMatrix * normal);
+    vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+    vWorld = worldPosition.xyz;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const spectralFragmentShader = `
+  uniform float uTime;
+  uniform float uOpacity;
+  uniform float uOffset;
+  uniform vec2 uPointer;
+
+  varying vec3 vNormal;
+  varying vec3 vWorld;
+  varying vec2 vUv;
+
+  float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+  }
+
+  void main() {
+    float fresnel = pow(1.0 - abs(dot(normalize(vNormal), normalize(vec3(0.0, 0.0, 1.0)))), 2.2);
+    float scan = 0.5 + 0.5 * sin(vWorld.y * 32.0 - uTime * 7.0 + uOffset * 3.0);
+    float signal = smoothstep(0.0, 1.0, scan);
+    float jitter = hash(floor(vWorld.xy * 7.0 + uTime * 5.0 + uOffset * 11.0));
+    float bands = step(0.72, fract(vWorld.y * 8.0 + uTime * 0.55 + uOffset));
+    float pointerEnergy = length(uPointer) * 0.45;
+
+    vec3 cyan = vec3(0.12, 0.92, 1.0);
+    vec3 violet = vec3(0.53, 0.22, 1.0);
+    vec3 green = vec3(0.32, 1.0, 0.76);
+    vec3 color = mix(cyan, violet, 0.5 + 0.5 * sin(uTime * 1.7 + uOffset * 4.0));
+    color = mix(color, green, bands * 0.24);
+    color += vec3(pointerEnergy * 0.13);
+
+    float alpha = uOpacity * (0.16 + fresnel * 0.8) * (0.72 + signal * 0.28);
+    alpha *= mix(0.72, 1.2, jitter);
+    alpha *= 0.92 + pointerEnergy * 0.18;
+
+    gl_FragColor = vec4(color, alpha);
+  }
+`;
+
+function SpectralGhostShell({
+  position,
+  rotation,
+  opacity,
+  scale,
+  offset,
+}: {
+  position: [number, number, number];
+  rotation: [number, number, number];
+  opacity: number;
+  scale: number;
+  offset: number;
+}) {
+  const ref = useRef<THREE.Mesh>(null);
+  const { pointer } = useThree();
+  const uniforms = useMemo(
+    () => ({
+      uTime: { value: 0 },
+      uOpacity: { value: opacity },
+      uOffset: { value: offset },
+      uPointer: { value: new THREE.Vector2() },
+    }),
+    [opacity, offset],
+  );
+
+  useFrame((state) => {
+    const material = ref.current?.material as THREE.ShaderMaterial | undefined;
+    if (!material) return;
+    material.uniforms.uTime.value = state.clock.elapsedTime;
+    material.uniforms.uPointer.value.lerp(new THREE.Vector2(pointer.x, pointer.y), 0.12);
+    material.uniforms.uOpacity.value = opacity * (0.84 + Math.sin(state.clock.elapsedTime * 2.1 + offset) * 0.12);
+  });
+
+  return (
+    <RoundedBox
+      ref={ref}
+      args={[3.94, 0.76, 2.14]}
+      radius={0.34}
+      smoothness={8}
+      position={position}
+      rotation={rotation}
+      scale={scale}
+    >
+      <shaderMaterial
+        uniforms={uniforms}
+        vertexShader={spectralVertexShader}
+        fragmentShader={spectralFragmentShader}
+        transparent
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+        side={THREE.DoubleSide}
+      />
+    </RoundedBox>
+  );
+}
+
+function SpectralTrail() {
+  const group = useRef<THREE.Group>(null);
+  const { pointer } = useThree();
+
+  useFrame((state, delta) => {
+    if (!group.current) return;
+    const t = state.clock.elapsedTime;
+    group.current.rotation.z += delta * (0.16 + Math.abs(pointer.x) * 0.05);
+    group.current.rotation.y = THREE.MathUtils.lerp(
+      group.current.rotation.y,
+      pointer.x * 0.26 + Math.sin(t * 0.45) * 0.05,
+      0.035,
+    );
+    group.current.rotation.x = THREE.MathUtils.lerp(
+      group.current.rotation.x,
+      -pointer.y * 0.16,
+      0.035,
+    );
+  });
+
+  return (
+    <group ref={group} position={[0, -0.24, -0.1]}>
+      <SpectralGhostShell position={[-0.16, 0.03, -0.08]} rotation={[0.02, -0.16, -0.01]} opacity={0.16} scale={1.02} offset={0.2} />
+      <SpectralGhostShell position={[0.1, -0.02, -0.18]} rotation={[-0.02, 0.12, 0.01]} opacity={0.12} scale={1.035} offset={1.3} />
+      <SpectralGhostShell position={[-0.03, 0.01, -0.32]} rotation={[0.01, -0.06, 0]} opacity={0.075} scale={1.05} offset={2.7} />
+
+      <mesh position={[0, 0.02, -0.5]} rotation={[-Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[2.2, 0.014, 8, 128]} />
+        <meshBasicMaterial color="#31e8ff" transparent opacity={0.22} blending={THREE.AdditiveBlending} />
+      </mesh>
+      <mesh position={[0, 0.02, -0.56]} rotation={[-Math.PI / 2, 0, Math.PI / 8]}>
+        <torusGeometry args={[2.55, 0.008, 8, 128]} />
+        <meshBasicMaterial color="#8f5dff" transparent opacity={0.14} blending={THREE.AdditiveBlending} />
+      </mesh>
+    </group>
+  );
+}
+
+function TouchToSteerPostFX() {
+  const composerRef = useRef<EffectComposer | null>(null);
+  const { gl, scene, camera, size } = useThree();
+
+  useEffect(() => {
+    const composer = new EffectComposer(gl);
+    composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
+    composer.setSize(size.width, size.height);
+
+    const renderPass = new RenderPass(scene, camera);
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(size.width, size.height),
+      0.72,
+      0.68,
+      0.22,
+    );
+
+    composer.addPass(renderPass);
+    composer.addPass(bloomPass);
+    composerRef.current = composer;
+
+    return () => {
+      composerRef.current = null;
+      composer.dispose();
+    };
+  }, [camera, gl, scene]);
+
+  useEffect(() => {
+    composerRef.current?.setSize(size.width, size.height);
+  }, [size.height, size.width]);
+
+  useFrame(() => {
+    composerRef.current?.render();
+  }, 1);
+
+  return null;
 }
 
 function ControllerModel() {
@@ -173,7 +359,8 @@ export function LandingScene() {
         <directionalLight position={[-4, 1.5, 2]} intensity={1.1} color="#3bdfff" />
         <pointLight position={[0, -1.2, 2.8]} intensity={3.6} distance={9} color="#23dcff" />
 
-        <Sparkles count={80} scale={[9, 5, 8]} size={2.1} speed={0.22} color="#70efff" />
+        <AdaptiveDpr pixelated />
+        <Sparkles count={120} scale={[9, 5, 8]} size={2.1} speed={0.22} color="#70efff" />
         <HoloRing radius={2.65} y={-0.55} speed={0.28} />
         <HoloRing radius={3.2} y={-1.1} speed={-0.17} opacity={0.16} />
         <HoloRing radius={2.1} y={0.8} speed={0.16} opacity={0.14} />
@@ -187,8 +374,10 @@ export function LandingScene() {
           </Float>
         ))}
 
+        <SpectralTrail />
         <ControllerModel />
         <ContactShadows position={[0, -1.35, 0]} opacity={0.4} scale={5.5} blur={2.6} far={4.5} resolution={512} />
+        <TouchToSteerPostFX />
       </Canvas>
     </div>
   );

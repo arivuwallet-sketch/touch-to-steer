@@ -3123,15 +3123,15 @@
 }
 
 
-/* STEERING METER: move another 0.5x left from the current position. */
+/* STEERING METER: move 0.25x right from the current position. */
 @media (orientation: landscape) {
   .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry {
-    transform: translateX(clamp(135px, 15.75vw, 214px)) !important;
+    transform: translateX(clamp(180px, 21vw, 285px)) !important;
   }
 }
 
 @media (orientation: landscape) and (max-height: 760px) {
   .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry {
-    transform: translateX(clamp(94px, 11.25vw, 169px)) !important;
+    transform: translateX(clamp(141px, 16.875vw, 216px)) !important;
   }
 }

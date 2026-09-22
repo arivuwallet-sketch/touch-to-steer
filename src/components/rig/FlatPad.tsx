@@ -637,7 +637,7 @@ export function FlatPad({ settings, set, press, onSettingsChange }: Props) {
 
   return (
     <div
-      className="flat-pad-root absolute inset-0 overflow-hidden bg-[#05080d] text-slate-100"
+      className={`flat-pad-root absolute inset-0 overflow-hidden bg-[#05080d] text-slate-100 ${rgb ? "rgb-enabled" : ""}`}
       style={{ filter: rgb ? undefined : "saturate(.65)" }}
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(100%_75%_at_50%_8%,#172333_0%,#04070b_68%)]" />

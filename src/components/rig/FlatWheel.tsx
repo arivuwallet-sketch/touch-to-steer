@@ -305,8 +305,9 @@ function Handbrake({ settings, set }: { settings: Settings; set: Props["set"] })
       <span className="absolute bottom-4 left-1/2 h-4 w-[72%] -translate-x-1/2 rounded-xl border border-white/10 bg-[linear-gradient(180deg,#3c444d,#171c22)] shadow-[inset_0_2px_2px_rgba(255,255,255,.1),0_5px_10px_rgba(0,0,0,.5)]" />
       <span className="absolute bottom-8 left-1/2 h-5 w-8 -translate-x-1/2 rounded-md bg-[#6e7780] shadow-[inset_0_2px_2px_rgba(255,255,255,.3),0_3px_6px_rgba(0,0,0,.45)]" />
       <span
-        className="absolute bottom-7 left-1/2 h-[74%] w-3.5 origin-bottom -translate-x-1/2 rounded-full bg-[linear-gradient(90deg,#4a525b,#d7dbe0_46%,#6f7881)] shadow-[0_8px_12px_rgba(0,0,0,.6),inset_0_1px_1px_rgba(255,255,255,.5)] transition-transform duration-75"
-        style={{ transform: "translateX(-50%) rotate(" + (-10 - value * 42) + "deg)" }}
+        ref={leverRef}
+        className="absolute bottom-7 left-1/2 h-[74%] w-3.5 origin-bottom -translate-x-1/2 rounded-full bg-[linear-gradient(90deg,#4a525b,#d7dbe0_46%,#6f7881)] shadow-[0_8px_12px_rgba(0,0,0,.6),inset_0_1px_1px_rgba(255,255,255,.5)] will-change-transform"
+        style={{ transform: "translateX(-50%) rotate(-10deg)" }}
       >
         <span className="absolute -bottom-2 left-1/2 size-7 -translate-x-1/2 rounded-full border border-white/10 bg-[radial-gradient(circle_at_35%_28%,#454c54,#171b20)] shadow-[0_5px_8px_rgba(0,0,0,.65)]" />
       </span>

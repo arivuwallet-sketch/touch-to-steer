@@ -644,6 +644,8 @@ const DSBTN = {
   m3: "THUMB_LEFT", m4: "THUMB_RIGHT", m5: "SHARE", m6: "OPTIONS",
   __horn: "THUMB_LEFT", __look: "THUMB_RIGHT", __reset: "TRIANGLE",
   __handbrake: "CROSS", __nitro: "SHOULDER_LEFT",
+  __legacyBrake: "SQUARE", __legacyThrottle: "CROSS",
+  __legacyHandbrake: "SHOULDER_RIGHT", __legacyNitro: "CIRCLE",
   // DS4 exposes trigger buttons in addition to its analog trigger axes.
   // Setting both lets legacy DirectInput games that bind LT/RT as buttons
   // recognize the steering pedals while games that read the analog axis still
@@ -716,6 +718,19 @@ function applyToTarget(target, s, buttonMap) {
   if (clamp(s.nitro, 0, 1) > 0.5) mark(buttonMap.__nitro);
   if (buttonMap.__brakeTrigger && brake > 0.02) mark(buttonMap.__brakeTrigger);
   if (buttonMap.__throttleTrigger && throttle > 0.02) mark(buttonMap.__throttleTrigger);
+
+  // Legacy DirectInput-style games sometimes expose the DS4 HID trigger
+  // inputs as ordinary numbered buttons rather than trigger axes. Mirror the
+  // driving controls to the common PlayStation-style vehicle bindings on the
+  // DS4 compatibility target: Cross=accelerate, Square=brake, R1=handbrake,
+  // Circle=nitro. The XInput target remains unchanged (RT/LT/A/LB mappings).
+  if (buttonMap === DSBTN) {
+    if (throttle > 0.02) mark(buttonMap.__legacyThrottle);
+    if (brake > 0.02) mark(buttonMap.__legacyBrake);
+    if (clamp(s.handbrake, 0, 1) > 0.5) mark(buttonMap.__legacyHandbrake);
+    if (clamp(s.nitro, 0, 1) > 0.5) mark(buttonMap.__legacyNitro);
+  }
+
   if (s.gear === 1) mark(buttonMap.__gearUp);
   if (s.gear === -1) mark(buttonMap.__gearDown);
 

@@ -2414,3 +2414,100 @@
     }
   }
 }
+
+
+/* FINAL MOBILE POSITIONING: keep D-pad/ABXY safely separated and stack
+   steering meter -> degree -> sensitivity at the top center. */
+@media (orientation: landscape) {
+  .rig-shell.mobile-controller.mode-pad .flat-pad-left,
+  .rig-shell.mobile-controller.mode-pad .flat-pad-right {
+    gap: clamp(46px, 4.8vw, 82px) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-left .flat-pad-dpad {
+    transform: translateX(clamp(-24px, -2vw, -42px)) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-right .flat-pad-face {
+    transform: translateX(clamp(24px, 2vw, 42px)) !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-dpad,
+  .rig-shell.mobile-controller.mode-pad .flat-pad-face {
+    flex: 0 0 auto !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-telemetry {
+    z-index: 34 !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-degrees,
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-sens {
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: max-content !important;
+    max-width: calc(100vw - 20px) !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+    z-index: 40 !important;
+  }
+
+  /* Telemetry meter at the very top; degree row directly beneath it. */
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-degrees {
+    top: clamp(78px, 9.2svh, 108px) !important;
+    gap: 4px !important;
+    padding: 3px 6px !important;
+  }
+
+  /* Sensitivity is the next row, directly beneath degree. */
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-sens {
+    top: clamp(112px, 13svh, 146px) !important;
+    gap: 4px !important;
+    padding: 3px 6px !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-degrees > span,
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-sens > span {
+    display: block !important;
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+  }
+
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-degrees button,
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-sens button {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: clamp(36px, 4.6vw, 58px) !important;
+    height: 28px !important;
+    padding: 5px 7px !important;
+    font-size: clamp(6.5px, .68vw, 8px) !important;
+    white-space: nowrap !important;
+    border-radius: 8px !important;
+  }
+
+  /* On the shortest landscape phones keep the three rows compact. */
+  @media (max-height: 760px) {
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-degrees {
+      top: 74px !important;
+    }
+
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-sens {
+      top: 108px !important;
+    }
+
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-degrees button,
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-sens button {
+      height: 25px !important;
+      padding: 4px 6px !important;
+      font-size: 6px !important;
+    }
+  }
+}

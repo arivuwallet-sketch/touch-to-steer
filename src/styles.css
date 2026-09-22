@@ -2460,16 +2460,21 @@
     z-index: 40 !important;
   }
 
-  /* Telemetry meter at the very top; degree row directly beneath it. */
+  /* Header stack: telemetry meter first, then degree, then sensitivity. */
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-telemetry {
+    top: max(4px, env(safe-area-inset-top)) !important;
+  }
+
+  /* Steering degree sits immediately below the meter. */
   .rig-shell.mobile-controller.mode-wheel .flat-wheel-degrees {
-    top: clamp(78px, 9.2svh, 108px) !important;
+    top: clamp(92px, 10.2svh, 116px) !important;
     gap: 4px !important;
     padding: 3px 6px !important;
   }
 
-  /* Sensitivity is the next row, directly beneath degree. */
+  /* Sensitivity sits immediately below the degree row. */
   .rig-shell.mobile-controller.mode-wheel .flat-wheel-sens {
-    top: clamp(112px, 13svh, 146px) !important;
+    top: clamp(126px, 13.8svh, 150px) !important;
     gap: 4px !important;
     padding: 3px 6px !important;
   }
@@ -2495,12 +2500,16 @@
 
   /* On the shortest landscape phones keep the three rows compact. */
   @media (max-height: 760px) {
+    .rig-shell.mobile-controller.mode-wheel .flat-wheel-telemetry {
+      top: max(3px, env(safe-area-inset-top)) !important;
+    }
+
     .rig-shell.mobile-controller.mode-wheel .flat-wheel-degrees {
-      top: 74px !important;
+      top: 82px !important;
     }
 
     .rig-shell.mobile-controller.mode-wheel .flat-wheel-sens {
-      top: 108px !important;
+      top: 113px !important;
     }
 
     .rig-shell.mobile-controller.mode-wheel .flat-wheel-degrees button,

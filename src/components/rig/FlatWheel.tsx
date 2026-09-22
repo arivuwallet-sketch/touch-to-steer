@@ -482,11 +482,13 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
 
   const emitRaw = useCallback(
     (raw: number) => {
+      // Sensitivity is applied at the input stage (drag speed / tilt ratio),
+      // so the curve here only shapes deadzone + linearity.
       const value = applyCurve(
         Math.max(-1, Math.min(1, raw)),
         settings.deadzone,
         settings.linearity,
-        settings.steerSensitivity,
+        1,
       );
       set({ steer: value });
     },

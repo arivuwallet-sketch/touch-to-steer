@@ -660,9 +660,9 @@ export function FlatPad({ settings, set, press, onSettingsChange }: Props) {
       <div className="flat-pad-center absolute left-1/2 top-[27%] flex -translate-x-1/2 flex-col items-center gap-2">
         <div className="flat-pad-center-box relative w-[clamp(14rem,27vw,20rem)] rounded-[2rem] bg-[linear-gradient(145deg,#39434f,#171d24)] px-5 py-4 shadow-[inset_0_2px_2px_rgba(255,255,255,.09),0_12px_24px_rgba(0,0,0,.48)]">
           <div className="flex items-center justify-center gap-3">
-            <SurfaceButton label="VIEW" id="back" settings={settings} press={press} className="h-[clamp(2rem,5.6svh,2.5rem)] min-w-[clamp(3.5rem,5vw,4rem)] rounded-lg text-[8px] text-slate-300" />
+            <SurfaceButton label="VIEW" id="back" settings={settings} press={press} className="flat-pad-nav-button h-[clamp(1.9rem,4.8svh,2.2rem)] min-w-[clamp(3.4rem,5vw,4rem)] rounded-lg px-2 text-[8px] text-slate-300" />
             <MiniScreen profile={profile} triggerMode={triggerMode} motion={gyroEnabled} turbo={turbo} />
-            <SurfaceButton label="MENU" id="start" settings={settings} press={press} className="h-10 min-w-16 rounded-lg text-[8px] text-slate-300" />
+            <SurfaceButton label="MENU" id="start" settings={settings} press={press} className="flat-pad-nav-button h-[clamp(1.9rem,4.8svh,2.2rem)] min-w-[clamp(3.4rem,5vw,4rem)] rounded-lg px-2 text-[8px] text-slate-300" />
           </div>
           <div className="mt-2 flex items-center justify-center gap-2">
             <SurfaceButton label="HOME" id="home" settings={settings} press={press} className="h-9 min-w-20 rounded-md text-[7px]" />

@@ -3001,3 +3001,40 @@
     animation: none !important;
   }
 }
+
+
+/* STEERING METER: move one step back left from the previous 2x-right position. */
+@media (orientation: landscape) {
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry {
+    transform: translateX(clamp(120px, 14vw, 190px)) !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 760px) {
+  .rig-shell.mobile-controller.mode-wheel .flat-wheel-header-stack .flat-wheel-telemetry {
+    transform: translateX(clamp(100px, 12vw, 150px)) !important;
+  }
+}
+
+/* GAMEPAD VIEW / MENU: keep both navigation buttons the same compact size. */
+@media (pointer: coarse) and (orientation: landscape) {
+  .flat-pad-root .flat-pad-nav-button {
+    width: clamp(52px, 7.5vw, 68px) !important;
+    min-width: clamp(52px, 7.5vw, 68px) !important;
+    height: clamp(28px, 4.8svh, 36px) !important;
+    min-height: clamp(28px, 4.8svh, 36px) !important;
+    padding-inline: 4px !important;
+    border-radius: 8px !important;
+    font-size: 7px !important;
+  }
+}
+
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 520px) {
+  .flat-pad-root .flat-pad-nav-button {
+    width: 52px !important;
+    min-width: 52px !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    font-size: 6px !important;
+  }
+}

@@ -43,6 +43,7 @@ function Rig() {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [showSettings, setShowSettings] = useState(false);
   const [mode, setMode] = useState<"pad" | "wheel" | "mouse">("pad");
+  const [mobileLayout, setMobileLayout] = useState(false);
   const stateRef = useRef<ControllerState>(emptyState());
   const {
     status,
@@ -100,6 +101,32 @@ function Rig() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       return next;
     });
+  }, []);
+
+  useEffect(() => {
+    const updateMobileLayout = () => {
+      const touchCapable =
+        navigator.maxTouchPoints > 0 ||
+        window.matchMedia("(pointer: coarse)").matches ||
+        window.matchMedia("(hover: none)").matches ||
+        /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+
+      const landscape = window.innerWidth >= window.innerHeight;
+      const controllerViewport = landscape && window.innerHeight <= 1100;
+
+      setMobileLayout(touchCapable && controllerViewport);
+    };
+
+    updateMobileLayout();
+    window.addEventListener("resize", updateMobileLayout, { passive: true });
+    window.addEventListener("orientationchange", updateMobileLayout, { passive: true });
+    window.visualViewport?.addEventListener("resize", updateMobileLayout);
+
+    return () => {
+      window.removeEventListener("resize", updateMobileLayout);
+      window.removeEventListener("orientationchange", updateMobileLayout);
+      window.visualViewport?.removeEventListener("resize", updateMobileLayout);
+    };
   }, []);
 
   const set = useCallback((p: Partial<ControllerState>) => {
@@ -185,7 +212,7 @@ function Rig() {
   }, [mode, releaseAll]);
 
   return (
-    <main className={`rig-shell mode-${mode} relative h-[100dvh] overflow-hidden bg-background`}>
+    <main className={`rig-shell ${mobileLayout ? "mobile-controller" : ""} mode-${mode} relative h-[100dvh] overflow-hidden bg-background`}>
       <RotateGate mode={mode} />
 
       {/* ---------- rig fills the screen ---------- */}

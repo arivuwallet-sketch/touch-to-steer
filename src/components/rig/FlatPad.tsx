@@ -441,7 +441,7 @@ function Trigger({
       onPointerMove={(e) => pointer.current === e.pointerId && (e.preventDefault(), move(e))}
       onPointerUp={release}
       onPointerCancel={release}
-      className={`flat-pad-trigger group relative grid h-[clamp(2.75rem,7.8svh,3.5rem)] w-[clamp(4.5rem,8vw,6rem)] touch-none select-none place-items-center overflow-hidden rounded-[1rem] border border-white/10 bg-[linear-gradient(180deg,#394754,#11171e)] text-[10px] font-black tracking-[0.25em] text-cyan-200 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),inset_0_-7px_14px_rgba(0,0,0,.72),0_7px_0_#05080b,0_11px_18px_rgba(0,0,0,.58)] ${id === "lt" ? "rgb-neon-button" : "rgb-neon-button"}`}
+      className="flat-pad-trigger group relative grid h-[clamp(2.75rem,7.8svh,3.5rem)] w-[clamp(4.5rem,8vw,6rem)] touch-none select-none place-items-center overflow-hidden rounded-[1rem] border border-white/10 bg-[linear-gradient(180deg,#394754,#11171e)] text-[10px] font-black tracking-[0.25em] text-cyan-200 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),inset_0_-7px_14px_rgba(0,0,0,.72),0_7px_0_#05080b,0_11px_18px_rgba(0,0,0,.58)]"
       style={{ perspective: "700px" }}
     >
       <span className="pointer-events-none absolute inset-[3px] rounded-[0.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,.06),rgba(0,0,0,.16))]" />

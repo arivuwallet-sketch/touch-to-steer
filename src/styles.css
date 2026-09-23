@@ -5503,6 +5503,7 @@ html {
   pointer-events: auto;
 }
 
+.spectral-controller-stage .uploaded-controller-canvas canvas,
 .spectral-controller-stage .apex5-controller-canvas canvas {
   width: 100% !important;
   height: 100% !important;

@@ -492,7 +492,7 @@ function LandingPage() {
                   Explore capability <ArrowDown size={16} />
                 </a>
                 <a
-                  href="https://drive.google.com/uc?export=download&id=1b39QZPejykCCSY8rpcs3cBsu6IqdfjRF"
+                  href="https://drive.google.com/file/d/1b39QZPejykCCSY8rpcs3cBsu6IqdfjRF/view?usp=sharing"
                   className="spectral-android-download"
                   aria-label="Download TouchToSteer Android APK"
                 >

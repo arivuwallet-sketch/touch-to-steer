@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
+import { HapticController3D } from "@/components/rig/HapticController3D";
 import { applyCurve, applyForceFlex, FORCEFLEX_DESCRIPTIONS, type ControllerState, type JoystickTensionGf, type Settings } from "@/lib/controller-types";
 
 type Props = {
@@ -13,14 +14,29 @@ type TriggerMode = "regular" | "race" | "sniper" | "recoil" | "vibration" | "loc
 // Haptics are deferred off the input task so a vibration call can never delay
 // the controller packet leaving the phone.
 const buzz = (enabled: boolean, pattern: number | number[] = 10) => {
-  if (!enabled || typeof navigator === "undefined" || !("vibrate" in navigator)) return;
-  setTimeout(() => {
-    try {
-      navigator.vibrate(pattern);
-    } catch {
-      /* ignore */
-    }
-  }, 0);
+  if (!enabled || typeof window === "undefined") return;
+
+  // The 3D controller listens to the same haptic event as the phone's
+  // vibration motor, so every real input feedback event has a matching
+  // physical-looking chassis response.
+  const values = Array.isArray(pattern) ? pattern : [pattern];
+  const strongest = Math.max(...values, 0);
+  const intensity = Math.max(0.12, Math.min(1, strongest / 18 + values.length * 0.035));
+  window.dispatchEvent(
+    new CustomEvent("touch-to-steer:haptic", {
+      detail: { intensity },
+    }),
+  );
+
+  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+    setTimeout(() => {
+      try {
+        navigator.vibrate(pattern);
+      } catch {
+        /* ignore */
+      }
+    }, 0);
+  }
 };
 
 const feelBuzz = (enabled: boolean, intensity: number) => {

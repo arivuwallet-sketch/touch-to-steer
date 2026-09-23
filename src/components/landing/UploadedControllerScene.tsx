@@ -55,7 +55,17 @@ function ControllerModel() {
         const base = source as THREE.MeshStandardMaterial;
         const skin = SKIN[(base.name ?? "").trim().toLowerCase()];
         const next = base.clone() as THREE.MeshStandardMaterial;
-        next.envMapIntensity = 0.85;
+        next.envMapIntensity = 0.95;
+        // Anisotropic filtering: keeps textures crisp at grazing angles.
+        const maxAniso = gl.capabilities.getMaxAnisotropy();
+        for (const slot of ["map", "normalMap", "roughnessMap", "metalnessMap", "aoMap"] as const) {
+          const tex = next[slot];
+          if (tex) {
+            tex.anisotropy = maxAniso;
+            tex.needsUpdate = true;
+          }
+        }
+        next.aoMapIntensity = 1;
         if (skin) {
           if (skin.color) next.color = new THREE.Color(skin.color);
           next.roughness = skin.roughness;

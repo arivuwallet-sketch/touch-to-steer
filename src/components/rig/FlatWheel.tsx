@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent, type RefObject } from "react";
+import { HapticController3D } from "@/components/rig/HapticController3D";
 import { applyCurve, type ControllerState, type Settings } from "@/lib/controller-types";
 import type { BridgeTelemetry } from "@/hooks/useBridge";
 
@@ -19,14 +20,26 @@ const STEER_SENS = [0.6, 0.8, 1, 1.25, 1.5, 2, 2.5, 3] as const;
 // Haptics are deferred off the input task so a vibration call can never delay
 // the controller packet leaving the phone.
 const buzz = (enabled: boolean, ms: number | number[] = 10) => {
-  if (!enabled || typeof navigator === "undefined" || !("vibrate" in navigator)) return;
-  setTimeout(() => {
-    try {
-      navigator.vibrate(ms);
-    } catch {
-      /* ignore */
-    }
-  }, 0);
+  if (!enabled || typeof window === "undefined") return;
+
+  const values = Array.isArray(ms) ? ms : [ms];
+  const strongest = Math.max(...values, 0);
+  const intensity = Math.max(0.12, Math.min(1, strongest / 18 + values.length * 0.035));
+  window.dispatchEvent(
+    new CustomEvent("touch-to-steer:haptic", {
+      detail: { intensity },
+    }),
+  );
+
+  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+    setTimeout(() => {
+      try {
+        navigator.vibrate(ms);
+      } catch {
+        /* ignore */
+      }
+    }, 0);
+  }
 };
 
 function TelemetryGauge({
@@ -752,6 +765,7 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
 
   return (
     <div className="flat-wheel-root absolute inset-0 overflow-hidden bg-[#080a0d] text-slate-100">
+      <HapticController3D mode="steering" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_95%_at_50%_6%,#1a222b_0%,#080a0d_55%,#030405_100%)]" />
       <div className="pointer-events-none absolute inset-2 rounded-[1.7rem] border border-white/15" />
       <div className="pointer-events-none absolute inset-4 rounded-[1.4rem] border border-[#e11d2e]/15" />

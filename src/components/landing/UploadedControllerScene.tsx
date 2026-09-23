@@ -186,10 +186,10 @@ function ControllerModel() {
     let hy = 0;
     let hr = 0;
     if (hovered.current) {
-      const t = clock.current * 46;
-      hx = Math.sin(t) * 0.02;
-      hy = Math.cos(t * 1.37) * 0.016;
-      hr = Math.sin(t * 0.83) * 0.012;
+      const t = clock.current * 58;
+      hx = Math.sin(t) * 0.05 + (Math.random() - 0.5) * 0.02;
+      hy = Math.cos(t * 1.37) * 0.04 + (Math.random() - 0.5) * 0.016;
+      hr = Math.sin(t * 0.83) * 0.03;
     }
 
     inner.position.set(gx + hx, gy + hy, gz);

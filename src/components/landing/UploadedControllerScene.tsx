@@ -76,6 +76,10 @@ function ControllerModel() {
           if (skin.color) next.color = new THREE.Color(skin.color);
           next.roughness = skin.roughness;
           next.metalness = skin.metalness;
+          if (skin.clearcoat !== undefined) {
+            next.clearcoat = skin.clearcoat;
+            next.clearcoatRoughness = 0.08;
+          }
         } else {
           next.roughness = Math.min(0.85, Math.max(0.2, next.roughness));
         }

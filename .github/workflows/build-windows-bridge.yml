@@ -142,17 +142,7 @@ jobs:
           # Nativefier's CLI takes the destination as a positional argument
           # after the target URL. Keep the destination explicit so the package
           # is created inside desktop-release on Windows runners.
-          npx --yes nativefier@52.0.0 \
-            --name "TouchToSteer — Spectral Control System" \
-            --platform windows \
-            --arch x64 \
-            --electron-version 25.7.0 \
-            --width 1280 \
-            --height 800 \
-            --icon "public/favicon.ico" \
-            --overwrite \
-            "https://touch-to-steer.lovable.app/" \
-            "desktop-release"
+          npx --yes nativefier@52.0.0 --name "TouchToSteer — Spectral Control System" --platform windows --arch x64 --electron-version 25.7.0 --width 1280 --height 800 --icon "public/favicon.ico" --overwrite "https://touch-to-steer.lovable.app/" "desktop-release"
 
           Write-Host "Nativefier output:"
           Get-ChildItem "desktop-release" -Force | Format-Table -AutoSize | Out-String | Write-Host

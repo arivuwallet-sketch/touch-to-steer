@@ -492,7 +492,7 @@ function LandingPage() {
                   Explore capability <ArrowDown size={16} />
                 </a>
                 <a
-                  href="https://github.com/arivuwallet-sketch/touch-to-steer/releases/download/bridge-latest/TouchToSteer-Android.apk"
+                  href="https://drive.google.com/uc?export=download&id=1b39QZPejykCCSY8rpcs3cBsu6IqdfjRF"
                   className="spectral-android-download"
                   aria-label="Download TouchToSteer Android APK"
                 >

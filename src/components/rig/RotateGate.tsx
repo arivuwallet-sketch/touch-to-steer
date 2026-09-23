@@ -47,7 +47,7 @@ export function RotateGate({ mode = "pad" }: Props) {
     : "Gamepad and steering are built for a wide cockpit layout so every control stays within thumb reach.";
 
   return (
-    <div className="spectral-orientation-gate">
+    <div className={"spectral-orientation-gate " + (mouse ? "is-mouse-target" : "is-landscape-target")}>
       <div className="spectral-orientation-noise" aria-hidden="true" />
       <div className="spectral-orientation-grid" aria-hidden="true" />
       <div className="spectral-orientation-orbit spectral-orientation-orbit-a" aria-hidden="true" />

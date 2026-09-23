@@ -8,12 +8,6 @@ import {
 } from "@react-three/drei";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
-import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
-import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
-import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
-import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
-import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
-
 const analogFragmentShader = \`
   uniform sampler2D tDiffuse;
   uniform float uTime;
@@ -487,42 +481,6 @@ function ControllerGhostEcho() {
 }
 
 function ControllerSceneFX() {
-  const { gl, scene, camera, size } = useThree();
-  const composerRef = useRef<EffectComposer | null>(null);
-
-  useEffect(() => {
-    const composer = new EffectComposer(gl);
-    composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.45));
-    composer.setSize(size.width, size.height);
-
-    const renderPass = new RenderPass(scene, camera);
-    const bloom = new UnrealBloomPass(
-      new THREE.Vector2(size.width, size.height),
-      0.58,
-      0.62,
-      0.12,
-    );
-    const output = new OutputPass();
-
-    composer.addPass(renderPass);
-    composer.addPass(bloom);
-    composer.addPass(output);
-    composerRef.current = composer;
-
-    return () => {
-      composerRef.current = null;
-      composer.dispose();
-    };
-  }, [camera, gl, scene, size.height, size.width]);
-
-  useEffect(() => {
-    composerRef.current?.setSize(size.width, size.height);
-  }, [size.height, size.width]);
-
-  useFrame(() => {
-    composerRef.current?.render();
-  }, 1);
-
   return null;
 }
 
@@ -597,79 +555,6 @@ function BackgroundWorld() {
 }
 
 function BackgroundSignalFX() {
-  const { gl, scene, camera, size, pointer } = useThree();
-  const composerRef = useRef<EffectComposer | null>(null);
-  const analogPassRef = useRef<ShaderPass | null>(null);
-  const lastPointer = useRef(new THREE.Vector2());
-  const velocity = useRef(0);
-
-  useEffect(() => {
-    const composer = new EffectComposer(gl);
-    composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
-    composer.setSize(size.width, size.height);
-
-    const renderPass = new RenderPass(scene, camera);
-    const bloom = new UnrealBloomPass(
-      new THREE.Vector2(size.width, size.height),
-      0.64,
-      0.7,
-      0.08,
-    );
-
-    const analog = new ShaderPass({
-      uniforms: {
-        tDiffuse: { value: null },
-        uTime: { value: 0 },
-        uResolution: { value: new THREE.Vector2(size.width, size.height) },
-        uVelocity: { value: 0 },
-      },
-      vertexShader: \`
-        varying vec2 vUv;
-        void main() {
-          vUv = uv;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      \`,
-      fragmentShader: analogFragmentShader,
-    });
-
-    const output = new OutputPass();
-
-    composer.addPass(renderPass);
-    composer.addPass(bloom);
-    composer.addPass(analog);
-    composer.addPass(output);
-
-    composerRef.current = composer;
-    analogPassRef.current = analog;
-
-    return () => {
-      composerRef.current = null;
-      analogPassRef.current = null;
-      composer.dispose();
-    };
-  }, [camera, gl, scene, size.height, size.width]);
-
-  useEffect(() => {
-    composerRef.current?.setSize(size.width, size.height);
-    analogPassRef.current?.uniforms.uResolution.value.set(size.width, size.height);
-  }, [size.height, size.width]);
-
-  useFrame((state, delta) => {
-    const p = new THREE.Vector2(pointer.x, pointer.y);
-    const deltaPointer = p.distanceTo(lastPointer.current);
-    lastPointer.current.lerp(p, 0.55);
-    velocity.current = THREE.MathUtils.damp(velocity.current, deltaPointer * 4.4, 4.6, delta);
-
-    const uniforms = analogPassRef.current?.uniforms;
-    if (uniforms) {
-      uniforms.uTime.value = state.clock.elapsedTime;
-      uniforms.uVelocity.value = velocity.current;
-    }
-
-    composerRef.current?.render();
-  }, 1);
-
   return null;
 }
 

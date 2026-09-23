@@ -5815,3 +5815,32 @@ body {
     overflow-x: hidden !important;
   }
 }
+
+
+/* Mobile landing: the desktop 3D controller layer must never capture the
+   browser's vertical touch gesture. Keep the model decorative on phones so
+   the document itself owns scrolling. */
+@media (max-width: 760px) {
+  html,
+  body {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    touch-action: pan-y !important;
+  }
+
+  .spectral-page {
+    min-height: 100vh !important;
+    height: auto !important;
+    overflow: visible !important;
+    touch-action: pan-y !important;
+  }
+
+  .spectral-controller-stage,
+  .spectral-controller-stage .uploaded-controller-canvas,
+  .spectral-controller-stage .uploaded-controller-canvas canvas,
+  .spectral-hero-background,
+  .spectral-hero-background .landing-3d-canvas {
+    pointer-events: none !important;
+    touch-action: pan-y !important;
+  }
+}

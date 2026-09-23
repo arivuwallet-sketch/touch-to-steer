@@ -131,13 +131,53 @@ jobs:
           Copy-Item "public/bridge/windows/README.md" "release/README.md"
           Compress-Archive -Path "release/TouchToSteer-Bridge.exe", "release/README.md" -DestinationPath "public/bridge/dist/TouchToSteer-Bridge-Windows.zip" -Force
 
+      - name: Build TouchToSteer Windows desktop package
+        shell: pwsh
+        run: |
+          if (Test-Path "desktop-release") {
+            Remove-Item "desktop-release" -Recurse -Force
+          }
+          New-Item -ItemType Directory -Force -Path "desktop-release" | Out-Null
+
+          npx --yes nativefier@52.0.0 `
+            --name "TouchToSteer — Spectral Control System" `
+            --platform windows `
+            --arch x64 `
+            --electron-version 25.7.0 `
+            --width 1280 `
+            --height 800 `
+            --icon "public/favicon.ico" `
+            --out "desktop-release" `
+            --overwrite `
+            "https://touch-to-steer.lovable.app/"
+
+          $app = Get-ChildItem "desktop-release" -Directory | Select-Object -First 1
+          if (-not $app) {
+            throw "Nativefier Windows package directory was not created."
+          }
+
+          $zipPath = "desktop-release/TouchToSteer — Spectral Control System-win32-x64.zip"
+          Compress-Archive -Path "$($app.FullName)/*" -DestinationPath $zipPath -Force
+
+          if (-not (Test-Path $zipPath)) {
+            throw "Windows desktop zip was not created."
+          }
+
+          $zipSize = (Get-Item $zipPath).Length
+          if ($zipSize -lt 10000000) {
+            throw "Windows desktop zip is unexpectedly small: $zipSize bytes."
+          }
+
+          Write-Host "Windows desktop package: $zipSize bytes"
+
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TouchToSteer-Bridge-Windows
+          name: TouchToSteer-Windows
           path: |
             public/bridge/dist/TouchToSteer-Bridge.exe
             public/bridge/dist/TouchToSteer-Bridge-Windows.zip
+            desktop-release/TouchToSteer — Spectral Control System-win32-x64.zip
           retention-days: 90
 
       - name: Publish stable latest release
@@ -149,6 +189,7 @@ jobs:
           gh release create bridge-latest \
             "public/bridge/dist/TouchToSteer-Bridge-Windows.zip" \
             "public/bridge/dist/TouchToSteer-Bridge.exe" \
+            "desktop-release/TouchToSteer — Spectral Control System-win32-x64.zip" \
             --repo "${GITHUB_REPOSITORY}" \
             --target "${GITHUB_SHA}" \
             --title "TouchToSteer Windows Bridge (latest)" \

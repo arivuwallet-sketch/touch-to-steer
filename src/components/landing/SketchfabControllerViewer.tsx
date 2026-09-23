@@ -123,6 +123,8 @@ function tuneViewer(api: SketchfabApi) {
       ssrEnable: true,
       bloomEnable: true,
       sharpenEnable: true,
+      toneMappingEnable: true,
+      toneMappingExposure: 1.04,
       vignetteEnable: false,
       grainEnable: false,
       chromaticAberrationEnable: false,

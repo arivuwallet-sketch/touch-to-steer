@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
 import { RoundedBox, ContactShadows, Float } from "@react-three/drei";
 import * as THREE from "three";
 
@@ -111,13 +111,13 @@ function ControllerModel() {
     }
   });
 
-  const handleDown = (event: THREE.ThreeEvent<PointerEvent>) => {
+  const handleDown = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
     dragging.current = true;
     pointer.current = { x: event.clientX, y: event.clientY };
   };
 
-  const handleMove = (event: THREE.ThreeEvent<PointerEvent>) => {
+  const handleMove = (event: ThreeEvent<PointerEvent>) => {
     if (!dragging.current || !root.current) return;
     event.stopPropagation();
     const dx = event.clientX - pointer.current.x;
@@ -127,7 +127,7 @@ function ControllerModel() {
     root.current.rotation.x = THREE.MathUtils.clamp(root.current.rotation.x + dy * 0.007, -0.35, 0.35);
   };
 
-  const release = (event?: THREE.ThreeEvent<PointerEvent>) => {
+  const release = (event?: ThreeEvent<PointerEvent>) => {
     event?.stopPropagation();
     dragging.current = false;
   };

@@ -55,7 +55,12 @@ function ControllerModel() {
       child.material = materials.map((source) => {
         const base = source as THREE.MeshStandardMaterial;
         const skin = SKIN[(base.name ?? "").trim().toLowerCase()];
-        const next = base.clone() as THREE.MeshStandardMaterial;
+        const next = new THREE.MeshPhysicalMaterial();
+        THREE.MeshPhysicalMaterial.prototype.copy.call(next, base as unknown as THREE.MeshPhysicalMaterial);
+        next.clearcoat = 0.35;
+        next.clearcoatRoughness = 0.22;
+        next.sheen = 0.12;
+        next.sheenRoughness = 0.6;
         next.envMapIntensity = 0.55;
         // Anisotropic filtering: keeps textures crisp at grazing angles.
         const maxAniso = gl.capabilities.getMaxAnisotropy();

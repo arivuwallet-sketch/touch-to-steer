@@ -221,8 +221,11 @@ function ControllerModel() {
       ref={root}
       onPointerDown={handleDown}
       onPointerMove={handleMove}
+      onPointerOver={handleOver}
+      onPointerOut={handleOut}
       onDoubleClick={handleDouble}
     >
+      <group ref={shell} />
     </group>
   );
 }

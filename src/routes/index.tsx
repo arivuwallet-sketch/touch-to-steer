@@ -283,18 +283,18 @@ function LandingPage() {
             <LocalControllerViewer />
             <div className="spectral-model-glass" />
             <div className="spectral-stage-hud hud-tl">
-              <span>DUALSENSE / 3D MODEL</span>
-              <strong>SKETCHFAB PBR VIEWER</strong>
+              <span>CONTROLLER / 3D MODEL</span>
+              <strong>LOCAL PBR VIEWER</strong>
             </div>
             <div className="spectral-stage-hud hud-tr">
               <span>CURSOR FLOW</span>
               <strong>FULL PAGE / SMOOTH TRACK</strong>
             </div>
-            <div className="spectral-stage-id">MODEL / PS5</div>
+            <div className="spectral-stage-id">MODEL / CONTROLLER</div>
             <div className="spectral-controller-reticle" />
             <div className="spectral-controller-caption">
-              <span>DUALSENSE CONTROLLER</span>
-              <strong>REAL 3D ASSET / POINTER FOLLOW</strong>
+              <span>REAL 3D CONTROLLER</span>
+              <strong>REAL 3D ASSET / POINTER + DRAG</strong>
             </div>
           </div>
         </section>

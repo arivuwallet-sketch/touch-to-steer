@@ -173,10 +173,10 @@ function ControllerModel() {
     let gz = 0;
     if (glitching) {
       const fade = 1 - phase / 0.26;
-      gx = (Math.random() - 0.5) * 0.24 * fade;
-      gy = (Math.random() - 0.5) * 0.1 * fade;
-      gz = (Math.random() - 0.5) * 0.14 * fade;
-      inner.visible = Math.random() > 0.12;
+      gx = (Math.random() - 0.5) * 0.46 * fade;
+      gy = (Math.random() - 0.5) * 0.2 * fade;
+      gz = (Math.random() - 0.5) * 0.26 * fade;
+      inner.visible = Math.random() > 0.18;
     } else {
       inner.visible = true;
     }

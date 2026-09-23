@@ -270,7 +270,6 @@ function LandingPage() {
           detail: { x: 0, y: 0 },
         }),
       );
-      setGyroEnabled(false);
     };
     setGyroEnabled(true);
   }, []);

@@ -5844,3 +5844,32 @@ body {
     touch-action: pan-y !important;
   }
 }
+
+
+/* Definitive mobile landing scroll override: an earlier coarse-pointer rule
+   sets html/body/#root to overflow:hidden. The landing is a document page, so
+   restore the scroll chain only while the spectral landing route is mounted. */
+@media (pointer: coarse) and (max-width: 760px) {
+  html:has(.spectral-page),
+  body:has(.spectral-page),
+  #root:has(.spectral-page) {
+    width: 100%;
+    max-width: 100%;
+    min-height: 100%;
+    height: auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior-y: auto !important;
+    touch-action: pan-y !important;
+  }
+
+  #root:has(.spectral-page) {
+    display: block !important;
+  }
+
+  .spectral-page {
+    height: auto !important;
+    min-height: 100vh !important;
+    overflow: visible !important;
+  }
+}

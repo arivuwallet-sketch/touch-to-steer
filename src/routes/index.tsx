@@ -282,7 +282,7 @@ function LandingPage() {
             <div className="spectral-sketchfab-shell">
               <iframe
                 title="PS5 DualSense Controller — Sketchfab 3D Model"
-                src="https://sketchfab.com/models/b7bb9c5102a04cb0b1966c6d02bad7d6/embed?autostart=1&preload=1&transparent=1&ui_infos=0&ui_controls=0&ui_inspector=0&ui_stop=0&ui_watermark=0&ui_theme=dark&autospin=0.14"
+                src="https://sketchfab.com/models/b7bb9c5102a04cb0b1966c6d02bad7d6/embed?autostart=1&preload=1&transparent=1&navigation=orbit&scrollwheel=0&ui_infos=0&ui_controls=0&ui_inspector=0&ui_stop=0&ui_hint=0&ui_watermark=0&ui_watermark_link=0&ui_theme=dark&autospin=0"
                 allow="autoplay; fullscreen; xr-spatial-tracking"
                 loading="eager"
                 referrerPolicy="strict-origin-when-cross-origin"

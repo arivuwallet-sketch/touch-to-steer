@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { LandingScene } from "@/components/landing/LandingScene";
-import { LocalControllerViewer } from "@/components/landing/LocalControllerViewer";
+import { UploadedControllerScene } from "@/components/landing/UploadedControllerScene";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -120,24 +120,18 @@ function Preloader({ ready }: { ready: boolean }) {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    let frame = 0;
     const timer = window.setInterval(() => {
-      setProgress((value) => {
-        const next = value + (value < 72 ? 7 : value < 92 ? 3 : 1);
-        if (next >= 100) {
-          window.clearInterval(timer);
-          return 100;
-        }
-        return next;
-      });
-      frame += 1;
-      if (frame > 55) window.clearInterval(timer);
+      setProgress((value) => Math.min(100, value + (value < 72 ? 7 : 4)));
     }, 55);
 
     return () => window.clearInterval(timer);
   }, []);
 
-  const visible = !ready || progress < 100;
+  useEffect(() => {
+    if (ready) setProgress(100);
+  }, [ready]);
+
+  const visible = !ready;
 
   return (
     <div className={`spectral-preloader ${visible ? "" : "spectral-preloader-hide"}`}>
@@ -280,7 +274,7 @@ function LandingPage() {
           </div>
 
           <div className="spectral-controller-stage">
-            <LocalControllerViewer />
+            <UploadedControllerScene />
             <div className="spectral-model-glass" />
             <div className="spectral-stage-hud hud-tl">
               <span>CONTROLLER / 3D MODEL</span>

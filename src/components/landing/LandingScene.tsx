@@ -53,14 +53,14 @@ function BackgroundWorld() {
         </mesh>
       </Float>
 
-      {[
+      {([
         [-4.8, -1.1, -2.2],
         [-3.5, -1.45, -2.8],
         [3.8, -1.28, -2.5],
         [4.9, -0.84, -3.5],
         [-1.05, -1.52, -3.1],
         [1.95, -1.43, -2.9],
-      ].map(([x, y, z], index) => (
+      ] as [number, number, number][]).map(([x, y, z], index) => (
         <mesh
           key={index}
           position={[x, y, z]}

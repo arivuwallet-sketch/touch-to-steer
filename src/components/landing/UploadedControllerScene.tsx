@@ -100,6 +100,15 @@ function ControllerModel() {
     };
   }, []);
 
+  useEffect(() => {
+    const group = root.current;
+    if (!group) return;
+    group.add(model);
+    return () => {
+      group.remove(model);
+    };
+  }, [model]);
+
   useFrame((_, delta) => {
     const group = root.current;
     if (!group) return;
@@ -160,7 +169,6 @@ function ControllerModel() {
       onPointerMove={handleMove}
       onDoubleClick={handleDouble}
     >
-      <primitive object={model} />
     </group>
   );
 }

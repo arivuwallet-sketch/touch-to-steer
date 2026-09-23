@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { ContactShadows, Environment, Float, Lightformer, useGLTF } from "@react-three/drei";
+import { EffectComposer, SMAA, SSAO } from "@react-three/postprocessing";
 import * as THREE from "three";
 import controllerAsset from "@/assets/controller.glb.asset.json";
 
@@ -30,12 +31,15 @@ type Drag = { mode: "rotate" | "move" | null; x: number; y: number };
 function ControllerModel() {
   const { scene } = useGLTF(MODEL_URL, true);
   const root = useRef<THREE.Group>(null);
+  const shell = useRef<THREE.Group>(null);
   const drag = useRef<Drag>({ mode: null, x: 0, y: 0 });
   const spin = useRef({ x: 0.12, y: 0.35 });
   const velocity = useRef({ x: 0, y: 0 });
   const offset = useRef({ x: 0, y: 0 });
   const pointer = useRef({ x: 0, y: 0 });
-  const { size } = useThree();
+  const hovered = useRef(false);
+  const clock = useRef(0);
+  const { size, gl } = useThree();
 
   // Auto-skin + auto-fit: clone the GLB, retune every material from the palette,
   // then centre and normalise the model so any export scale looks right.
@@ -52,7 +56,17 @@ function ControllerModel() {
         const base = source as THREE.MeshStandardMaterial;
         const skin = SKIN[(base.name ?? "").trim().toLowerCase()];
         const next = base.clone() as THREE.MeshStandardMaterial;
-        next.envMapIntensity = 0.85;
+        next.envMapIntensity = 0.95;
+        // Anisotropic filtering: keeps textures crisp at grazing angles.
+        const maxAniso = gl.capabilities.getMaxAnisotropy();
+        for (const slot of ["map", "normalMap", "roughnessMap", "metalnessMap", "aoMap"] as const) {
+          const tex = next[slot];
+          if (tex) {
+            tex.anisotropy = maxAniso;
+            tex.needsUpdate = true;
+          }
+        }
+        next.aoMapIntensity = 1;
         if (skin) {
           if (skin.color) next.color = new THREE.Color(skin.color);
           next.roughness = skin.roughness;
@@ -71,7 +85,7 @@ function ControllerModel() {
     const box = new THREE.Box3().setFromObject(clone);
     const centre = box.getCenter(new THREE.Vector3());
     const dimensions = box.getSize(new THREE.Vector3());
-    const scale = 4.6 / Math.max(dimensions.x, dimensions.y, dimensions.z, 0.0001);
+    const scale = 5.8 / Math.max(dimensions.x, dimensions.y, dimensions.z, 0.0001);
 
     clone.position.sub(centre);
 
@@ -101,7 +115,7 @@ function ControllerModel() {
   }, []);
 
   useEffect(() => {
-    const group = root.current;
+    const group = shell.current;
     if (!group) return;
     group.add(model);
     return () => {
@@ -111,8 +125,10 @@ function ControllerModel() {
 
   useFrame((_, delta) => {
     const group = root.current;
-    if (!group) return;
+    const inner = shell.current;
+    if (!group || !inner) return;
     const dt = Math.min(delta, 0.05);
+    clock.current += dt;
 
     if (drag.current.mode !== "rotate") {
       velocity.current.x *= 0.92;
@@ -126,7 +142,46 @@ function ControllerModel() {
     group.rotation.x = spin.current.x;
     group.position.x = THREE.MathUtils.lerp(group.position.x, offset.current.x, 0.18);
     group.position.y = THREE.MathUtils.lerp(group.position.y, offset.current.y, 0.18);
+
+    // Ghost glitch: a short burst of displacement/flicker every 2 seconds.
+    const phase = clock.current % 2;
+    const glitching = phase < 0.26;
+    let gx = 0;
+    let gy = 0;
+    let gz = 0;
+    if (glitching) {
+      const fade = 1 - phase / 0.26;
+      gx = (Math.random() - 0.5) * 0.24 * fade;
+      gy = (Math.random() - 0.5) * 0.1 * fade;
+      gz = (Math.random() - 0.5) * 0.14 * fade;
+      inner.visible = Math.random() > 0.12;
+    } else {
+      inner.visible = true;
+    }
+
+    // Hover vibration: a fast, tight shake while the cursor is on the controller.
+    let hx = 0;
+    let hy = 0;
+    let hr = 0;
+    if (hovered.current) {
+      const t = clock.current * 46;
+      hx = Math.sin(t) * 0.02;
+      hy = Math.cos(t * 1.37) * 0.016;
+      hr = Math.sin(t * 0.83) * 0.012;
+    }
+
+    inner.position.set(gx + hx, gy + hy, gz);
+    inner.rotation.z = gz * 0.5 + hr;
   });
+
+  const handleOver = (event: ThreeEvent<PointerEvent>) => {
+    event.stopPropagation();
+    hovered.current = true;
+  };
+
+  const handleOut = () => {
+    hovered.current = false;
+  };
 
   const handleDown = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
@@ -167,8 +222,11 @@ function ControllerModel() {
       ref={root}
       onPointerDown={handleDown}
       onPointerMove={handleMove}
+      onPointerOver={handleOver}
+      onPointerOut={handleOut}
       onDoubleClick={handleDouble}
     >
+      <group ref={shell} />
     </group>
   );
 }
@@ -186,7 +244,7 @@ export function UploadedControllerScene() {
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: 0.95,
         }}
-        camera={{ position: [0, 1.0, 8.8], fov: 32 }}
+        camera={{ position: [0, 0.7, 10.4], fov: 32 }}
       >
         <ambientLight intensity={0.4} />
         <directionalLight
@@ -214,14 +272,29 @@ export function UploadedControllerScene() {
         </Suspense>
 
         <ContactShadows
-          position={[0, -1.9, 0]}
-          opacity={0.34}
-          scale={9}
-          blur={2.6}
-          far={5}
+          position={[0, -2.9, 0]}
+          opacity={0.42}
+          scale={16}
+          blur={2.8}
+          far={7}
           resolution={1024}
           color="#00141a"
         />
+
+        <EffectComposer multisampling={0} enableNormalPass>
+          <SSAO
+            samples={24}
+            radius={0.12}
+            intensity={22}
+            luminanceInfluence={0.5}
+            color={new THREE.Color("#001018")}
+            worldDistanceThreshold={8}
+            worldDistanceFalloff={2}
+            worldProximityThreshold={2}
+            worldProximityFalloff={1}
+          />
+          <SMAA />
+        </EffectComposer>
       </Canvas>
     </div>
   );

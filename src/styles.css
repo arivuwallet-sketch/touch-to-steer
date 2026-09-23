@@ -5674,7 +5674,7 @@ html {
   z-index: 7;
   min-height: 0;
   height: auto;
-  pointer-events: none;
+  pointer-events: auto;
   overflow: hidden;
   isolation: isolate;
 }
@@ -5696,10 +5696,11 @@ html {
   transform-origin: center;
   transition: transform 140ms cubic-bezier(.16, 1, .3, 1);
   will-change: transform;
+  cursor: grab;
   filter:
     drop-shadow(0 42px 80px rgba(0, 0, 0, .42))
     drop-shadow(0 0 45px rgba(44, 220, 255, .09));
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .spectral-sketchfab-shell iframe {
@@ -5708,7 +5709,13 @@ html {
   height: 100%;
   border: 0;
   background: transparent;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: grab;
+}
+
+.spectral-sketchfab-shell:active,
+.spectral-sketchfab-shell:active iframe {
+  cursor: grabbing;
 }
 
 .spectral-model-glass {

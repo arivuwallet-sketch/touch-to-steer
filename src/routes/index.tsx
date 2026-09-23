@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { LandingScene } from "@/components/landing/LandingScene";
+import { SketchfabControllerViewer } from "@/components/landing/SketchfabControllerViewer";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -279,15 +280,7 @@ function LandingPage() {
           </div>
 
           <div className="spectral-controller-stage">
-            <div className="spectral-sketchfab-shell">
-              <iframe
-                title="PS5 DualSense Controller — Sketchfab 3D Model"
-                src="https://sketchfab.com/models/b7bb9c5102a04cb0b1966c6d02bad7d6/embed?autostart=1&preload=1&transparent=1&navigation=orbit&scrollwheel=0&ui_infos=0&ui_controls=0&ui_inspector=0&ui_stop=0&ui_hint=0&ui_watermark=0&ui_watermark_link=0&ui_theme=dark&autospin=0"
-                allow="autoplay; fullscreen; xr-spatial-tracking"
-                loading="eager"
-                referrerPolicy="strict-origin-when-cross-origin"
-              />
-            </div>
+            <SketchfabControllerViewer />
             <div className="spectral-model-glass" />
             <div className="spectral-stage-hud hud-tl">
               <span>DUALSENSE / 3D MODEL</span>

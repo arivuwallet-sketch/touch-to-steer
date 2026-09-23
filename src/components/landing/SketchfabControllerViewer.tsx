@@ -5,6 +5,7 @@ const MODEL_UID = "b7bb9c5102a04cb0b1966c6d02bad7d6";
 const API_SCRIPT_ID = "touchtosteer-sketchfab-viewer-api";
 
 type SketchfabApi = {
+  addEventListener: (event: "viewerready", callback: () => void) => void;
   start: (callback?: () => void) => void;
   setUserInteraction: (enabled: boolean, options?: Record<string, unknown>, callback?: (err: unknown) => void) => void;
   setTextureQuality: (quality: "ld" | "sd" | "hd", callback?: (err: unknown) => void) => void;
@@ -175,17 +176,34 @@ export function SketchfabControllerViewer() {
           preload: 1,
           scrollwheel: 0,
           transparent: 1,
+          dnt: 1,
+          double_click: 0,
           ui_controls: 0,
+          ui_general_controls: 0,
+          ui_help: 0,
+          ui_settings: 0,
+          ui_fullscreen: 0,
+          ui_vr: 0,
+          ui_ar: 0,
+          ui_annotations: 0,
+          ui_animations: 0,
+          ui_loading: 0,
+          ui_start: 0,
+          ui_fadeout: 0,
           ui_infos: 0,
           ui_inspector: 0,
           ui_stop: 0,
           ui_watermark: 0,
           ui_watermark_link: 0,
           ui_hint: 0,
+          dof_circle: 0,
           ui_theme: "dark",
           success(api) {
             if (cancelled) return;
-            api.start(() => tuneViewer(api));
+            api.addEventListener("viewerready", () => {
+              if (!cancelled) tuneViewer(api);
+            });
+            api.start();
           },
           error() {
             if (!cancelled) setFailed(true);

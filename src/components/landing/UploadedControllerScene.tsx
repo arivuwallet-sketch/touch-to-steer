@@ -1,7 +1,8 @@
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { ContactShadows, Environment, Float, Lightformer, useGLTF } from "@react-three/drei";
-import { EffectComposer, SMAA, SSAO } from "@react-three/postprocessing";
+import { ChromaticAberration, EffectComposer, Glitch, Noise, SMAA, SSAO, Scanline } from "@react-three/postprocessing";
+import { GlitchMode } from "postprocessing";
 import * as THREE from "three";
 import controllerAsset from "@/assets/controller.glb.asset.json";
 
@@ -314,6 +315,18 @@ export function UploadedControllerScene() {
             worldProximityThreshold={2}
             worldProximityFalloff={1}
           />
+          {/* RGB split + scanline tear bursts every ~2s, like the reference glitch art. */}
+          <Glitch
+            mode={GlitchMode.SPORADIC}
+            delay={new THREE.Vector2(1.6, 2.4)}
+            duration={new THREE.Vector2(0.14, 0.32)}
+            strength={new THREE.Vector2(0.18, 0.5)}
+            ratio={0.82}
+            columns={0.03}
+          />
+          <ChromaticAberration offset={new THREE.Vector2(0.0016, 0.0022)} radialModulation={false} modulationOffset={0} />
+          <Scanline density={1.45} opacity={0.12} />
+          <Noise opacity={0.05} premultiply />
           <SMAA />
         </EffectComposer>
       </Canvas>

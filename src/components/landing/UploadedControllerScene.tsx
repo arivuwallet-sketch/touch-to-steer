@@ -106,7 +106,7 @@ function ControllerModel() {
     const box = new THREE.Box3().setFromObject(clone);
     const centre = box.getCenter(new THREE.Vector3());
     const dimensions = box.getSize(new THREE.Vector3());
-    const scale = 5.8 / Math.max(dimensions.x, dimensions.y, dimensions.z, 0.0001);
+    const scale = 4.1 / Math.max(dimensions.x, dimensions.y, dimensions.z, 0.0001);
 
     clone.position.sub(centre);
 

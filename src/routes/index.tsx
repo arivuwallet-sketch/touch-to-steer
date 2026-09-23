@@ -479,7 +479,7 @@ function LandingPage() {
                   <ArrowUpRight size={18} />
                 </Link>
                 <a
-                  href="https://github.com/arivuwallet-sketch/touch-to-steer/releases/download/bridge-latest/TouchToSteer%20%E2%80%94%20Spectral%20Control%20System-win32-x64.zip"
+                  href="https://github.com/arivuwallet-sketch/touch-to-steer/releases/download/bridge-latest/TouchToSteer.Spectral.Control.System-win32-x64.zip"
                   className="spectral-download"
                   aria-label="Download TouchToSteer for Windows"
                 >

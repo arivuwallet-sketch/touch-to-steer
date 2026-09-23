@@ -5788,3 +5788,66 @@ html {
     border-radius: 30% 30% 36% 34%;
   }
 }
+
+
+/* Local controller asset viewer */
+.spectral-local-controller-shell {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(920px, 72vw);
+  height: min(760px, 82vh);
+  transform:
+    translate3d(
+      calc(-50% + var(--pointer-x) * 32px),
+      calc(-50% + var(--pointer-y) * -24px),
+      0
+    );
+  transform-origin: center;
+  transition: transform 140ms cubic-bezier(.16, 1, .3, 1);
+  will-change: transform;
+  pointer-events: auto;
+  cursor: grab;
+  filter:
+    drop-shadow(0 42px 80px rgba(0, 0, 0, .46))
+    drop-shadow(0 0 42px rgba(44, 220, 255, .08));
+}
+
+.spectral-local-controller-shell canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.spectral-local-controller-shell:active {
+  cursor: grabbing;
+}
+
+@media (max-width: 1050px) {
+  .spectral-local-controller-shell {
+    width: min(900px, 96vw);
+    height: min(720px, 76vh);
+    transform:
+      translate3d(
+        calc(-50% + var(--pointer-x) * 22px),
+        calc(-50% + var(--pointer-y) * -18px),
+        0
+      );
+  }
+}
+
+@media (max-width: 760px) {
+  .spectral-local-controller-shell {
+    left: 50%;
+    top: 59%;
+    width: 112vw;
+    height: 73vw;
+    min-height: 330px;
+    transform:
+      translate3d(
+        calc(-50% + var(--pointer-x) * 12px),
+        calc(-50% + var(--pointer-y) * -10px),
+        0
+      );
+  }
+}

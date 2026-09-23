@@ -185,8 +185,6 @@ export function SketchfabControllerViewer() {
           ui_theme: "dark",
           success(api) {
             if (cancelled) return;
-            api.start();
-            api.setUserInteraction(true, undefined, () => undefined);
             api.start(() => tuneViewer(api));
           },
           error() {
@@ -205,7 +203,7 @@ export function SketchfabControllerViewer() {
   }, []);
 
   return (
-    <div className="spectral-sketchfab-shell" data-render-quality="rt-style-ssr-ssao-hd">
+    <div className="spectral-sketchfab-shell" data-render-quality="enhanced-pbr-ssr-ssao-hd">
       <iframe
         ref={iframeRef}
         title="PS5 DualSense Controller — high quality interactive 3D model"

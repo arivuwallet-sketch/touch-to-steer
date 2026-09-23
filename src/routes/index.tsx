@@ -8,6 +8,7 @@ import {
   Hand,
   Keyboard,
   Mouse,
+  Download,
   RadioTower,
   ShieldCheck,
   Sparkles,
@@ -472,10 +473,20 @@ function LandingPage() {
             </p>
 
             <div className="spectral-hero-actions">
-              <Link to="/controller" className="spectral-primary">
-                Get started
-                <ArrowUpRight size={18} />
-              </Link>
+              <div className="spectral-primary-stack">
+                <Link to="/controller" className="spectral-primary">
+                  Get started
+                  <ArrowUpRight size={18} />
+                </Link>
+                <a
+                  href="https://github.com/arivuwallet-sketch/touch-to-steer/releases/download/bridge-latest/TouchToSteer%20%E2%80%94%20Spectral%20Control%20System-win32-x64.zip"
+                  className="spectral-download"
+                  aria-label="Download TouchToSteer for Windows"
+                >
+                  <Download size={15} />
+                  Download for Windows
+                </a>
+              </div>
               <a href="#features" className="spectral-secondary">
                 Explore capability <ArrowDown size={16} />
               </a>

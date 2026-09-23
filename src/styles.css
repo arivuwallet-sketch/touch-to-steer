@@ -6550,3 +6550,167 @@ body {
     transition-duration: .01ms !important;
   }
 }
+
+
+/* Portrait orientation gate: force a true vertical phone composition instead of
+   allowing the wide desktop/tablet proportions to survive on tall screens. */
+@media (orientation: portrait) and (max-width: 760px) {
+  .spectral-orientation-gate {
+    min-width: 0;
+    width: 100vw;
+    height: 100dvh;
+  }
+
+  .spectral-orientation-shell {
+    width: calc(100% - 16px);
+    height: calc(100dvh - 16px);
+    min-height: 0;
+    max-height: none;
+    padding: 10px 10px 9px;
+    border-radius: 16px;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .spectral-orientation-topline {
+    min-height: 34px;
+    padding-bottom: 9px;
+  }
+
+  .spectral-orientation-main {
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+    gap: 4px;
+    padding: 14px 2% 10px;
+  }
+
+  .spectral-orientation-copy {
+    width: 100%;
+    max-width: none;
+    flex: 0 0 auto;
+    text-align: center;
+  }
+
+  .spectral-orientation-copy h2 {
+    font-size: clamp(2rem, 11vw, 3.6rem);
+    line-height: .9;
+  }
+
+  .spectral-orientation-copy > p {
+    max-width: 420px;
+    margin: 13px auto 0;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .spectral-orientation-meta {
+    width: 100%;
+    max-width: 420px;
+    margin: 16px auto 0;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .spectral-orientation-meta > div {
+    min-height: 47px;
+    padding: 7px 5px;
+  }
+
+  .spectral-orientation-meta span {
+    font-size: 5px;
+  }
+
+  .spectral-orientation-meta strong {
+    font-size: 6.5px;
+  }
+
+  .spectral-orientation-button {
+    min-height: 46px;
+    margin-top: 15px;
+    padding-inline: 13px;
+    font-size: 8px;
+  }
+
+  .spectral-orientation-hint {
+    max-width: 360px;
+    margin: 9px auto 0;
+    justify-content: center;
+    text-align: center;
+    font-size: 5.5px;
+  }
+
+  .spectral-device-stage {
+    width: 100%;
+    min-height: 0;
+    height: clamp(190px, 30vh, 250px);
+    margin-top: 0;
+    flex: 0 0 auto;
+  }
+
+  .spectral-device-aura {
+    width: min(260px, 72vw);
+  }
+
+  .spectral-device-ring {
+    width: min(220px, 62vw);
+  }
+
+  .spectral-device-frame,
+  .spectral-device-stage.is-landscape-target .spectral-device-frame {
+    transform: rotate(-8deg) scale(.68);
+  }
+
+  .spectral-orientation-footer {
+    min-height: 28px;
+    padding-top: 8px;
+    font-size: 4.5px;
+  }
+}
+
+@media (orientation: portrait) and (max-width: 420px) {
+  .spectral-orientation-status {
+    display: none;
+  }
+
+  .spectral-orientation-brand {
+    font-size: 8px;
+  }
+
+  .spectral-orientation-main {
+    padding-inline: 0;
+  }
+
+  .spectral-orientation-copy h2 {
+    font-size: clamp(1.85rem, 12vw, 3rem);
+  }
+
+  .spectral-orientation-copy > p {
+    font-size: 11px;
+  }
+
+  .spectral-orientation-meta {
+    gap: 4px;
+  }
+
+  .spectral-orientation-meta > div {
+    min-height: 44px;
+  }
+
+  .spectral-orientation-button {
+    width: 100%;
+  }
+
+  .spectral-device-stage {
+    height: 180px;
+  }
+
+  .spectral-device-label {
+    display: none;
+  }
+
+  .spectral-orientation-footer span:first-child {
+    max-width: 70%;
+  }
+}

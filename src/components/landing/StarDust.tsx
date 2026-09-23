@@ -27,6 +27,7 @@ export function StarDust({ density = 0.00016 }: { density?: number }) {
     let stars: Star[] = [];
     let frame = 0;
     const pointer = { x: 0, y: 0 };
+    const gyro = { x: 0, y: 0 };
     const smooth = { x: 0, y: 0 };
 
     const build = () => {
@@ -58,10 +59,19 @@ export function StarDust({ density = 0.00016 }: { density?: number }) {
       pointer.y = (e.clientY / window.innerHeight) * 2 - 1;
     };
 
+    const onGyro = (event: Event) => {
+      const detail = (event as CustomEvent<{ x?: number; y?: number }>).detail;
+      gyro.x = Number.isFinite(detail?.x) ? Math.max(-1, Math.min(1, detail.x as number)) : 0;
+      gyro.y = Number.isFinite(detail?.y) ? Math.max(-1, Math.min(1, detail.y as number)) : 0;
+    };
+
     const render = () => {
       frame = window.requestAnimationFrame(render);
-      smooth.x += (pointer.x - smooth.x) * 0.045;
-      smooth.y += (pointer.y - smooth.y) * 0.045;
+      const targetX = Math.max(-1, Math.min(1, pointer.x + gyro.x));
+      const targetY = Math.max(-1, Math.min(1, pointer.y + gyro.y));
+
+      smooth.x += (targetX - smooth.x) * 0.045;
+      smooth.y += (targetY - smooth.y) * 0.045;
 
       ctx.clearRect(0, 0, width, height);
       const t = performance.now() * 0.001;
@@ -96,11 +106,13 @@ export function StarDust({ density = 0.00016 }: { density?: number }) {
     render();
     window.addEventListener("resize", build);
     window.addEventListener("pointermove", onPointer, { passive: true });
+    window.addEventListener("touch-to-steer:landing-gyro", onGyro);
 
     return () => {
       window.cancelAnimationFrame(frame);
       window.removeEventListener("resize", build);
       window.removeEventListener("pointermove", onPointer);
+      window.removeEventListener("touch-to-steer:landing-gyro", onGyro);
     };
   }, [density]);
 

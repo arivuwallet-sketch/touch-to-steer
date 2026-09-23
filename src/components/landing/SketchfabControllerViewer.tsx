@@ -1,228 +1,130 @@
-import { useEffect, useRef, useState } from "react";
+import { Canvas } from "@react-three/fiber";
+import { ContactShadows, OrbitControls } from "@react-three/drei";
+import { Suspense, useEffect, useState } from "react";
+import { Box3, Color, MeshPhysicalMaterial, Object3D, Vector3 } from "three";
+import { MTLLoader } from "three/examples/jsm/loaders/MTLLoader.js";
+import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
 
-const SKETCHFAB_VERSION = "1.12.1";
-const MODEL_UID = "b7bb9c5102a04cb0b1966c6d02bad7d6";
-const API_SCRIPT_ID = "touchtosteer-sketchfab-viewer-api";
+function tuneModel(root: Object3D) {
+  const bounds = new Box3().setFromObject(root);
+  const center = bounds.getCenter(new Vector3());
+  const size = bounds.getSize(new Vector3());
+  root.position.sub(center);
+  root.scale.setScalar(6.2 / Math.max(size.x, size.y, size.z, 0.001));
 
-type SketchfabApi = {
-  addEventListener: (event: "viewerready", callback: () => void) => void;
-  start: (callback?: () => void) => void;
-  setUserInteraction: (enabled: boolean, options?: Record<string, unknown>, callback?: (err: unknown) => void) => void;
-  setTextureQuality: (quality: "ld" | "sd" | "hd", callback?: (err: unknown) => void) => void;
-  setShadingStyle: (
-    style: "pbr" | "classic" | "matcap",
-    options: { type: "lit" | "shadeless" },
-    callback?: (err: unknown) => void,
-  ) => void;
-  getEnvironment: (callback: (err: unknown, env?: EnvironmentSettings) => void) => void;
-  setEnvironment: (options: EnvironmentSettings, callback?: (err: unknown) => void) => void;
-  getPostProcessing: (callback: (settings: Record<string, unknown>) => void) => void;
-  setPostProcessing: (settings: Record<string, unknown>, callback?: () => void) => void;
-  getLight: (lightId: number, callback: (err: unknown, light?: LightSettings) => void) => void;
-  setLight: (lightId: number, options: Partial<LightSettings>, callback?: (err: unknown) => void) => void;
-  setBackground: (options: { transparent?: boolean }, callback?: (err: unknown) => void) => void;
-  setCameraEasing: (easing: string) => void;
-};
-
-type EnvironmentSettings = {
-  enabled?: boolean;
-  exposure?: number;
-  lightIntensity?: number;
-  rotation?: number;
-  blur?: number;
-  shadowEnabled?: boolean;
-  uid?: string;
-};
-
-type LightSettings = {
-  matrix?: number[];
-  enabled?: boolean;
-  shadowEnabled?: boolean;
-  color?: number[];
-  intensity?: number;
-};
-
-type SketchfabClient = {
-  init: (uid: string, options: {
-    autostart?: number;
-    autospin?: number;
-    blending?: number;
-    camera?: number;
-    max_texture_size?: number;
-    navigation?: "orbit" | "fps";
-    preload?: number;
-    scrollwheel?: number;
-    transparent?: number;
-    ui_controls?: number;
-    ui_infos?: number;
-    ui_inspector?: number;
-    ui_stop?: number;
-    ui_watermark?: number;
-    ui_watermark_link?: number;
-    ui_hint?: number;
-    ui_theme?: "dark" | "light";
-    success: (api: SketchfabApi) => void;
-    error: () => void;
-  }) => void;
-};
-
-declare global {
-  interface Window {
-    Sketchfab?: new (version: string, iframe: HTMLIFrameElement) => SketchfabClient;
-  }
+  root.traverse((child: any) => {
+    if (!child.isMesh) return;
+    const mats = Array.isArray(child.material) ? child.material : [child.material];
+    child.material = mats.map((source: any) => {
+      const name = String(source?.name ?? "").toLowerCase();
+      const color = source?.color?.clone?.() ?? new Color("#e9eef1");
+      return new MeshPhysicalMaterial({
+        color,
+        metalness: name.includes("metal") ? 0.78 : name.includes("black") ? 0.2 : 0.04,
+        roughness: name.includes("shiny") ? 0.22 : name.includes("analog") ? 0.38 : name.includes("dull") ? 0.5 : 0.3,
+        clearcoat: name.includes("shiny") ? 0.32 : 0.1,
+        clearcoatRoughness: 0.2,
+        envMapIntensity: 1.05,
+        transparent: Boolean(source?.transparent),
+        opacity: source?.opacity ?? 1,
+        depthWrite: !source?.transparent,
+      });
+    });
+    child.castShadow = true;
+    child.receiveShadow = true;
+  });
 }
 
-const loadViewerApi = () =>
-  new Promise<void>((resolve, reject) => {
-    if (window.Sketchfab) {
-      resolve();
-      return;
-    }
+function ControllerAsset({ onError }: { onError: () => void }) {
+  const [model, setModel] = useState<Object3D | null>(null);
 
-    const existing = document.getElementById(API_SCRIPT_ID) as HTMLScriptElement | null;
-    if (existing) {
-      existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener("error", () => reject(new Error("Sketchfab Viewer API failed to load")), { once: true });
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.id = API_SCRIPT_ID;
-    script.src = `https://static.sketchfab.com/api/sketchfab-viewer-${SKETCHFAB_VERSION}.js`;
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Sketchfab Viewer API failed to load"));
-    document.head.appendChild(script);
-  });
-
-function tuneViewer(api: SketchfabApi) {
-  api.setTextureQuality("hd");
-  api.setShadingStyle("pbr", { type: "lit" });
-  api.setCameraEasing("easeOutCubic");
-  api.setUserInteraction(true, undefined);
-
-  // Keep the model's authored HDR environment, but force its real-time shadow path on.
-  api.getEnvironment((err, env) => {
-    if (err || !env) return;
-    api.setEnvironment(
-      {
-        ...env,
-        shadowEnabled: true,
-        exposure: Math.min(env.exposure ?? 1, 0.45),
-        lightIntensity: Math.min(env.lightIntensity ?? 1, 0.45),
+  useEffect(() => {
+    let mounted = true;
+    const materials = new MTLLoader();
+    materials.load(
+      "/models/Controller.mtl",
+      (creator) => {
+        creator.preload();
+        const loader = new OBJLoader();
+        loader.setMaterials(creator);
+        loader.load(
+          "/models/Controller.obj",
+          (object) => {
+            if (!mounted) return;
+            tuneModel(object);
+            setModel(object);
+          },
+          undefined,
+          () => mounted && onError(),
+        );
       },
       undefined,
+      () => mounted && onError(),
     );
-  });
+    return () => {
+      mounted = false;
+    };
+  }, [onError]);
 
-  // Enable the viewer's high-end screen-space lighting/reflection stack.
-  api.getPostProcessing((settings) => {
-    api.setPostProcessing({
-      ...settings,
-      enable: true,
-      ssaoEnable: true,
-      ssrEnable: true,
-      sharpenEnable: true,
-      toneMappingEnable: true,
-      toneMappingExposure: 1.04,
-      vignetteEnable: false,
-      grainEnable: false,
-      chromaticAberrationEnable: false,
-    });
-  });
-
-  // Preserve the model's authored light placement and color; only enable
-  // its shadow path so the shell does not get artificially over-lit.
-  [0, 1, 2].forEach((lightId) => {
-    api.getLight(lightId, (err, light) => {
-      if (err || !light || light.enabled === false) return;
-      api.setLight(lightId, { shadowEnabled: true });
-    });
-  });
-
-  api.setBackground({ transparent: true });
+  if (!model) return null;
+  return <primitive object={model} />;
 }
 
 export function SketchfabControllerViewer() {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const boot = async () => {
-      try {
-        await loadViewerApi();
-        if (cancelled || !iframeRef.current || !window.Sketchfab) return;
-
-        const client = new window.Sketchfab(SKETCHFAB_VERSION, iframeRef.current);
-        client.init(MODEL_UID, {
-          autostart: 1,
-          autospin: 0.28,
-          blending: 1,
-          camera: 0,
-          max_texture_size: 8192,
-          navigation: "orbit",
-          preload: 1,
-          scrollwheel: 0,
-          transparent: 1,
-          dnt: 1,
-          double_click: 0,
-          ui_controls: 0,
-          ui_general_controls: 0,
-          ui_help: 0,
-          ui_settings: 0,
-          ui_fullscreen: 0,
-          ui_vr: 0,
-          ui_ar: 0,
-          ui_annotations: 0,
-          ui_animations: 0,
-          ui_loading: 0,
-          ui_start: 0,
-          ui_fadeout: 0,
-          ui_infos: 0,
-          ui_inspector: 0,
-          ui_stop: 0,
-          ui_watermark: 0,
-          ui_watermark_link: 0,
-          ui_hint: 0,
-          dof_circle: 0,
-          ui_theme: "dark",
-          success(api) {
-            if (cancelled) return;
-            api.addEventListener("viewerready", () => {
-              if (!cancelled) tuneViewer(api);
-            });
-            api.start();
-          },
-          error() {
-            if (!cancelled) setFailed(true);
-          },
-        });
-      } catch {
-        if (!cancelled) setFailed(true);
-      }
-    };
-
-    void boot();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const [error, setError] = useState(false);
 
   return (
-    <div className="spectral-sketchfab-shell" data-render-quality="enhanced-pbr-ssr-ssao-hd">
-      <iframe
-        ref={iframeRef}
-        title="PS5 DualSense Controller — high quality interactive 3D model"
-        src=""
-        allow="autoplay; fullscreen; xr-spatial-tracking"
-        loading="eager"
-        referrerPolicy="strict-origin-when-cross-origin"
-      />
-      {failed ? (
+    <div className="spectral-sketchfab-shell spectral-local-controller-shell">
+      <Canvas
+        shadows
+        dpr={[1, 2]}
+        camera={{ position: [0, 0.2, 10.8], fov: 34, near: 0.1, far: 80 }}
+        gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+      >
+        <color attach="background" args={["#000000"]} />
+        <ambientLight intensity={0.28} />
+        <hemisphereLight args={["#8eeaff", "#02070b", 0.72]} />
+        <directionalLight
+          castShadow
+          position={[-5, 7, 6]}
+          intensity={1.55}
+          color="#dceff4"
+          shadow-mapSize-width={2048}
+          shadow-mapSize-height={2048}
+          shadow-bias={-0.00025}
+          shadow-normalBias={0.02}
+        />
+        <directionalLight position={[5, 1, -4]} intensity={0.7} color="#62dfff" />
+        <pointLight position={[0, 2, 5]} intensity={7} distance={18} decay={2} color="#bfefff" />
+        <Suspense fallback={null}>
+          <ControllerAsset onError={() => setError(true)} />
+        </Suspense>
+        <ContactShadows
+          position={[0, -2.55, 0]}
+          opacity={0.28}
+          scale={8.5}
+          blur={2.6}
+          far={5.4}
+          resolution={1024}
+          color="#001419"
+        />
+        <OrbitControls
+          makeDefault
+          enablePan={false}
+          enableZoom={false}
+          enableDamping
+          dampingFactor={0.075}
+          rotateSpeed={0.72}
+          autoRotate
+          autoRotateSpeed={0.52}
+          minPolarAngle={Math.PI * 0.28}
+          maxPolarAngle={Math.PI * 0.72}
+        />
+      </Canvas>
+
+      {error ? (
         <div className="spectral-model-fallback" aria-hidden="true">
-          <span>3D SIGNAL OFFLINE</span>
+          <span>LOCAL CONTROLLER ASSET OFFLINE</span>
         </div>
       ) : null}
     </div>

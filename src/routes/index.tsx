@@ -21,6 +21,7 @@ import {
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { LandingScene } from "@/components/landing/LandingScene";
 import { UploadedControllerScene } from "@/components/landing/UploadedControllerScene";
+import { StarDust } from "@/components/landing/StarDust";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -202,6 +203,7 @@ function LandingPage() {
         onPointerMove={trackPointer}
         className={`spectral-page ${ready ? "spectral-ready" : ""}`}
       >
+        <StarDust />
         <div className="spectral-noise" aria-hidden="true" />
         <div className="spectral-vignette" aria-hidden="true" />
 

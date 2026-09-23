@@ -19,7 +19,8 @@ import {
   Zap,
 } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Apex5ControllerScene, LandingScene } from "@/components/landing/LandingScene";
+import { LandingScene } from "@/components/landing/LandingScene";
+import { Apex5ControllerScene } from "@/components/landing/Apex5ControllerScene";
 
 export const Route = createFileRoute("/")({
   head: () => ({

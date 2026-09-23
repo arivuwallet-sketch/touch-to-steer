@@ -139,22 +139,39 @@ jobs:
           }
           New-Item -ItemType Directory -Force -Path "desktop-release" | Out-Null
 
-          npx --yes nativefier@52.0.0 `
-            --name "TouchToSteer — Spectral Control System" `
-            --platform windows `
-            --arch x64 `
-            --electron-version 25.7.0 `
-            --width 1280 `
-            --height 800 `
-            --icon "public/favicon.ico" `
-            --out "desktop-release" `
-            --overwrite `
-            "https://touch-to-steer.lovable.app/"
+          # Nativefier's CLI takes the destination as a positional argument
+          # after the target URL. Keep the destination explicit so the package
+          # is created inside desktop-release on Windows runners.
+          npx --yes nativefier@52.0.0 \
+            --name "TouchToSteer — Spectral Control System" \
+            --platform windows \
+            --arch x64 \
+            --electron-version 25.7.0 \
+            --width 1280 \
+            --height 800 \
+            --icon "public/favicon.ico" \
+            --overwrite \
+            "https://touch-to-steer.lovable.app/" \
+            "desktop-release"
 
-          $app = Get-ChildItem "desktop-release" -Directory | Select-Object -First 1
+          Write-Host "Nativefier output:"
+          Get-ChildItem "desktop-release" -Force | Format-Table -AutoSize | Out-String | Write-Host
+
+          $app = Get-ChildItem "desktop-release" -Directory -Recurse |
+            Where-Object { $_.Name -like "*-win32-x64" } |
+            Select-Object -First 1
+
           if (-not $app) {
+            Write-Host "Recursive desktop-release contents:"
+            Get-ChildItem "desktop-release" -Force -Recurse |
+              Select-Object FullName, Length |
+              Format-Table -AutoSize |
+              Out-String |
+              Write-Host
             throw "Nativefier Windows package directory was not created."
           }
+
+          Write-Host "Nativefier package directory: $($app.FullName)"
 
           $zipPath = "desktop-release/TouchToSteer — Spectral Control System-win32-x64.zip"
           Compress-Archive -Path "$($app.FullName)/*" -DestinationPath $zipPath -Force

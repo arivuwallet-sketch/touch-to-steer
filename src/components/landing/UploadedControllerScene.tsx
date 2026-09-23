@@ -85,7 +85,7 @@ function ControllerModel() {
     const box = new THREE.Box3().setFromObject(clone);
     const centre = box.getCenter(new THREE.Vector3());
     const dimensions = box.getSize(new THREE.Vector3());
-    const scale = 8.4 / Math.max(dimensions.x, dimensions.y, dimensions.z, 0.0001);
+    const scale = 5.8 / Math.max(dimensions.x, dimensions.y, dimensions.z, 0.0001);
 
     clone.position.sub(centre);
 
@@ -244,7 +244,7 @@ export function UploadedControllerScene() {
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: 0.95,
         }}
-        camera={{ position: [0, 0.8, 9.6], fov: 34 }}
+        camera={{ position: [0, 0.7, 10.4], fov: 32 }}
       >
         <ambientLight intensity={0.4} />
         <directionalLight

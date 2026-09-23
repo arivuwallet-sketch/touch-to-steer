@@ -1,8 +1,7 @@
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { ContactShadows, Environment, Float, Lightformer, useGLTF } from "@react-three/drei";
-import { ChromaticAberration, EffectComposer, Glitch, Noise, SMAA, SSAO, Scanline } from "@react-three/postprocessing";
-import { GlitchMode } from "postprocessing";
+import { ChromaticAberration, EffectComposer, Noise, SMAA, SSAO, Scanline } from "@react-three/postprocessing";
 import * as THREE from "three";
 import controllerAsset from "@/assets/controller.glb.asset.json";
 
@@ -173,10 +172,10 @@ function ControllerModel() {
     let gz = 0;
     if (glitching) {
       const fade = 1 - phase / 0.26;
-      gx = (Math.random() - 0.5) * 0.24 * fade;
-      gy = (Math.random() - 0.5) * 0.1 * fade;
-      gz = (Math.random() - 0.5) * 0.14 * fade;
-      inner.visible = Math.random() > 0.12;
+      gx = (Math.random() - 0.5) * 0.46 * fade;
+      gy = (Math.random() - 0.5) * 0.2 * fade;
+      gz = (Math.random() - 0.5) * 0.26 * fade;
+      inner.visible = Math.random() > 0.18;
     } else {
       inner.visible = true;
     }
@@ -186,10 +185,10 @@ function ControllerModel() {
     let hy = 0;
     let hr = 0;
     if (hovered.current) {
-      const t = clock.current * 46;
-      hx = Math.sin(t) * 0.02;
-      hy = Math.cos(t * 1.37) * 0.016;
-      hr = Math.sin(t * 0.83) * 0.012;
+      const t = clock.current * 58;
+      hx = Math.sin(t) * 0.05 + (Math.random() - 0.5) * 0.02;
+      hy = Math.cos(t * 1.37) * 0.04 + (Math.random() - 0.5) * 0.016;
+      hr = Math.sin(t * 0.83) * 0.03;
     }
 
     inner.position.set(gx + hx, gy + hy, gz);
@@ -315,15 +314,7 @@ export function UploadedControllerScene() {
             worldProximityThreshold={2}
             worldProximityFalloff={1}
           />
-          {/* RGB split + scanline tear bursts every ~2s, like the reference glitch art. */}
-          <Glitch
-            mode={GlitchMode.SPORADIC}
-            delay={new THREE.Vector2(1.6, 2.4)}
-            duration={new THREE.Vector2(0.14, 0.32)}
-            strength={new THREE.Vector2(0.18, 0.5)}
-            ratio={0.82}
-            columns={0.03}
-          />
+          {/* RGB split + scanlines, matching the reference glitch art. */}
           <ChromaticAberration offset={new THREE.Vector2(0.0016, 0.0022)} radialModulation={false} modulationOffset={0} />
           <Scanline density={1.45} opacity={0.12} />
           <Noise opacity={0.05} premultiply />

@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { LandingScene } from "@/components/landing/LandingScene";
-import { SketchfabControllerViewer } from "@/components/landing/SketchfabControllerViewer";
+import { LocalControllerViewer } from "@/components/landing/LocalControllerViewer";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -280,7 +280,7 @@ function LandingPage() {
           </div>
 
           <div className="spectral-controller-stage">
-            <SketchfabControllerViewer />
+            <LocalControllerViewer />
             <div className="spectral-model-glass" />
             <div className="spectral-stage-hud hud-tl">
               <span>DUALSENSE / 3D MODEL</span>

@@ -243,7 +243,7 @@ export function UploadedControllerScene() {
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: 0.95,
         }}
-        camera={{ position: [0, 1.0, 8.8], fov: 32 }}
+        camera={{ position: [0, 0.8, 9.6], fov: 34 }}
       >
         <ambientLight intensity={0.4} />
         <directionalLight

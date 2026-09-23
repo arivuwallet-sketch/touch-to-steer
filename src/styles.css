@@ -6714,3 +6714,107 @@ body {
     max-width: 70%;
   }
 }
+
+
+/* Portrait-target warning (Mouse mode): keep the same spectral gate design,
+   but present it as a vertical phone-sized surface when the physical viewport
+   is still landscape. This changes the composition only; no content is rotated. */
+@media (orientation: landscape) and (max-width: 860px) {
+  .spectral-orientation-gate.is-portrait-target {
+    padding: 8px;
+  }
+
+  .spectral-orientation-gate.is-portrait-target .spectral-orientation-shell {
+    width: min(430px, calc(100vw - 16px));
+    height: calc(100dvh - 16px);
+    min-height: 0;
+    padding: 12px;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .spectral-orientation-gate.is-portrait-target .spectral-orientation-main {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 4px 10px;
+    overflow: hidden;
+  }
+
+  .spectral-orientation-gate.is-portrait-target .spectral-orientation-copy {
+    width: 100%;
+    max-width: none;
+    text-align: center;
+  }
+
+  .spectral-orientation-gate.is-portrait-target .spectral-orientation-copy h2 {
+    font-size: clamp(2rem, 8vw, 3.3rem);
+  }
+
+  .spectral-orientation-gate.is-portrait-target .spectral-orientation-copy h2::after {
+    margin-inline: auto;
+  }
+
+  .spectral-orientation-gate.is-portrait-target .spectral-orientation-copy > p {
+    max-width: 360px;
+    margin-inline: auto;
+    font-size: 12px;
+  }
+
+  .spectral-orientation-gate.is-portrait-target .spectral-orientation-meta {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    margin-inline: auto;
+  }
+
+  .spectral-orientation-gate.is-portrait-target .spectral-orientation-meta > div {
+    min-height: 46px;
+    padding: 7px 5px;
+  }
+
+  .spectral-orientation-gate.is-portrait-target .spectral-orientation-meta strong {
+    font-size: 7px;
+  }
+
+  .spectral-orientation-gate.is-portrait-target .spectral-orientation-button {
+    width: min(320px, 100%);
+    justify-content: center;
+    margin-inline: auto;
+    margin-top: 15px;
+  }
+
+  .spectral-orientation-gate.is-portrait-target .spectral-orientation-hint {
+    max-width: 340px;
+    margin-inline: auto;
+    justify-content: center;
+    text-align: center;
+    font-size: 6px;
+  }
+
+  .spectral-orientation-gate.is-portrait-target .spectral-device-stage {
+    width: 100%;
+    height: 190px;
+    min-height: 0;
+    margin-top: 0;
+    flex: 0 0 auto;
+  }
+
+  .spectral-orientation-gate.is-portrait-target .spectral-device-frame {
+    width: 108px;
+    height: 205px;
+    transform: rotate(-9deg) scale(.66);
+  }
+
+  .spectral-orientation-gate.is-portrait-target .spectral-device-ring {
+    width: 215px;
+  }
+
+  .spectral-orientation-gate.is-portrait-target .spectral-device-label {
+    display: none;
+  }
+
+  .spectral-orientation-gate.is-portrait-target .spectral-orientation-status {
+    display: none;
+  }
+}

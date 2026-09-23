@@ -18,7 +18,7 @@ import {
   Wifi,
   Zap,
 } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { LandingScene } from "@/components/landing/LandingScene";
 import { UploadedControllerScene } from "@/components/landing/UploadedControllerScene";
 import { StarDust } from "@/components/landing/StarDust";
@@ -179,12 +179,128 @@ function FeatureCard({
 
 function LandingPage() {
   const [ready, setReady] = useState(false);
+  const [gyroSupported, setGyroSupported] = useState(false);
+  const [gyroEnabled, setGyroEnabled] = useState(false);
+  const gyroCleanupRef = useRef<(() => void) | null>(null);
+  const gyroBaselineRef = useRef<{ beta: number; gamma: number } | null>(null);
   const pageRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setReady(true), 1450);
     return () => window.clearTimeout(timer);
   }, []);
+
+  const startGyro = useCallback(async () => {
+    if (typeof window === "undefined") return;
+
+    const DeviceOrientation = window.DeviceOrientationEvent as typeof window.DeviceOrientationEvent & {
+      requestPermission?: () => Promise<"granted" | "denied">;
+    };
+
+    if (!DeviceOrientation) {
+      setGyroSupported(false);
+      return;
+    }
+
+    if (typeof DeviceOrientation.requestPermission === "function") {
+      try {
+        const permission = await DeviceOrientation.requestPermission();
+        if (permission !== "granted") {
+          setGyroEnabled(false);
+          return;
+        }
+      } catch {
+        setGyroEnabled(false);
+        return;
+      }
+    }
+
+    gyroCleanupRef.current?.();
+    gyroBaselineRef.current = null;
+
+    const onOrientation = (event: DeviceOrientationEvent) => {
+      const beta = typeof event.beta === "number" ? event.beta : null;
+      const gamma = typeof event.gamma === "number" ? event.gamma : null;
+      if (beta === null || gamma === null) return;
+
+      const screenAngle =
+        typeof window !== "undefined"
+          ? window.screen.orientation?.angle ??
+            (window as Window & { orientation?: number }).orientation ??
+            0
+          : 0;
+
+      let xTilt = gamma;
+      let yTilt = beta;
+
+      if (Math.abs(screenAngle) === 90) {
+        xTilt = screenAngle === 90 ? beta : -beta;
+        yTilt = screenAngle === 90 ? -gamma : gamma;
+      }
+
+      const baseline = gyroBaselineRef.current;
+      if (!baseline) {
+        gyroBaselineRef.current = { beta: xTilt, gamma: yTilt };
+        return;
+      }
+
+      const sensitivity = 1.5;
+      const x = Math.max(-1, Math.min(1, ((xTilt - baseline.beta) / 18) * sensitivity));
+      const y = Math.max(-1, Math.min(1, ((yTilt - baseline.gamma) / 18) * sensitivity));
+
+      window.dispatchEvent(
+        new CustomEvent("touch-to-steer:landing-gyro", {
+          detail: { x, y },
+        }),
+      );
+    };
+
+    const recalibrate = () => {
+      gyroBaselineRef.current = null;
+    };
+
+    window.addEventListener("deviceorientation", onOrientation, true);
+    window.addEventListener("orientationchange", recalibrate, { passive: true });
+    gyroCleanupRef.current = () => {
+      window.removeEventListener("deviceorientation", onOrientation, true);
+      window.removeEventListener("orientationchange", recalibrate);
+      gyroBaselineRef.current = null;
+      window.dispatchEvent(
+        new CustomEvent("touch-to-steer:landing-gyro", {
+          detail: { x: 0, y: 0 },
+        }),
+      );
+      setGyroEnabled(false);
+    };
+    setGyroEnabled(true);
+  }, []);
+
+  useEffect(() => {
+    const touchDevice =
+      navigator.maxTouchPoints > 0 ||
+      window.matchMedia("(pointer: coarse)").matches ||
+      window.matchMedia("(hover: none)").matches ||
+      /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+
+    if (!touchDevice || typeof window === "undefined") return;
+
+    const DeviceOrientation = window.DeviceOrientationEvent as typeof window.DeviceOrientationEvent & {
+      requestPermission?: () => Promise<"granted" | "denied">;
+    };
+
+    if (!DeviceOrientation) return;
+
+    setGyroSupported(true);
+
+    if (typeof DeviceOrientation.requestPermission !== "function") {
+      void startGyro();
+    }
+
+    return () => {
+      gyroCleanupRef.current?.();
+      gyroCleanupRef.current = null;
+    };
+  }, [startGyro]);
 
   const trackPointer = (event: React.PointerEvent<HTMLElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -263,6 +379,17 @@ function LandingPage() {
               <a href="#features" className="spectral-secondary">
                 Explore capability <ArrowDown size={16} />
               </a>
+              {gyroSupported && (
+                <button
+                  type="button"
+                  className={`spectral-gyro-toggle ${gyroEnabled ? "is-active" : ""}`}
+                  onClick={() => void startGyro()}
+                  aria-label={gyroEnabled ? "Recalibrate landing gyro" : "Enable landing gyro"}
+                >
+                  <span className="spectral-gyro-dot" />
+                  {gyroEnabled ? "GYRO 1.50× ACTIVE" : "ENABLE GYRO 1.50×"}
+                </button>
+              )}
             </div>
 
             <div className="spectral-mode-readout">

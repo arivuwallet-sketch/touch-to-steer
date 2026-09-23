@@ -104,6 +104,104 @@ const setupSteps = [
   { n: "03", title: "Take control", copy: "Open the controller and choose Gamepad, Steering or Mouse." },
 ];
 
+
+const systemMatrix = [
+  {
+    code: "01 / GAMEPAD",
+    title: "APEX-STYLE CONTROL DECK",
+    items: [
+      "D-pad + ABXY face buttons",
+      "L3 / R3 clickable analog sticks",
+      "LB / RB shoulder buttons",
+      "LT / RT analog ForceAdapt triggers",
+      "VIEW / MENU / HOME extra controls",
+      "Turbo rapid-repeat mode",
+      "Gyro aim with invert-Y support",
+      "FORCEFLEX 30 / 50 / 80 / 100 gf response profiles",
+      "Dead zone + linearity + stick sensitivity tuning",
+      "60 / 120 / 144 / 180 / 240 Hz controller transport",
+      "Phone haptics + visual 3D DualShock-style vibration feedback",
+    ],
+  },
+  {
+    code: "02 / STEERING",
+    title: "G29-STYLE DRIVING COCKPIT",
+    items: [
+      "Touch steering wheel with automatic return-to-centre",
+      "Tilt steering through device gyroscope",
+      "180° / 270° / 360° / 540° / 720° / 900° / 1080° lock range",
+      "3-clutch / brake / throttle pedal surface",
+      "Racing handbrake + analog travel",
+      "Nitro control",
+      "Shift / gear state + selector dial transport",
+      "G29-style telemetry gauges: speed / RPM / gear",
+      "Native NO SIGNAL state when telemetry is unavailable",
+      "FFB haptic assist around wheel movement / centre / lock edges",
+      "Dedicated steering sensitivity + max-tilt + invert-tilt controls",
+    ],
+  },
+  {
+    code: "03 / MOUSE",
+    title: "VIPER-STYLE PRECISION SURFACE",
+    items: [
+      "LMB / RMB click zones + middle wheel",
+      "Back / Forward side buttons (MB4 / MB5)",
+      "DPI output from 400 to 50,000",
+      "125 / 250 / 500 / 1000 / 2000 / 4000 / 8000 Hz polling target",
+      "Mouse sensitivity scaling + rotation",
+      "Magic-Remote-style gyro pointer",
+      "Center Sync to re-calibrate the pointer origin",
+      "Dynamic sensitivity with configurable maximum multiplier",
+      "Smart tracking with coalesced pointer events",
+      "Asymmetric lift-off / landing tuning",
+      "Independent X / Y inversion",
+      "Viper V4 Pro / FPS Precision / Desktop 1:1 software profiles",
+    ],
+  },
+  {
+    code: "04 / BRIDGE",
+    title: "REAL WINDOWS INPUT PATH",
+    items: [
+      "WebSocket phone → PC transport",
+      "Universal XInput + DirectInput/HID-compatible output",
+      "XInput-only and DualShock 4 / HID output modes",
+      "Up to 4 simultaneous XInput players",
+      "Immediate digital edge packets for fast taps",
+      "Immediate analog-state packets + continuous refresh watchdog",
+      "Native Windows mouse injection path",
+      "Connection status + latency reporting",
+      "Saved settings stored locally on the phone",
+    ],
+  },
+  {
+    code: "05 / SIGNAL + MOTION",
+    title: "SPECTRAL INTERACTION LAYER",
+    items: [
+      "Landing-page 3D controller viewer using the current controller asset",
+      "Pointer-following controller pose + drag / rotate interaction",
+      "Live phone gyro driving the landing controller at 1.50× sensitivity",
+      "Gyro-driven star-dust particle parallax at the same 1.50× response",
+      "Cyan / violet / green spectral glow system",
+      "Animated scanlines, orbit rings, noise and vignette layers",
+      "Responsive portrait + landscape layouts",
+      "Orientation gate with fullscreen + orientation-lock request",
+    ],
+  },
+  {
+    code: "06 / FEEL + SAFETY",
+    title: "FEEDBACK / CONTROL INTEGRITY",
+    items: [
+      "Input haptics are rate-limited and sent without blocking controller packets",
+      "Trigger pressure-aware response when touch/pen pressure is available",
+      "Automatic release on blur / page hide / visibility changes",
+      "Mode changes clear the previous controller state",
+      "Reduced-motion accessibility handling",
+      "Touch-first controls use compositor-friendly transforms",
+      "Unsupported telemetry stays clean instead of inventing values",
+    ],
+  },
+];
+
 function GhostMark() {
   return (
     <svg viewBox="0 0 512 512" aria-hidden="true" className="spectral-ghost-mark">
@@ -435,6 +533,33 @@ function LandingPage() {
 
           <div className="spectral-feature-grid">
             {featureCards.map((item) => <FeatureCard key={item.code} {...item} />)}
+          </div>
+
+          <div className="spectral-system-matrix">
+            <div className="spectral-system-matrix-head">
+              <div>
+                <span>02A / COMPLETE FEATURE MATRIX</span>
+                <h3>Nothing hidden behind the controller.</h3>
+              </div>
+              <p>Every current control surface, tuning option, feedback layer and transport feature is documented here — including the latest 1.50× landing gyro update.</p>
+            </div>
+
+            <div className="spectral-system-matrix-grid">
+              {systemMatrix.map((group) => (
+                <article key={group.code} className="spectral-system-matrix-card">
+                  <div className="spectral-system-matrix-code">{group.code}</div>
+                  <h4>{group.title}</h4>
+                  <div className="spectral-system-matrix-list">
+                    {group.items.map((item) => (
+                      <div key={item}>
+                        <span />
+                        <p>{item}</p>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </div>
           </div>
 
           <div className="spectral-product-band">

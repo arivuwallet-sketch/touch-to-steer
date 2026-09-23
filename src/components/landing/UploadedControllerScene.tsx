@@ -37,6 +37,7 @@ function ControllerModel() {
   const velocity = useRef({ x: 0, y: 0 });
   const offset = useRef({ x: 0, y: 0 });
   const pointer = useRef({ x: 0, y: 0 });
+  const gyro = useRef({ x: 0, y: 0 });
   const hovered = useRef(false);
   const clock = useRef(0);
   const { size, gl } = useThree();
@@ -125,13 +126,21 @@ function ControllerModel() {
     const stop = () => {
       drag.current.mode = null;
     };
+    const onGyro = (event: Event) => {
+      const detail = (event as CustomEvent<{ x?: number; y?: number }>).detail;
+      gyro.current.x = Number.isFinite(detail?.x) ? Math.max(-1, Math.min(1, detail.x as number)) : 0;
+      gyro.current.y = Number.isFinite(detail?.y) ? Math.max(-1, Math.min(1, detail.y as number)) : 0;
+    };
+
     window.addEventListener("pointermove", onMove, { passive: true });
     window.addEventListener("pointerup", stop);
     window.addEventListener("pointercancel", stop);
+    window.addEventListener("touch-to-steer:landing-gyro", onGyro);
     return () => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", stop);
       window.removeEventListener("pointercancel", stop);
+      window.removeEventListener("touch-to-steer:landing-gyro", onGyro);
     };
   }, []);
 
@@ -159,10 +168,22 @@ function ControllerModel() {
       spin.current.x = THREE.MathUtils.lerp(spin.current.x, 0.1 + pointer.current.y * 0.18, 0.03);
     }
 
-    group.rotation.y = spin.current.y + pointer.current.x * 0.12;
-    group.rotation.x = spin.current.x;
-    group.position.x = THREE.MathUtils.lerp(group.position.x, offset.current.x, 0.18);
-    group.position.y = THREE.MathUtils.lerp(group.position.y, offset.current.y, 0.18);
+    const gyroX = gyro.current.x;
+    const gyroY = gyro.current.y;
+
+    group.rotation.y = spin.current.y + pointer.current.x * 0.12 + gyroX * 0.18;
+    group.rotation.x = spin.current.x + gyroY * 0.13;
+    group.rotation.z = gyroX * 0.045;
+    group.position.x = THREE.MathUtils.lerp(
+      group.position.x,
+      offset.current.x + gyroX * 0.34,
+      0.18,
+    );
+    group.position.y = THREE.MathUtils.lerp(
+      group.position.y,
+      offset.current.y - gyroY * 0.24,
+      0.18,
+    );
 
     // Ghost glitch: a short burst of displacement/flicker every 2 seconds.
     const phase = clock.current % 2;

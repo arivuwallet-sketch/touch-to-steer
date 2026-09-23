@@ -271,14 +271,29 @@ export function UploadedControllerScene() {
         </Suspense>
 
         <ContactShadows
-          position={[0, -1.9, 0]}
-          opacity={0.34}
-          scale={9}
-          blur={2.6}
-          far={5}
+          position={[0, -2.9, 0]}
+          opacity={0.42}
+          scale={16}
+          blur={2.8}
+          far={7}
           resolution={1024}
           color="#00141a"
         />
+
+        <EffectComposer multisampling={0} enableNormalPass>
+          <SSAO
+            samples={24}
+            radius={0.12}
+            intensity={22}
+            luminanceInfluence={0.5}
+            color={new THREE.Color("#001018")}
+            worldDistanceThreshold={8}
+            worldDistanceFalloff={2}
+            worldProximityThreshold={2}
+            worldProximityFalloff={1}
+          />
+          <SMAA />
+        </EffectComposer>
       </Canvas>
     </div>
   );

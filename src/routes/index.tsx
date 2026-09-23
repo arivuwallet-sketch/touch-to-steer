@@ -120,18 +120,15 @@ function Preloader({ ready }: { ready: boolean }) {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    let frame = 0;
     const timer = window.setInterval(() => {
       setProgress((value) => {
-        const next = value + (value < 72 ? 7 : value < 92 ? 3 : 1);
+        const next = value + (value < 72 ? 7 : value < 92 ? 4 : 3);
         if (next >= 100) {
           window.clearInterval(timer);
           return 100;
         }
         return next;
       });
-      frame += 1;
-      if (frame > 55) window.clearInterval(timer);
     }, 55);
 
     return () => window.clearInterval(timer);

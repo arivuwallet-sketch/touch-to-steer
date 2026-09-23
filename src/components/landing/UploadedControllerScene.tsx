@@ -114,7 +114,7 @@ function ControllerModel() {
   }, []);
 
   useEffect(() => {
-    const group = root.current;
+    const group = shell.current;
     if (!group) return;
     group.add(model);
     return () => {
@@ -124,8 +124,10 @@ function ControllerModel() {
 
   useFrame((_, delta) => {
     const group = root.current;
-    if (!group) return;
+    const inner = shell.current;
+    if (!group || !inner) return;
     const dt = Math.min(delta, 0.05);
+    clock.current += dt;
 
     if (drag.current.mode !== "rotate") {
       velocity.current.x *= 0.92;
@@ -139,7 +141,46 @@ function ControllerModel() {
     group.rotation.x = spin.current.x;
     group.position.x = THREE.MathUtils.lerp(group.position.x, offset.current.x, 0.18);
     group.position.y = THREE.MathUtils.lerp(group.position.y, offset.current.y, 0.18);
+
+    // Ghost glitch: a short burst of displacement/flicker every 2 seconds.
+    const phase = clock.current % 2;
+    const glitching = phase < 0.26;
+    let gx = 0;
+    let gy = 0;
+    let gz = 0;
+    if (glitching) {
+      const fade = 1 - phase / 0.26;
+      gx = (Math.random() - 0.5) * 0.24 * fade;
+      gy = (Math.random() - 0.5) * 0.1 * fade;
+      gz = (Math.random() - 0.5) * 0.14 * fade;
+      inner.visible = Math.random() > 0.12;
+    } else {
+      inner.visible = true;
+    }
+
+    // Hover vibration: a fast, tight shake while the cursor is on the controller.
+    let hx = 0;
+    let hy = 0;
+    let hr = 0;
+    if (hovered.current) {
+      const t = clock.current * 46;
+      hx = Math.sin(t) * 0.02;
+      hy = Math.cos(t * 1.37) * 0.016;
+      hr = Math.sin(t * 0.83) * 0.012;
+    }
+
+    inner.position.set(gx + hx, gy + hy, gz);
+    inner.rotation.z = gz * 0.5 + hr;
   });
+
+  const handleOver = (event: ThreeEvent<PointerEvent>) => {
+    event.stopPropagation();
+    hovered.current = true;
+  };
+
+  const handleOut = () => {
+    hovered.current = false;
+  };
 
   const handleDown = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();

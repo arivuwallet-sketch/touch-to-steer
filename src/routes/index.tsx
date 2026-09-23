@@ -121,20 +121,17 @@ function Preloader({ ready }: { ready: boolean }) {
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      setProgress((value) => {
-        const next = value + (value < 72 ? 7 : value < 92 ? 4 : 3);
-        if (next >= 100) {
-          window.clearInterval(timer);
-          return 100;
-        }
-        return next;
-      });
+      setProgress((value) => Math.min(100, value + (value < 72 ? 7 : 4)));
     }, 55);
 
     return () => window.clearInterval(timer);
   }, []);
 
-  const visible = !ready || progress < 100;
+  useEffect(() => {
+    if (ready) setProgress(100);
+  }, [ready]);
+
+  const visible = !ready;
 
   return (
     <div className={`spectral-preloader ${visible ? "" : "spectral-preloader-hide"}`}>

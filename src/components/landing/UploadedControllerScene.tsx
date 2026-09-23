@@ -30,12 +30,15 @@ type Drag = { mode: "rotate" | "move" | null; x: number; y: number };
 function ControllerModel() {
   const { scene } = useGLTF(MODEL_URL, true);
   const root = useRef<THREE.Group>(null);
+  const shell = useRef<THREE.Group>(null);
   const drag = useRef<Drag>({ mode: null, x: 0, y: 0 });
   const spin = useRef({ x: 0.12, y: 0.35 });
   const velocity = useRef({ x: 0, y: 0 });
   const offset = useRef({ x: 0, y: 0 });
   const pointer = useRef({ x: 0, y: 0 });
-  const { size } = useThree();
+  const hovered = useRef(false);
+  const clock = useRef(0);
+  const { size, gl } = useThree();
 
   // Auto-skin + auto-fit: clone the GLB, retune every material from the palette,
   // then centre and normalise the model so any export scale looks right.

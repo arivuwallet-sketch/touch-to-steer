@@ -6818,3 +6818,69 @@ body {
     display: none;
   }
 }
+
+
+/* Landing gyro control: compact spectral HUD treatment, visible on devices
+   with motion sensors without disturbing the desktop hero composition. */
+.spectral-gyro-toggle {
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 13px;
+  border: 1px solid rgba(71, 228, 255, .17);
+  border-radius: 12px;
+  color: rgba(220, 244, 249, .58);
+  background:
+    linear-gradient(135deg, rgba(53, 225, 255, .06), rgba(126, 79, 255, .05)),
+    rgba(4, 12, 17, .7);
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.05),
+    0 0 24px rgba(42,216,255,.04);
+  backdrop-filter: blur(12px);
+  cursor: pointer;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  transition: transform .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease;
+}
+
+.spectral-gyro-toggle:hover {
+  transform: translateY(-1px);
+  border-color: rgba(71, 228, 255, .34);
+  color: #e7fcff;
+}
+
+.spectral-gyro-toggle.is-active {
+  border-color: rgba(112, 255, 193, .34);
+  color: rgba(224, 255, 242, .86);
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.07),
+    0 0 28px rgba(75, 239, 190, .08);
+}
+
+.spectral-gyro-dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: rgba(98, 225, 255, .42);
+  box-shadow: 0 0 8px rgba(72, 224, 255, .3);
+}
+
+.spectral-gyro-toggle.is-active .spectral-gyro-dot {
+  background: #70ffc1;
+  box-shadow: 0 0 12px rgba(112, 255, 193, .82);
+  animation: spectral-pulse 1.8s ease-in-out infinite;
+}
+
+@media (max-width: 760px) {
+  .spectral-gyro-toggle {
+    width: 100%;
+    justify-content: center;
+    min-height: 48px;
+    padding-inline: 12px;
+    font-size: 8px;
+  }
+}

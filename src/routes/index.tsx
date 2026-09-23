@@ -487,9 +487,19 @@ function LandingPage() {
                   Download for Windows
                 </a>
               </div>
-              <a href="#features" className="spectral-secondary">
-                Explore capability <ArrowDown size={16} />
-              </a>
+              <div className="spectral-explore-stack">
+                <a href="#features" className="spectral-secondary">
+                  Explore capability <ArrowDown size={16} />
+                </a>
+                <a
+                  href="https://github.com/arivuwallet-sketch/touch-to-steer/releases/download/bridge-latest/TouchToSteer-Android.apk"
+                  className="spectral-android-download"
+                  aria-label="Download TouchToSteer Android APK"
+                >
+                  <Download size={15} />
+                  Download for Android — APK
+                </a>
+              </div>
               {gyroSupported && (
                 <button
                   type="button"

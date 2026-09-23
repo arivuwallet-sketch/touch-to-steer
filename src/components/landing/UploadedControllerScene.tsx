@@ -1,8 +1,7 @@
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { ContactShadows, Environment, Float, Lightformer, useGLTF } from "@react-three/drei";
-import { ChromaticAberration, EffectComposer, Glitch, Noise, SMAA, SSAO, Scanline } from "@react-three/postprocessing";
-import { GlitchMode } from "postprocessing";
+import { ChromaticAberration, EffectComposer, Noise, SMAA, SSAO, Scanline } from "@react-three/postprocessing";
 import * as THREE from "three";
 import controllerAsset from "@/assets/controller.glb.asset.json";
 

@@ -160,7 +160,6 @@ function ControllerModel() {
       onPointerMove={handleMove}
       onDoubleClick={handleDouble}
     >
-      <primitive object={model} />
     </group>
   );
 }

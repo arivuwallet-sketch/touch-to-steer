@@ -108,7 +108,8 @@ function tuneViewer(api: SketchfabApi) {
       {
         ...env,
         shadowEnabled: true,
-        lightIntensity: Math.max(env.lightIntensity ?? 1, 1),
+        exposure: Math.min(env.exposure ?? 1, 0.45),
+        lightIntensity: Math.min(env.lightIntensity ?? 1, 0.45),
       },
       undefined,
     );
@@ -121,7 +122,6 @@ function tuneViewer(api: SketchfabApi) {
       enable: true,
       ssaoEnable: true,
       ssrEnable: true,
-      bloomEnable: true,
       sharpenEnable: true,
       toneMappingEnable: true,
       toneMappingExposure: 1.04,
@@ -131,24 +131,12 @@ function tuneViewer(api: SketchfabApi) {
     });
   });
 
-  // Retain authored light placement/colors while enabling shadow casting and adding a
-  // subtle cool fill so the asset sits naturally inside the spectral cyan background.
+  // Preserve the model's authored light placement and color; only enable
+  // its shadow path so the shell does not get artificially over-lit.
   [0, 1, 2].forEach((lightId) => {
     api.getLight(lightId, (err, light) => {
       if (err || !light || light.enabled === false) return;
-      const baseIntensity = Math.min(light.intensity ?? 1, 1);
-      api.setLight(lightId, {
-        shadowEnabled: true,
-        intensity: baseIntensity,
-        color:
-          light.color && light.color.length >= 3
-            ? [
-                Math.max(light.color[0], 0.55),
-                Math.max(light.color[1], 0.72),
-                Math.max(light.color[2], 0.86),
-              ]
-            : [0.72, 0.9, 1],
-      });
+      api.setLight(lightId, { shadowEnabled: true });
     });
   });
 
@@ -170,7 +158,7 @@ export function SketchfabControllerViewer() {
         const client = new window.Sketchfab(SKETCHFAB_VERSION, iframeRef.current);
         client.init(MODEL_UID, {
           autostart: 1,
-          autospin: 0,
+          autospin: 0.28,
           blending: 1,
           camera: 0,
           max_texture_size: 8192,

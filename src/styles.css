@@ -5785,3 +5785,33 @@ html {
     opacity: 0.4;
   }
 }
+
+
+/* Mobile landing scrolling: keep the immersive layers from hijacking the
+   browser's vertical pan gesture while preserving touch interaction elsewhere. */
+html,
+body {
+  touch-action: pan-y;
+}
+
+.spectral-page {
+  touch-action: pan-y;
+  overscroll-behavior-y: auto;
+}
+
+.spectral-hero,
+.spectral-controller-stage,
+.spectral-local-controller-shell {
+  touch-action: pan-y;
+}
+
+@media (max-width: 760px) {
+  .spectral-page {
+    min-height: 100%;
+  }
+
+  body:has(.spectral-page) {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+}

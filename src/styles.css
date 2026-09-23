@@ -5873,3 +5873,680 @@ body {
     overflow: visible !important;
   }
 }
+
+
+/* =========================================================
+   SPECTRAL ORIENTATION GATE
+   Same visual language as the landing page: deep signal field,
+   cyan/violet/green glow, ghost mark, glass HUD panels and scan motion.
+   ========================================================= */
+
+.spectral-orientation-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  color: #edf8ff;
+  background:
+    radial-gradient(55vw 45vw at 72% 28%, rgba(53, 222, 255, .12), transparent 68%),
+    radial-gradient(48vw 42vw at 18% 78%, rgba(108, 75, 255, .10), transparent 72%),
+    linear-gradient(180deg, #020509 0%, #05090e 50%, #03060a 100%);
+  font-family: "Rajdhani", sans-serif;
+}
+
+.spectral-orientation-gate::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(74, 218, 255, .04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(74, 218, 255, .04) 1px, transparent 1px);
+  background-size: 54px 54px;
+  mask-image: linear-gradient(to bottom, #000 0, transparent 90%);
+  opacity: .52;
+}
+
+.spectral-orientation-gate::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.012) 1px, transparent 1px);
+  background-size: 3px 3px, 7px 7px;
+  mix-blend-mode: screen;
+  opacity: .11;
+}
+
+.spectral-orientation-noise {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: .07;
+  mix-blend-mode: screen;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.9'/%3E%3C/svg%3E");
+}
+
+.spectral-orientation-grid {
+  position: absolute;
+  inset: 9%;
+  border: 1px solid rgba(94, 227, 255, .06);
+  border-radius: 32px;
+  pointer-events: none;
+  z-index: 1;
+  box-shadow:
+    inset 0 0 90px rgba(52, 219, 255, .025),
+    0 0 80px rgba(54, 221, 255, .025);
+}
+
+.spectral-orientation-orbit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(72vw, 900px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(66, 226, 255, .09);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.spectral-orientation-orbit-a {
+  transform: translate(-50%, -50%) rotate(14deg) scaleX(.82);
+  animation: spectral-orientation-orbit-a 16s linear infinite;
+}
+
+.spectral-orientation-orbit-b {
+  width: min(55vw, 680px);
+  transform: translate(-50%, -50%) rotate(-20deg) scaleY(.74);
+  border-color: rgba(130, 86, 255, .08);
+  animation: spectral-orientation-orbit-b 22s linear infinite reverse;
+}
+
+.spectral-orientation-scan {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  top: 18%;
+  height: 1px;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(66, 232, 255, .45), rgba(130, 91, 255, .35), transparent);
+  box-shadow: 0 0 18px rgba(65, 227, 255, .22);
+  animation: spectral-orientation-scan 5.8s ease-in-out infinite;
+}
+
+.spectral-orientation-shell {
+  position: relative;
+  z-index: 5;
+  width: min(1160px, calc(100% - 42px));
+  min-height: min(720px, calc(100dvh - 42px));
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  padding: 18px 26px 15px;
+  border: 1px solid rgba(153, 227, 239, .08);
+  border-radius: 24px;
+  background:
+    linear-gradient(145deg, rgba(9, 20, 28, .72), rgba(2, 7, 12, .84)),
+    radial-gradient(circle at 68% 44%, rgba(52, 221, 255, .055), transparent 34%);
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.06),
+    0 30px 100px rgba(0,0,0,.45),
+    0 0 70px rgba(41, 215, 255, .045);
+  backdrop-filter: blur(18px);
+}
+
+.spectral-orientation-topline,
+.spectral-orientation-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.spectral-orientation-topline {
+  min-height: 38px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid rgba(148, 223, 239, .07);
+}
+
+.spectral-orientation-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: "Chakra Petch", sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .19em;
+}
+
+.spectral-orientation-ghost {
+  width: 27px;
+  height: 27px;
+  display: grid;
+  place-items: center;
+  color: #efffff;
+  filter:
+    drop-shadow(0 0 6px rgba(255,255,255,.34))
+    drop-shadow(0 0 17px rgba(53,227,255,.26));
+  animation: spectral-orientation-ghost 3s ease-in-out infinite;
+}
+
+.spectral-orientation-ghost svg {
+  width: 100%;
+  height: 100%;
+}
+
+.spectral-orientation-status,
+.spectral-orientation-footer {
+  color: rgba(189, 219, 227, .35);
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.spectral-orientation-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.spectral-orientation-status span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #70ffc1;
+  box-shadow: 0 0 13px rgba(112,255,193,.85);
+  animation: spectral-pulse 2s ease-in-out infinite;
+}
+
+.spectral-orientation-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(320px, .95fr);
+  align-items: center;
+  gap: 7vw;
+  padding: 34px 5% 28px;
+}
+
+.spectral-orientation-copy {
+  max-width: 590px;
+}
+
+.spectral-orientation-kicker {
+  color: rgba(89, 227, 255, .64);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+}
+
+.spectral-orientation-copy h2 {
+  margin: 14px 0 0;
+  font-family: "Chakra Petch", sans-serif;
+  font-size: clamp(3rem, 6.4vw, 6.4rem);
+  line-height: .88;
+  letter-spacing: -.055em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.spectral-orientation-copy h2::after {
+  content: "";
+  display: block;
+  width: 84px;
+  height: 1px;
+  margin-top: 20px;
+  background: linear-gradient(90deg, #3ce8ff, #8860ff, transparent);
+  box-shadow: 0 0 12px rgba(60,232,255,.22);
+}
+
+.spectral-orientation-copy > p {
+  max-width: 540px;
+  margin: 21px 0 0;
+  color: rgba(199,220,229,.56);
+  font-size: 16px;
+  line-height: 1.52;
+}
+
+.spectral-orientation-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 27px;
+}
+
+.spectral-orientation-meta > div {
+  min-height: 58px;
+  padding: 10px 11px;
+  border-left: 1px solid rgba(71, 224, 255, .18);
+  background: linear-gradient(90deg, rgba(13, 28, 36, .44), transparent);
+}
+
+.spectral-orientation-meta span,
+.spectral-orientation-meta strong {
+  display: block;
+}
+
+.spectral-orientation-meta span {
+  color: rgba(94, 226, 255, .42);
+  font-size: 6px;
+  font-weight: 900;
+  letter-spacing: .16em;
+}
+
+.spectral-orientation-meta strong {
+  margin-top: 5px;
+  color: rgba(237,251,255,.78);
+  font-family: "Chakra Petch", sans-serif;
+  font-size: 9px;
+  letter-spacing: .08em;
+}
+
+.spectral-orientation-button {
+  margin-top: 24px;
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 17px;
+  border: 1px solid rgba(120,255,210,.32);
+  border-radius: 12px;
+  color: #f4ffff;
+  background:
+    linear-gradient(135deg, rgba(55,228,255,.18), rgba(121,90,255,.12)),
+    linear-gradient(180deg, rgba(16,37,45,.92), rgba(5,15,21,.96));
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.13),
+    0 0 35px rgba(49,219,255,.09),
+    0 16px 42px rgba(0,0,0,.26);
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .17em;
+  text-transform: uppercase;
+  transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+}
+
+.spectral-orientation-button:hover {
+  transform: translateY(-2px);
+  border-color: rgba(120,255,210,.58);
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.18),
+    0 0 46px rgba(49,219,255,.18),
+    0 20px 44px rgba(0,0,0,.34);
+}
+
+.spectral-orientation-button svg:last-child {
+  color: rgba(104,235,255,.75);
+}
+
+.spectral-orientation-hint {
+  margin-top: 11px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: rgba(182,211,220,.32);
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+
+.spectral-device-stage {
+  position: relative;
+  min-height: 370px;
+  display: grid;
+  place-items: center;
+  isolation: isolate;
+}
+
+.spectral-device-aura {
+  position: absolute;
+  width: min(330px, 62vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(61,226,255,.15), transparent 44%),
+    radial-gradient(circle, rgba(119,81,255,.08), transparent 68%);
+  filter: blur(5px);
+  animation: spectral-orientation-aura 3.8s ease-in-out infinite;
+}
+
+.spectral-device-frame {
+  position: relative;
+  width: 108px;
+  height: 205px;
+  padding: 10px 8px;
+  border: 2px solid rgba(222,241,247,.38);
+  border-radius: 22px;
+  transform: rotate(-13deg);
+  background:
+    linear-gradient(145deg, #202b34, #070b10 50%, #161e25),
+    #05080c;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.26),
+    inset 0 -8px 18px rgba(0,0,0,.7),
+    0 24px 50px rgba(0,0,0,.55),
+    0 0 35px rgba(57,225,255,.09);
+  z-index: 4;
+  transition: transform .45s cubic-bezier(.16,1,.3,1);
+}
+
+.spectral-device-stage.is-landscape-target .spectral-device-frame {
+  width: 205px;
+  height: 108px;
+  transform: rotate(8deg);
+}
+
+.spectral-device-speaker {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  width: 25px;
+  height: 3px;
+  transform: translateX(-50%);
+  border-radius: 99px;
+  background: rgba(206,228,235,.28);
+  box-shadow: 0 0 5px rgba(255,255,255,.05);
+}
+
+.spectral-device-screen {
+  position: absolute;
+  inset: 11px 7px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(117,229,255,.18);
+  border-radius: 15px;
+  background:
+    radial-gradient(circle at 48% 44%, rgba(59,220,255,.16), transparent 42%),
+    linear-gradient(180deg, #03080d, #071019);
+  box-shadow: inset 0 0 24px rgba(53,224,255,.06);
+}
+
+.spectral-device-screen span {
+  color: rgba(99,229,255,.68);
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: .2em;
+}
+
+.spectral-device-screen strong {
+  color: rgba(239,253,255,.92);
+  font-family: "Chakra Petch", sans-serif;
+  font-size: 16px;
+  letter-spacing: .1em;
+}
+
+.spectral-device-signal {
+  position: absolute;
+  left: -30%;
+  right: -30%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(60,232,255,.5), rgba(133,91,255,.38), transparent);
+  animation: spectral-device-signal 2.8s ease-in-out infinite;
+}
+
+.signal-one { top: 35%; }
+.signal-two { top: 52%; animation-delay: .9s; opacity: .65; }
+.signal-three { top: 69%; animation-delay: 1.7s; opacity: .35; }
+
+.spectral-device-home {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 24px;
+  height: 3px;
+  transform: translateX(-50%);
+  border-radius: 99px;
+  background: rgba(207,230,237,.2);
+}
+
+.spectral-device-ring {
+  position: absolute;
+  width: 292px;
+  aspect-ratio: 1;
+  border: 1px solid rgba(61,226,255,.13);
+  border-radius: 50%;
+  transform: rotate(22deg) scaleX(.75);
+  animation: spectral-orientation-ring 9s linear infinite;
+}
+
+.spectral-device-ring::after {
+  content: "";
+  position: absolute;
+  inset: 13%;
+  border: 1px dashed rgba(124,82,255,.14);
+  border-radius: 50%;
+}
+
+.spectral-device-label {
+  position: absolute;
+  right: 2%;
+  bottom: 4%;
+  padding: 8px 10px;
+  border-right: 1px solid rgba(82,227,255,.34);
+  background: linear-gradient(270deg, rgba(3,14,20,.72), transparent);
+  color: rgba(220,246,250,.48);
+  font-size: 6px;
+  font-weight: 900;
+  letter-spacing: .16em;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.spectral-orientation-footer {
+  min-height: 34px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(148,223,239,.07);
+}
+
+.spectral-orientation-footer span:last-child {
+  color: rgba(112,255,193,.42);
+}
+
+@keyframes spectral-orientation-orbit-a {
+  from { transform: translate(-50%, -50%) rotate(14deg) scaleX(.82); }
+  to { transform: translate(-50%, -50%) rotate(374deg) scaleX(.82); }
+}
+
+@keyframes spectral-orientation-orbit-b {
+  from { transform: translate(-50%, -50%) rotate(-20deg) scaleY(.74); }
+  to { transform: translate(-50%, -50%) rotate(340deg) scaleY(.74); }
+}
+
+@keyframes spectral-orientation-scan {
+  0%, 100% { top: 17%; opacity: 0; }
+  15% { opacity: .9; }
+  52% { opacity: .75; }
+  86% { opacity: .1; }
+  100% { top: 83%; }
+}
+
+@keyframes spectral-orientation-ghost {
+  0%, 100% { transform: translateY(0) scale(.98); opacity: .84; }
+  50% { transform: translateY(-3px) scale(1.03); opacity: 1; }
+}
+
+@keyframes spectral-orientation-aura {
+  0%, 100% { transform: scale(.92); opacity: .72; }
+  50% { transform: scale(1.06); opacity: 1; }
+}
+
+@keyframes spectral-device-signal {
+  0%, 100% { transform: translateX(-20%); opacity: 0; }
+  20% { opacity: .72; }
+  55% { opacity: .35; }
+  100% { transform: translateX(20%); opacity: 0; }
+}
+
+@keyframes spectral-orientation-ring {
+  from { transform: rotate(0deg) scaleX(.75); }
+  to { transform: rotate(360deg) scaleX(.75); }
+}
+
+@media (max-width: 860px) {
+  .spectral-orientation-shell {
+    width: min(100%, calc(100% - 20px));
+    min-height: calc(100dvh - 20px);
+    padding: 12px 14px 11px;
+    border-radius: 18px;
+  }
+
+  .spectral-orientation-main {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 24px 2% 14px;
+  }
+
+  .spectral-orientation-copy {
+    max-width: 640px;
+    margin-inline: auto;
+    text-align: center;
+  }
+
+  .spectral-orientation-copy h2 {
+    font-size: clamp(2.55rem, 12vw, 4.6rem);
+  }
+
+  .spectral-orientation-copy h2::after {
+    margin-inline: auto;
+  }
+
+  .spectral-orientation-copy > p {
+    margin-inline: auto;
+    font-size: 14px;
+  }
+
+  .spectral-orientation-meta {
+    max-width: 610px;
+    margin-inline: auto;
+  }
+
+  .spectral-orientation-button {
+    margin-top: 20px;
+  }
+
+  .spectral-device-stage {
+    min-height: 235px;
+    margin-top: -6px;
+  }
+
+  .spectral-device-frame {
+    transform: rotate(-10deg) scale(.82);
+  }
+
+  .spectral-device-stage.is-landscape-target .spectral-device-frame {
+    transform: rotate(7deg) scale(.88);
+  }
+
+  .spectral-device-ring {
+    width: 235px;
+  }
+
+  .spectral-orientation-footer span:nth-child(2) {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .spectral-orientation-topline {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .spectral-orientation-status {
+    max-width: 180px;
+    justify-content: flex-end;
+    text-align: right;
+    font-size: 6px;
+    line-height: 1.35;
+  }
+
+  .spectral-orientation-brand {
+    font-size: 9px;
+  }
+
+  .spectral-orientation-ghost {
+    width: 23px;
+    height: 23px;
+  }
+
+  .spectral-orientation-main {
+    padding-top: 18px;
+  }
+
+  .spectral-orientation-copy h2 {
+    font-size: clamp(2.35rem, 14vw, 4rem);
+  }
+
+  .spectral-orientation-copy > p {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .spectral-orientation-meta {
+    gap: 5px;
+  }
+
+  .spectral-orientation-meta > div {
+    min-height: 51px;
+    padding: 8px 6px;
+  }
+
+  .spectral-orientation-meta strong {
+    font-size: 7px;
+  }
+
+  .spectral-orientation-button {
+    width: min(100%, 330px);
+    justify-content: center;
+  }
+
+  .spectral-orientation-hint {
+    justify-content: center;
+    font-size: 6px;
+  }
+
+  .spectral-device-stage {
+    min-height: 205px;
+  }
+
+  .spectral-device-frame {
+    transform: rotate(-10deg) scale(.7);
+  }
+
+  .spectral-device-stage.is-landscape-target .spectral-device-frame {
+    transform: rotate(7deg) scale(.7);
+  }
+
+  .spectral-device-label {
+    font-size: 5px;
+    right: 0;
+  }
+
+  .spectral-orientation-footer {
+    font-size: 5px;
+    gap: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spectral-orientation-gate *,
+  .spectral-orientation-gate *::before,
+  .spectral-orientation-gate *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

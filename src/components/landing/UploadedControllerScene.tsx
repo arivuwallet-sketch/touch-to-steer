@@ -56,7 +56,7 @@ function ControllerModel() {
         const base = source as THREE.MeshStandardMaterial;
         const skin = SKIN[(base.name ?? "").trim().toLowerCase()];
         const next = base.clone() as THREE.MeshStandardMaterial;
-        next.envMapIntensity = 0.95;
+        next.envMapIntensity = 0.55;
         // Anisotropic filtering: keeps textures crisp at grazing angles.
         const maxAniso = gl.capabilities.getMaxAnisotropy();
         for (const slot of ["map", "normalMap", "roughnessMap", "metalnessMap", "aoMap"] as const) {
@@ -242,27 +242,27 @@ export function UploadedControllerScene() {
           alpha: true,
           powerPreference: "high-performance",
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 0.95,
+          toneMappingExposure: 0.62,
         }}
         camera={{ position: [0, 0.7, 10.4], fov: 32 }}
       >
-        <ambientLight intensity={0.4} />
+        <ambientLight intensity={0.12} />
         <directionalLight
           position={[4.5, 7, 5]}
-          intensity={1.35}
-          color="#b7ecff"
+          intensity={0.7}
+          color="#cfe8ff"
           castShadow
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
           shadow-bias={-0.00015}
         />
-        <directionalLight position={[-4, 2, -2]} intensity={0.42} color="#6b7cff" />
-        <pointLight position={[0, 2.6, 2.8]} intensity={0.8} color="#4ce8ff" distance={9} decay={2} />
+        <directionalLight position={[-4, 2, -2]} intensity={0.16} color="#5566cc" />
+        <pointLight position={[0, 2.6, 2.8]} intensity={0.35} color="#4ce8ff" distance={9} decay={2} />
 
-        <Environment resolution={128}>
-          <Lightformer intensity={2.2} position={[0, 6, 2]} scale={[10, 10, 1]} />
-          <Lightformer intensity={1.3} color="#7fd4ff" position={[-6, 2, 1]} rotation-y={Math.PI / 2} scale={[10, 3, 1]} />
-          <Lightformer intensity={1.1} color="#9fb6ff" position={[6, 1, -2]} rotation-y={-Math.PI / 2} scale={[10, 3, 1]} />
+        <Environment resolution={256}>
+          <Lightformer intensity={1.1} position={[0, 6, 2]} scale={[10, 10, 1]} />
+          <Lightformer intensity={0.5} color="#7fd4ff" position={[-6, 2, 1]} rotation-y={Math.PI / 2} scale={[10, 3, 1]} />
+          <Lightformer intensity={0.4} color="#9fb6ff" position={[6, 1, -2]} rotation-y={-Math.PI / 2} scale={[10, 3, 1]} />
         </Environment>
 
         <Suspense fallback={null}>
@@ -273,7 +273,7 @@ export function UploadedControllerScene() {
 
         <ContactShadows
           position={[0, -2.9, 0]}
-          opacity={0.42}
+          opacity={0.6}
           scale={16}
           blur={2.8}
           far={7}

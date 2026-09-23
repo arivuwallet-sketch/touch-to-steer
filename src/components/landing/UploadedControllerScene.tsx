@@ -56,13 +56,8 @@ function Button({
         <planeGeometry args={[0.01, 0.01]} />
         <meshBasicMaterial transparent opacity={0} />
       </mesh>
-      <textLabel value={label} />
     </group>
   );
-}
-
-function textLabel({ value }: { value: string }) {
-  return null;
 }
 
 function DPad() {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { ContactShadows, Environment, useGLTF } from "@react-three/drei";
@@ -10,7 +10,7 @@ type HapticEventDetail = {
   intensity?: number;
 };
 
-function ControllerBody({ pulseRef }: { pulseRef: React.MutableRefObject<number> }) {
+function ControllerBody({ pulseRef }: { pulseRef: MutableRefObject<number> }) {
   const { scene } = useGLTF(MODEL_URL);
   const root = useMemo(() => {
     const clone = scene.clone(true);

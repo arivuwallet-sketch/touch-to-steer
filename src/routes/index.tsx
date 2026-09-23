@@ -114,6 +114,7 @@ const systemMatrix = [
       "L3 / R3 clickable analog sticks",
       "LB / RB shoulder buttons",
       "LT / RT analog ForceAdapt triggers",
+      "ForceAdapt profiles: regular / race / sniper / recoil / vibration / lock",
       "VIEW / MENU / HOME extra controls",
       "Turbo rapid-repeat mode",
       "Gyro aim with invert-Y support",
@@ -135,6 +136,7 @@ const systemMatrix = [
       "Nitro control",
       "Shift / gear state + selector dial transport",
       "G29-style telemetry gauges: speed / RPM / gear",
+      "PS3 / PS4 wheel-platform state support",
       "Native NO SIGNAL state when telemetry is unavailable",
       "FFB haptic assist around wheel movement / centre / lock edges",
       "Dedicated steering sensitivity + max-tilt + invert-tilt controls",
@@ -146,6 +148,7 @@ const systemMatrix = [
     items: [
       "LMB / RMB click zones + middle wheel",
       "Back / Forward side buttons (MB4 / MB5)",
+      "Phone vibration + optional short audio click/scroll feedback",
       "DPI output from 400 to 50,000",
       "125 / 250 / 500 / 1000 / 2000 / 4000 / 8000 Hz polling target",
       "Mouse sensitivity scaling + rotation",

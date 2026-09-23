@@ -236,10 +236,24 @@ export function useBridge(
           }
 
           if (msg.type === "ffb" && typeof msg.value === "number") {
+            const force = Math.max(-1, Math.min(1, msg.value));
             setTelemetry((prev) => ({
               ...prev,
-              ffb: Math.max(-1, Math.min(1, msg.value)),
+              ffb: force,
             }));
+
+            // Mirror PC force-feedback into the 3D controller chassis. This
+            // is intentionally visual and rate-safe; the phone's native
+            // vibration path remains handled by the controller UI.
+            if (Math.abs(force) > 0.04 && typeof window !== "undefined") {
+              window.dispatchEvent(
+                new CustomEvent("touch-to-steer:haptic", {
+                  detail: {
+                    intensity: Math.min(1, 0.18 + Math.abs(force) * 0.82),
+                  },
+                }),
+              );
+            }
           }
         } catch {
           /* ignore malformed frames */

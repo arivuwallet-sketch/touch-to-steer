@@ -55,8 +55,20 @@ function ControllerModel() {
       child.material = materials.map((source) => {
         const base = source as THREE.MeshStandardMaterial;
         const skin = SKIN[(base.name ?? "").trim().toLowerCase()];
-        const next = new THREE.MeshPhysicalMaterial();
-        THREE.MeshPhysicalMaterial.prototype.copy.call(next, base as unknown as THREE.MeshPhysicalMaterial);
+        const next = new THREE.MeshPhysicalMaterial({
+          name: base.name,
+          color: base.color?.clone?.() ?? new THREE.Color("#ffffff"),
+          map: base.map ?? null,
+          normalMap: base.normalMap ?? null,
+          roughnessMap: base.roughnessMap ?? null,
+          metalnessMap: base.metalnessMap ?? null,
+          aoMap: base.aoMap ?? null,
+          roughness: base.roughness ?? 0.5,
+          metalness: base.metalness ?? 0.2,
+          transparent: base.transparent,
+          opacity: base.opacity,
+          side: base.side,
+        });
         next.clearcoat = 0.35;
         next.clearcoatRoughness = 0.22;
         next.sheen = 0.12;

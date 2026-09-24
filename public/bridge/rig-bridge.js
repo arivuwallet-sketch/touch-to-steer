@@ -1197,32 +1197,28 @@ console.log(`EA WRC is not guessed: its native packet structure is configurable.
 console.log(`Wreckfest 2 native telemetry is supported by the game on UDP ${WRECKFEST2_PORT}, but its Pino packet is not decoded by this bridge yet rather than showing fabricated values.`);
 console.log("Live gauges use game telemetry only; no speed/RPM simulation is generated.");
 
-const FOREGROUND_GAME_COMMAND = String.raw\`
-Add-Type @"
-using System;
-using System.Text;
-using System.Runtime.InteropServices;
-public static class TtsWindow {
-  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
-  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
-  [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
-}
-"@;
-$hwnd=[TtsWindow]::GetForegroundWindow();
-if ($hwnd -eq [IntPtr]::Zero) { exit 0 }
-$sb=New-Object Text.StringBuilder 512;
-[TtsWindow]::GetWindowText($hwnd,$sb,$sb.Capacity) | Out-Null;
-[uint32]$pid=0;
-[TtsWindow]::GetWindowThreadProcessId($hwnd,[ref]$pid) | Out-Null;
-$p=Get-Process -Id $pid -ErrorAction SilentlyContinue;
-if ($p) {
-  [pscustomobject]@{
-    title=$sb.ToString();
-    process=$p.ProcessName;
-    path=$p.Path
-  } | ConvertTo-Json -Compress
-}
-\`;
+const FOREGROUND_GAME_COMMAND = [
+  'Add-Type @"',
+  "using System;",
+  "using System.Text;",
+  "using System.Runtime.InteropServices;",
+  "public static class TtsWindow {",
+  '  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();',
+  '  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);',
+  '  [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);',
+  "}",
+  '"@;',
+  '$hwnd=[TtsWindow]::GetForegroundWindow();',
+  'if ($hwnd -eq [IntPtr]::Zero) { exit 0 }',
+  '$sb=New-Object Text.StringBuilder 512;',
+  '[TtsWindow]::GetWindowText($hwnd,$sb,$sb.Capacity) | Out-Null;',
+  '[uint32]$pid=0;',
+  '[TtsWindow]::GetWindowThreadProcessId($hwnd,[ref]$pid) | Out-Null;',
+  '$p=Get-Process -Id $pid -ErrorAction SilentlyContinue;',
+  'if ($p) {',
+  '  [pscustomobject]@{title=$sb.ToString(); process=$p.ProcessName; path=$p.Path} | ConvertTo-Json -Compress',
+  '}',
+].join("\n");
 
 function readForegroundGame() {
   if (process.platform !== "win32") return null;
@@ -1297,8 +1293,8 @@ wss.on("connection", (ws) => {
 
   function disconnectSessionTargets() {
     stopHapticKeepalive(session);
-      targetSession.delete(entry.target);
     for (const entry of session.targets) {
+      targetSession.delete(entry.target);
       disconnectTarget(entry.target);
     }
     session.targets = [];
@@ -1308,7 +1304,6 @@ wss.on("connection", (ws) => {
     session.lastAppliedSeq = 0;
     controllerSessions.delete(session);
   }
-
   function createSessionTargets(requestedMode) {
     if (session.targets.length && session.mode === requestedMode) {
       return true;

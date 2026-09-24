@@ -264,6 +264,7 @@ export function SettingsPanel({
               <option value={144}>144 Hz</option>
               <option value={180}>180 Hz</option>
               <option value={240}>240 Hz</option>
+              <option value={333}>333 Hz · ~3 ms</option>
             </select>
           </Row>
           <Row label="Invert tilt">

@@ -47,18 +47,20 @@ function ControllerBody({ pulseRef }: { pulseRef: MutableRefObject<number> }) {
 
     const time = state.clock.elapsedTime;
     const shake = p * p;
-    const high = Math.sin(time * 78) * shake;
-    const low = Math.sin(time * 25.5) * shake;
+    const high = Math.sin(time * 92) * shake;
+    const low = Math.sin(time * 29) * shake;
 
-    root.position.x = high * 0.012;
-    root.position.y = low * 0.008;
-    root.position.z = Math.cos(time * 71) * shake * 0.006;
+    // A visible, layered DualShock-style chassis shake: a fast buzz sits on
+    // top of a slower body movement and rotational kick.
+    root.position.x = high * 0.026;
+    root.position.y = low * 0.018;
+    root.position.z = Math.cos(time * 83) * shake * 0.012;
 
-    root.rotation.x = -Math.PI * 0.5 + Math.sin(time * 46) * shake * 0.012;
-    root.rotation.y = Math.cos(time * 67) * shake * 0.014;
-    root.rotation.z = Math.sin(time * 54) * shake * 0.01;
+    root.rotation.x = -Math.PI * 0.5 + Math.sin(time * 52) * shake * 0.026;
+    root.rotation.y = Math.cos(time * 71) * shake * 0.03;
+    root.rotation.z = Math.sin(time * 61) * shake * 0.022;
 
-    pulseRef.current = Math.max(0, p - delta * 3.9);
+    pulseRef.current = Math.max(0, p - delta * 4.8);
   });
 
   return <primitive object={root} />;

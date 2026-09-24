@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import { applyCurve, applyForceFlex, FORCEFLEX_DESCRIPTIONS, type ControllerState, type JoystickTensionGf, type Settings } from "@/lib/controller-types";
+import { playDualRumble, type DualRumbleKind } from "@/lib/haptics";
 
 type Props = {
   settings: Settings;
@@ -12,8 +13,44 @@ type TriggerMode = "regular" | "race" | "sniper" | "recoil" | "vibration" | "loc
 
 // Haptics are deferred off the input task so a vibration call can never delay
 // the controller packet leaving the phone.
-const buzz = (enabled: boolean, pattern: number | number[] = 10) => {
+const buzz = (enabled: boolean, pattern: number | number[] = 10, kind: DualRumbleKind = "ui") => {
   if (!enabled || typeof window === "undefined") return;
+
+  const values = Array.isArray(pattern) ? pattern : [pattern];
+  const strongest = Math.max(...values, 0);
+  const intensity = Math.max(0.08, Math.min(1, strongest / 18 + values.length * 0.035));
+  const resolvedKind =
+    kind !== "ui"
+      ? kind
+      : strongest >= 15
+        ? "heavy"
+        : values.length >= 4
+          ? "heartbeat"
+          : intensity > 0.5
+            ? "light"
+            : "ui";
+
+  playDualRumble(resolvedKind, {
+    strongMagnitude:
+      resolvedKind === "heavy"
+        ? Math.max(0.72, intensity)
+        : resolvedKind === "ui"
+          ? 0
+          : Math.max(0.08, intensity * 0.55),
+    weakMagnitude:
+      resolvedKind === "heavy"
+        ? Math.max(0.6, intensity * 0.82)
+        : resolvedKind === "ui"
+          ? Math.max(0.2, intensity)
+          : Math.max(0.12, intensity * 0.8),
+    duration:
+      resolvedKind === "heavy"
+        ? Math.min(500, Math.max(300, strongest * 22))
+        : resolvedKind === "ui"
+          ? Math.min(50, Math.max(30, strongest + 28))
+          : Math.min(180, Math.max(45, strongest * 7)),
+  });
+};
 
   // The 3D controller listens to the same haptic event as the phone's
   // vibration motor, so every real input feedback event has a matching

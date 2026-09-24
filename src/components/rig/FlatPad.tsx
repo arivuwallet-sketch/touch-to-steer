@@ -526,30 +526,23 @@ function MiniScreen({
   turbo: boolean;
   gameName: string;
 }) {
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    const id = window.setInterval(() => setTick((v) => (v + 1) % 5), 1100);
-    return () => window.clearInterval(id);
-  }, []);
+  const displayGame = gameName.trim()
+    ? gameName.trim().replace(/\s+/g, " ").slice(0, 18).toUpperCase()
+    : "DESKTOP";
 
   return (
     <div className="flat-pad-screen flex h-[clamp(2.75rem,7.8svh,3.5rem)] w-[clamp(5rem,7vw,7rem)] flex-col items-center justify-center rounded-lg border border-cyan-300/25 bg-[#071018] shadow-[inset_0_0_14px_rgba(34,211,238,.12),0_0_12px_rgba(34,211,238,.1)]">
-      <span className="max-w-full overflow-hidden text-center text-[4.5px] font-black leading-none tracking-[0.09em] text-cyan-400/70 whitespace-nowrap">
-        APEX 5
+      <span className="max-w-full overflow-hidden text-center text-[4px] font-black leading-none tracking-[0.07em] text-cyan-400/70 whitespace-nowrap">
+        TOUCHTOSTEER • P1
       </span>
-      <span className="mt-0.5 max-w-full overflow-hidden text-center text-[4.5px] font-black leading-none tracking-[0.07em] text-cyan-300/65 whitespace-nowrap">
-        FORCEADAPT
+      <span
+        className="mt-1 max-w-[94%] overflow-hidden text-center text-[8px] font-mono font-bold leading-none text-cyan-200 whitespace-nowrap"
+        title={gameName}
+      >
+        {displayGame}
       </span>
-      <span className="mt-1 max-w-full overflow-hidden text-center text-[9px] font-mono font-bold leading-none text-cyan-200 whitespace-nowrap">
-        {tick === 0
-          ? (gameName.trim() ? gameName.trim().slice(0, 18).toUpperCase() : "DESKTOP")
-          : tick === 1
-            ? `P${profile}`
-            : tick === 2
-              ? triggerMode.toUpperCase()
-              : tick === 3
-                ? (motion ? "GYRO ON" : "GYRO OFF")
-                : (turbo ? "TURBO ON" : "READY")}
+      <span className="mt-1 max-w-full overflow-hidden text-center text-[4.5px] font-black leading-none tracking-[0.07em] text-cyan-300/65 whitespace-nowrap">
+        {triggerMode.toUpperCase()} • {motion ? "GYRO" : turbo ? "TURBO" : "READY"}
       </span>
     </div>
   );

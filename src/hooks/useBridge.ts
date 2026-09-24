@@ -35,6 +35,8 @@ export function useBridge(
   const [packets, setPackets] = useState(0);
   const [telemetry, setTelemetry] = useState<BridgeTelemetry>({});
   const [telemetryLive, setTelemetryLive] = useState(false);
+  const [activeGame, setActiveGame] = useState<string>("Desktop");
+  const [activeGameProcess, setActiveGameProcess] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const moveAccumRef = useRef({ dx: 0, dy: 0 });
   const moveFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -217,6 +219,74 @@ export function useBridge(
               lastLatencyPaintRef.current = t;
               setLatency(value);
             }
+            return;
+          }
+
+          if (msg.type === "haptic") {
+            if (!vibrationEnabled) return;
+
+            const strong = Math.max(
+              0,
+              Math.min(1, Number(msg.strongMagnitude ?? msg.large ?? 0)),
+            );
+            const weak = Math.max(
+              0,
+              Math.min(1, Number(msg.weakMagnitude ?? msg.small ?? 0)),
+            );
+            const duration = Math.max(
+              20,
+              Math.min(500, Number(msg.duration) || 70),
+            );
+            const kind =
+              msg.kind === "heavy" ||
+              msg.kind === "heartbeat" ||
+              msg.kind === "engine" ||
+              msg.kind === "gunfire" ||
+              msg.kind === "ui" ||
+              msg.kind === "light"
+                ? msg.kind
+                : strong >= 0.78 && weak >= 0.58
+                  ? "heavy"
+                  : strong <= 0.12 && weak >= 0.68
+                    ? "gunfire"
+                    : strong >= 0.28 && weak <= 0.08
+                      ? "heartbeat"
+                      : strong <= 0.34 && weak <= 0.24
+                        ? "engine"
+                        : "light";
+
+            playDualRumble(kind, {
+              strongMagnitude: strong,
+              weakMagnitude: weak,
+              duration,
+            });
+
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(
+                new CustomEvent("touch-to-steer:game-haptic", {
+                  detail: {
+                    kind,
+                    strongMagnitude: strong,
+                    weakMagnitude: weak,
+                    duration,
+                  },
+                }),
+              );
+            }
+            return;
+          }
+
+          if (msg.type === "game") {
+            const name =
+              typeof msg.name === "string" && msg.name.trim()
+                ? msg.name.trim()
+                : "Desktop";
+            setActiveGame(name);
+            setActiveGameProcess(
+              typeof msg.process === "string" && msg.process.trim()
+                ? msg.process.trim()
+                : null,
+            );
             return;
           }
 
@@ -427,6 +497,8 @@ export function useBridge(
     packets,
     telemetry,
     telemetryLive,
+    activeGame,
+    activeGameProcess,
     connect,
     disconnect,
     sendMouse,

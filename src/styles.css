@@ -8906,3 +8906,108 @@ body {
     font-size: 8px;
   }
 }
+
+
+/* Final spectral controls cleanup — icon-only mode dock and cool haptic-console controls. */
+.spectral-rig-mode-buttons .mode-switch-button {
+  min-width: 46px !important;
+  width: 46px !important;
+  min-height: 46px !important;
+  height: 46px !important;
+  padding: 0 !important;
+  grid-template-columns: 1fr !important;
+  place-items: center !important;
+}
+
+.spectral-rig-mode-buttons .mode-switch-button span,
+.spectral-rig-mode-buttons .mode-switch-button i {
+  display: none !important;
+}
+
+.spectral-rig-mode-buttons .mode-switch-button svg {
+  margin: 0 !important;
+  width: 19px !important;
+  height: 19px !important;
+}
+
+.spectral-settings-panel input[type="checkbox"] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 38px !important;
+  height: 21px !important;
+  min-width: 38px !important;
+  border: 1px solid rgba(96, 225, 255, .18) !important;
+  border-radius: 999px !important;
+  background: rgba(3, 10, 15, .9) !important;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.56), 0 0 0 1px rgba(255,255,255,.02) !important;
+  position: relative !important;
+  cursor: pointer !important;
+}
+
+.spectral-settings-panel input[type="checkbox"]::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 3px !important;
+  left: 3px !important;
+  width: 13px !important;
+  height: 13px !important;
+  border-radius: 50% !important;
+  background: rgba(168, 198, 208, .7) !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,.55) !important;
+  transition: transform .18s ease, background .18s ease, box-shadow .18s ease !important;
+}
+
+.spectral-settings-panel input[type="checkbox"]:checked {
+  border-color: rgba(75, 229, 255, .42) !important;
+  background: linear-gradient(90deg, rgba(48, 216, 242, .16), rgba(119, 86, 255, .18)) !important;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.5), 0 0 18px rgba(63, 221, 255, .07) !important;
+}
+
+.spectral-settings-panel input[type="checkbox"]:checked::before {
+  transform: translateX(17px) !important;
+  background: #c5f9ff !important;
+  box-shadow: 0 0 11px rgba(74, 227, 255, .38) !important;
+}
+
+.spectral-settings-panel input[type="checkbox"]:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(65, 225, 255, .08), 0 0 18px rgba(65, 225, 255, .08) !important;
+}
+
+.spectral-settings-panel input[type="range"] {
+  accent-color: #4de4ff !important;
+}
+
+.spectral-settings-panel .text-primary,
+.spectral-settings-panel a.text-primary {
+  color: rgba(91, 226, 255, .82) !important;
+}
+
+.spectral-settings-panel .text-orange-200,
+.spectral-settings-panel .text-orange-300,
+.spectral-settings-panel .text-orange-400,
+.spectral-settings-panel .text-amber-200,
+.spectral-settings-panel .text-amber-300 {
+  color: rgba(91, 226, 255, .8) !important;
+}
+
+.spectral-settings-panel a {
+  color: rgba(91, 226, 255, .74);
+}
+
+.spectral-settings-panel a:hover {
+  color: #eaffff !important;
+}
+
+@media (max-width: 720px) {
+  .spectral-rig-mode-buttons {
+    grid-template-columns: repeat(3, 46px) !important;
+    justify-content: end !important;
+  }
+
+  .spectral-rig-mode-buttons .mode-switch-button {
+    width: 46px !important;
+    min-width: 46px !important;
+    height: 46px !important;
+  }
+}

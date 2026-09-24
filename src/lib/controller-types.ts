@@ -66,6 +66,41 @@ export function applyForceFlex(v: number, tensionGf: JoystickTensionGf) {
   return Math.sign(v) * Math.pow(magnitude, exponent);
 }
 
+export type GamepadLayout = {
+  scale: number;
+  topScale: number;
+  topY: number;
+  leftScale: number;
+  leftX: number;
+  leftY: number;
+  centerScale: number;
+  centerX: number;
+  centerY: number;
+  rightScale: number;
+  rightX: number;
+  rightY: number;
+  bottomScale: number;
+  bottomY: number;
+};
+
+export type SteeringLayout = {
+  scale: number;
+  titleY: number;
+  telemetryScale: number;
+  telemetryY: number;
+  controlsScale: number;
+  controlsY: number;
+  wheelScale: number;
+  wheelX: number;
+  wheelY: number;
+  pedalsScale: number;
+  pedalsX: number;
+  pedalsY: number;
+  auxScale: number;
+  auxX: number;
+  auxY: number;
+};
+
 export type Settings = {
   bridgeUrl: string;
   /** Virtual PC controller output. Universal creates synchronized XInput + DirectInput/HID-compatible targets for broad legacy/modern coverage. */
@@ -107,6 +142,9 @@ export type Settings = {
   mouseLiftOffLevel: number;
   mouseLandingLevel: number;
   mouseProfile: string;
+  /** Per-mode visual layout controls. Values are intentionally cosmetic and do not alter input semantics. */
+  gamepadLayout: GamepadLayout;
+  steeringLayout: SteeringLayout;
 };
 
 export const defaultSettings: Settings = {
@@ -141,6 +179,39 @@ export const defaultSettings: Settings = {
   mouseLiftOffLevel: 0,
   mouseLandingLevel: 0,
   mouseProfile: "viper-v4-pro",
+  gamepadLayout: {
+    scale: 1,
+    topScale: 1,
+    topY: 0,
+    leftScale: 1,
+    leftX: 0,
+    leftY: 0,
+    centerScale: 1,
+    centerX: 0,
+    centerY: 0,
+    rightScale: 1,
+    rightX: 0,
+    rightY: 0,
+    bottomScale: 1,
+    bottomY: 0,
+  },
+  steeringLayout: {
+    scale: 1,
+    titleY: 0,
+    telemetryScale: 1,
+    telemetryY: 0,
+    controlsScale: 1,
+    controlsY: 0,
+    wheelScale: 1,
+    wheelX: 0,
+    wheelY: 0,
+    pedalsScale: 1,
+    pedalsX: 0,
+    pedalsY: 0,
+    auxScale: 1,
+    auxX: 0,
+    auxY: 0,
+  },
 };
 
 /** Tuned presets so each genre feels right without manual fiddling. */

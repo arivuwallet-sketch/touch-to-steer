@@ -5262,6 +5262,22 @@ html {
   letter-spacing: .18em;
 }
 
+.spectral-founder-credit {
+  font-size: 11px;
+  letter-spacing: .22em;
+  color: rgba(234, 253, 255, .72);
+  text-shadow:
+    0 0 10px rgba(73, 227, 255, .14),
+    0 0 22px rgba(125, 82, 255, .08);
+}
+
+@media (max-width: 760px) {
+  .spectral-founder-credit {
+    font-size: 12px;
+    letter-spacing: .2em;
+  }
+}
+
 .spectral-preloader {
   position: fixed;
   inset: 0;

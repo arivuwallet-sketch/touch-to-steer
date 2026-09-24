@@ -546,14 +546,38 @@ function sendGameRumble(session, strong, weak, source = "game") {
 
 function registerTargetHaptics(target) {
   if (!target?.on) return;
-  target.on("vibration", (data) => {
+
+  // ViGEmClient documents a combined "vibration" event and individual
+  // "large motor" / "small motor" events. Listen to every notification path
+  // so XInput and DS4 game rumble cannot get lost between targets/channels.
+  const motors = { large: 0, small: 0 };
+
+  const emit = () => {
     const session = targetSession.get(target);
     if (!session) return;
-    sendGameRumble(
-      session,
-      clampHaptic(data?.large),
-      clampHaptic(data?.small),
-    );
+    sendGameRumble(session, motors.large, motors.small);
+  };
+
+  target.on("vibration", (data) => {
+    motors.large = clampHaptic(data?.large);
+    motors.small = clampHaptic(data?.small);
+    emit();
+  });
+
+  target.on("large motor", (value) => {
+    motors.large = clampHaptic(value);
+    emit();
+  });
+
+  target.on("small motor", (value) => {
+    motors.small = clampHaptic(value);
+    emit();
+  });
+
+  target.on("notification", (data) => {
+    motors.large = clampHaptic(data?.LargeMotor ?? data?.large);
+    motors.small = clampHaptic(data?.SmallMotor ?? data?.small);
+    emit();
   });
 }
 
@@ -1396,7 +1420,7 @@ const FOREGROUND_GAME_COMMAND = [
   '[TtsWindow]::GetWindowThreadProcessId($hwnd,[ref]$pid) | Out-Null;',
   '$p=Get-Process -Id $pid -ErrorAction SilentlyContinue;',
   'if ($p) {',
-  '  [pscustomobject]@{title=$sb.ToString(); process=$p.ProcessName; path=$p.Path} | ConvertTo-Json -Compress',
+  '  [pscustomobject]@{title=$sb.ToString(); process=$p.ProcessName} | ConvertTo-Json -Compress',
   '}',
 ].join("\n");
 

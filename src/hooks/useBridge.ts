@@ -166,6 +166,13 @@ export function useBridge(
           /* socket may close immediately */
         }
 
+        // Connection cue also proves the asynchronous game-haptic lane is alive.
+        if (vibrationEnabled) playDualRumble("ui", {
+          strongMagnitude: 0,
+          weakMagnitude: 0.2,
+          duration: 40,
+        });
+
         let nextDue = nowMs();
 
         const pump = () => {

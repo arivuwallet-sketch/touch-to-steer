@@ -28,6 +28,7 @@ export function useBridge(
   stateRef: React.MutableRefObject<ControllerState>,
   rateHz: number,
   outputMode: "xinput" | "ds4" | "universal" = "xinput",
+  vibrationEnabled = true,
 ) {
   const [status, setStatus] = useState<BridgeStatus>("idle");
   const [latency, setLatency] = useState<number | null>(null);
@@ -246,7 +247,7 @@ export function useBridge(
             // Mirror PC force-feedback into the real dual-rumble path.
             // Strong force drives the heavy motor; softer force drives the
             // high-frequency motor while remaining rate-safe.
-            if (Math.abs(force) > 0.04) {
+            if (vibrationEnabled && Math.abs(force) > 0.04) {
               const magnitude = Math.abs(force);
               playDualRumble(magnitude >= 0.68 ? "heavy" : "engine", {
                 strongMagnitude: Math.min(1, 0.12 + magnitude * 0.88),
@@ -269,7 +270,7 @@ export function useBridge(
         }
       };
     },
-    [clearLoop, clearTelemetryTimer, disconnect, outputMode, rateHz, stateRef, stateSignature],
+    [clearLoop, clearTelemetryTimer, disconnect, outputMode, rateHz, stateRef, stateSignature, vibrationEnabled],
   );
 
   useEffect(

@@ -276,8 +276,6 @@ function Rig() {
               title="Gamepad controller"
             >
               <Gamepad2 />
-              <span>GAMEPAD</span>
-              <i>01</i>
             </Button>
             <Button
               onClick={() => setMode("wheel")}
@@ -289,8 +287,6 @@ function Rig() {
               title="Steering wheel controller"
             >
               <Gauge />
-              <span>STEERING</span>
-              <i>02</i>
             </Button>
             <Button
               onClick={() => setMode("mouse")}
@@ -302,8 +298,6 @@ function Rig() {
               title="Mouse controller"
             >
               <Mouse />
-              <span>MOUSE</span>
-              <i>03</i>
             </Button>
           </div>
         </div>

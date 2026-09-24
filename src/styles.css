@@ -9071,3 +9071,74 @@ body {
     height: 21px !important;
   }
 }
+
+
+/* FINAL CONTROLLER DOCK COMPACTNESS:
+   Keep mode switching + settings tight. M1-M4 use their original compact
+   mobile footprint and are intentionally not part of the mode dock sizing. */
+.spectral-rig-toolbar.mode-toolbar {
+  gap: 3px !important;
+  padding: 4px !important;
+}
+
+.spectral-rig-toolbar .spectral-rig-mode-switch {
+  min-width: 0 !important;
+  gap: 2px !important;
+}
+
+.spectral-rig-toolbar .spectral-rig-mode-buttons {
+  gap: 2px !important;
+}
+
+.spectral-rig-toolbar .spectral-rig-mode-buttons .mode-switch-button {
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 0 !important;
+}
+
+.spectral-rig-toolbar .spectral-rig-settings-trigger {
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+}
+
+.spectral-rig-toolbar .spectral-rig-mode-buttons .mode-switch-button svg,
+.spectral-rig-toolbar .spectral-rig-settings-trigger svg {
+  width: 17px !important;
+  height: 17px !important;
+}
+
+@media (pointer: coarse) {
+  .spectral-rig-toolbar.mode-toolbar {
+    gap: 3px !important;
+    padding: 3px !important;
+  }
+
+  .spectral-rig-toolbar .spectral-rig-mode-buttons .mode-switch-button,
+  .spectral-rig-toolbar .spectral-rig-settings-trigger {
+    width: 42px !important;
+    min-width: 42px !important;
+    height: 42px !important;
+    min-height: 42px !important;
+  }
+
+  .spectral-rig-toolbar .spectral-rig-mode-buttons .mode-switch-button svg,
+  .spectral-rig-toolbar .spectral-rig-settings-trigger svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-bottom {
+    gap: 5px !important;
+  }
+
+  .rig-shell.mobile-controller.mode-pad .flat-pad-bottom button {
+    min-width: 50px !important;
+    height: 32px !important;
+    padding-inline: 8px !important;
+    font-size: 7px !important;
+  }
+}

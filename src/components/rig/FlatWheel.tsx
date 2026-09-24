@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent, type RefObject } from "react";
 import { applyCurve, type ControllerState, type Settings } from "@/lib/controller-types";
+import { playDualRumble, type DualRumbleKind } from "@/lib/haptics";
 import type { BridgeTelemetry } from "@/hooks/useBridge";
 
 type Props = {
@@ -18,8 +19,44 @@ const STEER_SENS = [0.6, 0.8, 1, 1.25, 1.5, 2, 2.5, 3] as const;
 
 // Haptics are deferred off the input task so a vibration call can never delay
 // the controller packet leaving the phone.
-const buzz = (enabled: boolean, ms: number | number[] = 10) => {
+const buzz = (enabled: boolean, ms: number | number[] = 10, kind: DualRumbleKind = "ui") => {
   if (!enabled || typeof window === "undefined") return;
+
+  const values = Array.isArray(ms) ? ms : [ms];
+  const strongest = Math.max(...values, 0);
+  const intensity = Math.max(0.08, Math.min(1, strongest / 18 + values.length * 0.035));
+  const resolvedKind =
+    kind !== "ui"
+      ? kind
+      : strongest >= 15
+        ? "heavy"
+        : values.length >= 4
+          ? "heartbeat"
+          : intensity > 0.5
+            ? "light"
+            : "ui";
+
+  playDualRumble(resolvedKind, {
+    strongMagnitude:
+      resolvedKind === "heavy"
+        ? Math.max(0.72, intensity)
+        : resolvedKind === "ui"
+          ? 0
+          : Math.max(0.08, intensity * 0.55),
+    weakMagnitude:
+      resolvedKind === "heavy"
+        ? Math.max(0.6, intensity * 0.82)
+        : resolvedKind === "ui"
+          ? Math.max(0.2, intensity)
+          : Math.max(0.12, intensity * 0.8),
+    duration:
+      resolvedKind === "heavy"
+        ? Math.min(500, Math.max(300, strongest * 22))
+        : resolvedKind === "ui"
+          ? Math.min(50, Math.max(30, strongest + 28))
+          : Math.min(180, Math.max(45, strongest * 7)),
+  });
+};
 
   const values = Array.isArray(ms) ? ms : [ms];
   const strongest = Math.max(...values, 0);

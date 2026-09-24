@@ -103,7 +103,7 @@ function phoneFallback(
     kind === "heartbeat"
       ? [duration, 45, duration]
       : kind === "gunfire"
-        ? [duration, 18, duration]
+        ? [duration]
         : kind === "engine"
           ? [Math.max(45, Math.round(duration * 0.62)), 26, Math.max(35, Math.round(duration * 0.36))]
           : kind === "heavy"

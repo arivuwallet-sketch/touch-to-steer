@@ -19,7 +19,7 @@ const nowMs = () => (typeof performance !== "undefined" ? performance.now() : Da
 
 /**
  * Low-latency state transport:
- * - target rate is selectable up to 240 Hz (~4.17 ms minimum cadence)
+ * - target rate is selectable up to 333 Hz (~3.00 ms cadence target)
  * - self-scheduling avoids interval drift
  * - only the newest controller state is sent
  * - browser/transport buffering is bounded so stale input is not accumulated

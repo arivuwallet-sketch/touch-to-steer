@@ -5977,11 +5977,11 @@ html {
    remain primary; haptic events shake the rendered chassis in place. */
 .haptic-controller-3d {
   position: absolute;
-  z-index: 4;
+  z-index: 14;
   width: min(29rem, 38vw);
   height: min(18rem, 24vw);
   pointer-events: none;
-  opacity: 0.72;
+  opacity: 0.86;
   filter:
     drop-shadow(0 20px 34px rgba(0, 0, 0, .42))
     drop-shadow(0 0 26px rgba(58, 220, 245, .065));
@@ -5998,6 +5998,24 @@ html {
   right: 21%;
 }
 
+.rig-shell > .haptic-controller-3d {
+  top: 7%;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0.88;
+  filter:
+    drop-shadow(0 18px 28px rgba(0, 0, 0, .48))
+    drop-shadow(0 0 34px rgba(58, 220, 245, .12));
+}
+
+.mode-wheel > .haptic-controller-3d {
+  top: 8%;
+}
+
+.mode-pad > .haptic-controller-3d {
+  top: 7%;
+}
+
 .haptic-controller-3d canvas {
   width: 100% !important;
   height: 100% !important;
@@ -6008,7 +6026,15 @@ html {
   .haptic-controller-3d {
     width: min(25rem, 48vw);
     height: min(15rem, 31vw);
-    opacity: 0.58;
+    opacity: 0.72;
+  }
+
+  .rig-shell > .haptic-controller-3d {
+    top: 8%;
+  }
+
+  .mode-wheel > .haptic-controller-3d {
+    top: 9%;
   }
 
   .flat-pad-root > .haptic-controller-3d {

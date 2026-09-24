@@ -542,16 +542,14 @@ function MiniScreen({
       </span>
       <span className="mt-1 max-w-full overflow-hidden text-center text-[9px] font-mono font-bold leading-none text-cyan-200 whitespace-nowrap">
         {tick === 0
-          ? `P${profile}`
+          ? (gameName.trim() ? gameName.trim().slice(0, 18).toUpperCase() : "DESKTOP")
           : tick === 1
-            ? triggerMode.toUpperCase()
+            ? `P${profile}`
             : tick === 2
-              ? (motion ? "GYRO ON" : "GYRO OFF")
+              ? triggerMode.toUpperCase()
               : tick === 3
-                ? (turbo ? "TURBO ON" : "READY")
-                : gameName.trim()
-                  ? gameName.trim().slice(0, 18).toUpperCase()
-                  : "DESKTOP"}
+                ? (motion ? "GYRO ON" : "GYRO OFF")
+                : (turbo ? "TURBO ON" : "READY")}
       </span>
     </div>
   );

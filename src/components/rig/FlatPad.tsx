@@ -680,6 +680,22 @@ export function FlatPad({ settings, set, press, onSettingsChange, gameName = "De
   return (
     <div
       className="flat-pad-root absolute inset-0 overflow-hidden bg-[#05080d] text-slate-100"
+      style={{
+        "--layout-pad-scale": settings.gamepadLayout.scale,
+        "--layout-pad-top-scale": settings.gamepadLayout.topScale * settings.gamepadLayout.scale,
+        "--layout-pad-top-y": settings.gamepadLayout.topY,
+        "--layout-pad-left-scale": settings.gamepadLayout.leftScale * settings.gamepadLayout.scale,
+        "--layout-pad-left-x": settings.gamepadLayout.leftX,
+        "--layout-pad-left-y": settings.gamepadLayout.leftY,
+        "--layout-pad-center-scale": settings.gamepadLayout.centerScale * settings.gamepadLayout.scale,
+        "--layout-pad-center-x": settings.gamepadLayout.centerX,
+        "--layout-pad-center-y": settings.gamepadLayout.centerY,
+        "--layout-pad-right-scale": settings.gamepadLayout.rightScale * settings.gamepadLayout.scale,
+        "--layout-pad-right-x": settings.gamepadLayout.rightX,
+        "--layout-pad-right-y": settings.gamepadLayout.rightY,
+        "--layout-pad-bottom-scale": settings.gamepadLayout.bottomScale * settings.gamepadLayout.scale,
+        "--layout-pad-bottom-y": settings.gamepadLayout.bottomY,
+      } as CSSProperties}
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(100%_75%_at_50%_8%,#172333_0%,#04070b_68%)]" />
       <div className="pointer-events-none absolute inset-2 rounded-[1.8rem] border border-white/15 shadow-[0_0_40px_rgba(34,211,238,.08)]" />

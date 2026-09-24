@@ -726,11 +726,11 @@ export function FlatPad({ settings, set, press, onSettingsChange, gameName = "De
         <Stick side="right" settings={settings} onMove={(x, y) => set({ rx: x, ry: settings.invertLookY ? y : -y })} onClick3={(d) => press("r3", d)} />
       </div>
 
-      <div className="flat-pad-bottom absolute bottom-[4%] left-1/2 flex -translate-x-1/2 gap-2">
-        <ExtraButton label="M1" id="m1" settings={settings} press={press} />
-        <ExtraButton label="M2" id="m2" settings={settings} press={press} />
-        <ExtraButton label="M3" id="m3" settings={settings} press={press} />
-        <ExtraButton label="M4" id="m4" settings={settings} press={press} />
+      <div className="flat-pad-bottom absolute bottom-[4%] left-1/2 flex -translate-x-1/2 gap-1 md:gap-1.5">
+        <ExtraButton label="M1" id="m1" settings={settings} press={press} className="min-w-[3.6rem] px-2 md:min-w-[4rem]" />
+        <ExtraButton label="M2" id="m2" settings={settings} press={press} className="min-w-[3.6rem] px-2 md:min-w-[4rem]" />
+        <ExtraButton label="M3" id="m3" settings={settings} press={press} className="min-w-[3.6rem] px-2 md:min-w-[4rem]" />
+        <ExtraButton label="M4" id="m4" settings={settings} press={press} className="min-w-[3.6rem] px-2 md:min-w-[4rem]" />
       </div>
 
     </div>

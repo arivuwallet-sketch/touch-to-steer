@@ -29,6 +29,8 @@ type GamepadWithVibration = Gamepad & {
   vibrationActuator?: HapticActuatorLike;
 };
 
+let lastHapticAt = 0;
+
 const PROFILES: Record<DualRumbleKind, Required<DualRumbleOptions>> = {
   ui: {
     strongMagnitude: 0,
@@ -104,6 +106,11 @@ export function playDualRumble(
   kind: DualRumbleKind = "ui",
   options: DualRumbleOptions = {},
 ) {
+  const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+  const bypassRateLimit = kind === "heartbeat" || kind === "gunfire";
+  if (!bypassRateLimit && now - lastHapticAt < 20) return;
+  lastHapticAt = now;
+
   const profile = PROFILES[kind];
   const strongMagnitude = clamp01(options.strongMagnitude ?? profile.strongMagnitude);
   const weakMagnitude = clamp01(options.weakMagnitude ?? profile.weakMagnitude);

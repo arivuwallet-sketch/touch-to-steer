@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ControllerState } from "@/lib/controller-types";
+import { playDualRumble } from "@/lib/haptics";
 
 export type BridgeStatus = "idle" | "connecting" | "connected" | "error";
 
@@ -242,17 +243,16 @@ export function useBridge(
               ffb: force,
             }));
 
-            // Mirror PC force-feedback into the 3D controller chassis. This
-            // is intentionally visual and rate-safe; the phone's native
-            // vibration path remains handled by the controller UI.
-            if (Math.abs(force) > 0.04 && typeof window !== "undefined") {
-              window.dispatchEvent(
-                new CustomEvent("touch-to-steer:haptic", {
-                  detail: {
-                    intensity: Math.min(1, 0.18 + Math.abs(force) * 0.82),
-                  },
-                }),
-              );
+            // Mirror PC force-feedback into the real dual-rumble path.
+            // Strong force drives the heavy motor; softer force drives the
+            // high-frequency motor while remaining rate-safe.
+            if (Math.abs(force) > 0.04) {
+              const magnitude = Math.abs(force);
+              playDualRumble(magnitude >= 0.68 ? "heavy" : "engine", {
+                strongMagnitude: Math.min(1, 0.12 + magnitude * 0.88),
+                weakMagnitude: Math.min(1, 0.08 + magnitude * 0.72),
+                duration: magnitude >= 0.68 ? 180 : 70,
+              });
             }
           }
         } catch {

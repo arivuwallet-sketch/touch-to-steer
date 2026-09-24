@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowDownLeft, ArrowUpRight, Check, Download, Gamepad2, Gauge, Mouse, RadioTower, ShieldCheck, Wifi } from "lucide-react";
 
 export const Route = createFileRoute("/setup")({
   head: () => ({
@@ -54,106 +55,162 @@ const steps = [
 
 function Setup() {
   return (
-    <main className="mx-auto min-h-screen max-w-2xl px-4 py-8">
-      <Link to="/controller" className="text-xs font-semibold uppercase tracking-widest text-primary">
-        ← Back to controller
-      </Link>
-      <h1 className="mt-4 text-3xl font-bold">Connect to your PC</h1>
-      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-        A web page cannot create a Windows XInput/DS4 device by itself, so TouchToSteer uses a small
-        packaged Windows bridge. Download it once and run it on the PC — no developer toolchain is
-        required on the gaming computer.
-      </p>
+    <main className="spectral-setup-page">
+      <div className="spectral-setup-noise" aria-hidden="true" />
+      <div className="spectral-setup-vignette" aria-hidden="true" />
 
-      <ol className="mt-6 space-y-3">
-        {steps.map((s) => (
-          <li key={s.t} className="panel p-4">
-            <h2 className="text-base font-bold">{s.t}</h2>
-            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{s.d}</p>
-          </li>
-        ))}
-      </ol>
+      <header className="spectral-setup-nav">
+        <Link to="/" className="spectral-setup-brand">
+          <span className="spectral-setup-brand-mark"><RadioTower size={15} /></span>
+          TOUCHTOSTEER
+          <span className="spectral-setup-brand-sep">/</span>
+          PC SETUP
+        </Link>
+        <Link to="/controller" className="spectral-setup-back">
+          <ArrowDownLeft size={13} /> BACK TO CONTROLLER
+        </Link>
+      </header>
 
-      <div className="mt-4 flex flex-wrap gap-3">
-        <a
-          href="https://github.com/arivuwallet-sketch/touch-to-steer/releases/latest/download/TouchToSteer-Bridge.exe"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex rounded-xl px-5 py-3 text-sm font-bold uppercase tracking-widest text-primary-foreground glow"
-          style={{ background: "var(--gradient-primary)" }}
-        >
-          Download Windows Bridge (.exe)
-        </a>
-        <a
-          href="https://github.com/nefarius/ViGEmBus/releases/latest"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold uppercase tracking-widest text-white hover:bg-white/10"
-        >
-          Driver fallback
-        </a>
-      </div>
+      <section className="spectral-setup-hero">
+        <div className="spectral-setup-hero-copy">
+          <span className="spectral-setup-kicker">04 / WINDOWS BRIDGE INITIALIZATION</span>
+          <h1>Connect the<br /><em>signal.</em></h1>
+          <p>
+            TouchToSteer uses a small packaged Windows receiver to turn phone touch,
+            motion and telemetry into real PC controller and mouse input.
+          </p>
 
-      <div className="panel mt-4 p-4">
-        <h2 className="text-base font-bold">One-click Windows setup</h2>
-        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-          The Windows bridge package is built automatically from this project. It contains the bridge
-          executable plus the official ViGEmBus installer used on first launch, so the gaming PC does
-          not need Node.js or a C++ compiler.
-        </p>
-      </div>
-
-      <div className="panel mt-6 p-4">
-        <h2 className="text-base font-bold">Native telemetry supported</h2>
-        <div className="mt-2 space-y-2 text-sm leading-relaxed text-muted-foreground">
-          <p><strong className="text-foreground">Forza:</strong> Horizon 4/5/6 and Motorsport 7/2023 Data Out. The bridge auto-detects the 232, 311, 324 and 331-byte formats and listens on UDP 5300, 5301 and 9876.</p>
-          <p><strong className="text-foreground">EA F1:</strong> F1 2018 through F1 25 / 2026 Season Pack telemetry on UDP 20777.</p>
-          <p><strong className="text-foreground">DiRT:</strong> DiRT Rally / DiRT Rally 2.0 / DiRT 4 full UDP telemetry on UDP 20778; the same parser is also checked on 20777.</p>
-          <p><strong className="text-foreground">Project CARS 2 / Automobilista 2 / KartKraft:</strong> SMS UDP physics telemetry on UDP 5606.</p>
-          <p><strong className="text-foreground">BeamNG.drive / Live for Speed:</strong> OutGauge UDP on UDP 4444, 30000 or 63392. Speed, RPM and gear are native; OutGauge does not provide a native redline value.</p>
-          <p><strong className="text-foreground">EA SPORTS WRC:</strong> native UDP telemetry is configurable by the game's packet-structure system. The bridge does not guess its schema, so it stays NO SIGNAL until a compatible structure/decoder is configured.</p>
-          <p><strong className="text-foreground">Wreckfest 2:</strong> native UDP telemetry is available on port 23123, but its Pino packet is not decoded yet. No fake values are shown.</p>
-          <p><strong className="text-foreground">Mouse mode:</strong> the packaged Windows bridge injects real Windows mouse movement, left/right/middle/back/forward buttons and wheel input. The phone mouse surface also supports gyro aiming, DPI scaling, rotation, dynamic sensitivity and coalesced pointer events.</p>
+          <div className="spectral-setup-hero-actions">
+            <a
+              href="https://github.com/arivuwallet-sketch/touch-to-steer/releases/latest/download/TouchToSteer-Bridge.exe"
+              className="spectral-setup-primary"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Download size={15} /> DOWNLOAD WINDOWS BRIDGE
+              <ArrowUpRight size={14} />
+            </a>
+            <a
+              href="https://github.com/nefarius/ViGEmBus/releases/latest"
+              className="spectral-setup-secondary"
+              target="_blank"
+              rel="noreferrer"
+            >
+              DRIVER FALLBACK
+            </a>
+          </div>
         </div>
-      </div>
 
-      <div className="panel mt-6 p-4">
-        <h2 className="text-base font-bold">Live telemetry</h2>
-        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-          The steering dashboard does not invent speed or RPM. The PC bridge parses the game's
-          telemetry packets and immediately forwards the newest values to the phone. Mouse mode is
-          separate: it uses the Windows SendInput API through the packaged native helper, so the
-          phone controls the normal desktop cursor as a real OS mouse input path. Game-specific
-          anti-cheat or protected input paths can still reject injected input.
-        </p>
-        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-          Do not run another application on the same UDP port. Games that send UDP telemetry can
-          usually be forwarded by SimHub to another free port when another telemetry application
-          already owns the game's default port.
-        </p>
-      </div>
+        <div className="spectral-setup-signal-card">
+          <div className="spectral-setup-signal-grid" />
+          <div className="spectral-setup-signal-ring signal-ring-one" />
+          <div className="spectral-setup-signal-ring signal-ring-two" />
+          <div className="spectral-setup-signal-core">
+            <span>RECEIVER</span>
+            <strong>READY</strong>
+            <small>PHONE → PC</small>
+          </div>
+          <div className="spectral-setup-signal-readout">
+            <span><i /> WEBSOCKET</span>
+            <span><i /> LOCAL WI-FI</span>
+            <span><i /> XINPUT / DS4 / HID</span>
+            <span><i /> MOUSE INJECTION</span>
+          </div>
+        </div>
+      </section>
 
-      <div className="panel mt-6 p-4">
-        <h2 className="text-base font-bold">Compatibility</h2>
-        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-          XInput is the default PC output and a DualShock 4 virtual output is available for games that expect PlayStation-style input. Custom keyboard bindings are still controlled by the game or a separate input mapper. No browser controller can guarantee a fixed 3 ms end-to-end latency or support every anti-cheat/protected input path; network, device refresh, browser scheduling, driver, and game polling all affect the final result.
-        </p>
-      </div>
+      <section className="spectral-setup-status-row">
+        <div><span>01</span><strong>DOWNLOAD</strong><small>Packaged Windows receiver</small></div>
+        <div><span>02</span><strong>INSTALL</strong><small>ViGEmBus on first launch</small></div>
+        <div><span>03</span><strong>CONNECT</strong><small>Same Wi-Fi network</small></div>
+        <div><span>04</span><strong>PLAY</strong><small>Gamepad / Steering / Mouse</small></div>
+      </section>
 
-      <div className="panel mt-6 p-4">
-        <h2 className="text-base font-bold">Developer build (optional)</h2>
-        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-          Developers can still run the raw rig-bridge.js with Node.js and npm, but that path is no
-          longer required for normal users. The downloadable Windows EXE is the intended end-user
-          setup.
-        </p>
-      </div>
+      <section className="spectral-setup-section">
+        <div className="spectral-setup-section-head">
+          <div>
+            <span>01 / RECEIVER SEQUENCE</span>
+            <h2>One clean path to control.</h2>
+          </div>
+          <p>
+            The bridge is the PC-side receiver. Run it once, copy its WebSocket address into
+            the phone settings, and the controller surfaces stay connected through the same transport.
+          </p>
+        </div>
 
-      <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
-        Games that only read keyboard input can still work with Steam Input or a separate key-mapping
-        tool. The packaged virtual-controller path is Windows-only because XInput/DS4 emulation uses
-        the Windows virtual gamepad driver.
-      </p>
+        <div className="spectral-setup-step-grid">
+          {steps.map((s, index) => (
+            <article key={s.t} className="spectral-setup-step">
+              <div className="spectral-setup-step-code">
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <Check size={12} />
+              </div>
+              <h3>{s.t.replace(/^\d+\.\s*/, "")}</h3>
+              <p>{s.d}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="spectral-setup-section spectral-setup-dark">
+        <div className="spectral-setup-section-head">
+          <div>
+            <span>02 / CONTROL OUTPUT</span>
+            <h2>Three surfaces. One receiver.</h2>
+          </div>
+          <p>Choose the control surface on the phone. The same bridge receives the resulting state and routes it to Windows.</p>
+        </div>
+
+        <div className="spectral-setup-output-grid">
+          <article><Gamepad2 size={18} /><span>GAMEPAD</span><strong>XInput / DS4 / HID</strong><p>D-pad, ABXY, sticks, triggers, Turbo, gyro aim and adaptive response.</p></article>
+          <article><Gauge size={18} /><span>STEERING</span><strong>WHEEL / TELEMETRY</strong><p>Touch or gyro steering, pedals, handbrake, nitro, gears and native telemetry.</p></article>
+          <article><Mouse size={18} /><span>MOUSE</span><strong>NATIVE WINDOWS INPUT</strong><p>Real cursor movement, buttons, wheel, DPI scaling, gyro aim and tracking.</p></article>
+        </div>
+      </section>
+
+      <section className="spectral-setup-section">
+        <div className="spectral-setup-section-head">
+          <div>
+            <span>03 / NATIVE TELEMETRY</span>
+            <h2>Supported signal sources.</h2>
+          </div>
+          <p>Telemetry remains grounded in actual packets. Unsupported or absent data stays NO SIGNAL instead of being invented.</p>
+        </div>
+
+        <div className="spectral-setup-telemetry-grid">
+          <article><strong>FORZA</strong><span>UDP 5300 / 5301 / 9876</span><p>Horizon 4/5/6 and Motorsport 7/2023 Data Out. Auto-detects supported packet sizes.</p></article>
+          <article><strong>EA F1</strong><span>UDP 20777</span><p>F1 2018 through F1 25 / 2026 Season Pack telemetry.</p></article>
+          <article><strong>DiRT</strong><span>UDP 20778 / 20777</span><p>DiRT Rally, DiRT Rally 2.0 and DiRT 4 UDP telemetry.</p></article>
+          <article><strong>SMS / AMS2</strong><span>UDP 5606</span><p>Project CARS 2, Automobilista 2 and KartKraft physics telemetry.</p></article>
+          <article><strong>OUTGAUGE</strong><span>UDP 4444 / 30000 / 63392</span><p>BeamNG.drive / Live for Speed speed, RPM and gear data.</p></article>
+          <article><strong>WRC / WRECKFEST 2</strong><span>PACKET-DEPENDENT</span><p>Unsupported schemas remain NO SIGNAL until a compatible decoder is available.</p></article>
+        </div>
+      </section>
+
+      <section className="spectral-setup-section spectral-setup-dark">
+        <div className="spectral-setup-utility">
+          <div className="spectral-setup-utility-icon"><ShieldCheck size={18} /></div>
+          <div>
+            <span>04 / CONTROL INTEGRITY</span>
+            <h2>Designed to fail cleanly.</h2>
+            <p>
+              Controller state is released on blur, page hide and mode changes. Network, browser,
+              driver and game polling determine final end-to-end latency; the site does not claim a fixed latency figure.
+            </p>
+          </div>
+          <div className="spectral-setup-utility-metrics">
+            <span><Wifi size={13} /> SAME LAN</span>
+            <span><RadioTower size={13} /> WEBSOCKET</span>
+            <span>240 HZ CEILING</span>
+          </div>
+        </div>
+      </section>
+
+      <footer className="spectral-setup-footer">
+        <span>TOUCHTOSTEER / SPECTRAL CONTROL SYSTEM</span>
+        <span>FOUNDER / SOORAJ</span>
+        <span>2026</span>
+      </footer>
     </main>
   );
 }

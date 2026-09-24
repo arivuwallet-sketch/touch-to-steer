@@ -547,34 +547,39 @@ function sendGameRumble(session, strong, weak, source = "game") {
 function registerTargetHaptics(target) {
   if (!target?.on) return;
 
-  // ViGEmClient documents a combined "vibration" event and individual
-  // "large motor" / "small motor" events. Listen to every notification path
-  // so XInput and DS4 game rumble cannot get lost between targets/channels.
+  // ViGEmClient exposes combined and per-motor notifications. Keep the most
+  // recent pair and forward only actual changes to avoid duplicate pulses when
+  // the same driver callback is surfaced through multiple node events.
   const motors = { large: 0, small: 0 };
+  let lastSignature = '';
 
   const emit = () => {
+    const signature = motors.large.toFixed(3) + '|' + motors.small.toFixed(3);
+    if (signature === lastSignature) return;
+    lastSignature = signature;
+
     const session = targetSession.get(target);
     if (!session) return;
     sendGameRumble(session, motors.large, motors.small);
   };
 
-  target.on("vibration", (data) => {
+  target.on('vibration', (data) => {
     motors.large = clampHaptic(data?.large);
     motors.small = clampHaptic(data?.small);
     emit();
   });
 
-  target.on("large motor", (value) => {
+  target.on('large motor', (value) => {
     motors.large = clampHaptic(value);
     emit();
   });
 
-  target.on("small motor", (value) => {
+  target.on('small motor', (value) => {
     motors.small = clampHaptic(value);
     emit();
   });
 
-  target.on("notification", (data) => {
+  target.on('notification', (data) => {
     motors.large = clampHaptic(data?.LargeMotor ?? data?.large);
     motors.small = clampHaptic(data?.SmallMotor ?? data?.small);
     emit();

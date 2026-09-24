@@ -10,7 +10,9 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <thread>
+#include <vector>
 
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "avrt.lib")

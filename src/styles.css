@@ -9142,3 +9142,69 @@ body {
     font-size: 7px !important;
   }
 }
+
+
+/* Live per-mode layout editor. Settings only changes presentation transforms;
+   controller semantics and bridge packets remain untouched. */
+.flat-pad-root .flat-pad-top {
+  transform: translate3d(0, var(--layout-pad-top-y, 0px), 0) scale(var(--layout-pad-top-scale, 1));
+  transform-origin: top center;
+}
+.flat-pad-root .flat-pad-left {
+  transform: translate3d(var(--layout-pad-left-x, 0px), var(--layout-pad-left-y, 0px), 0) scale(var(--layout-pad-left-scale, 1));
+  transform-origin: left center;
+}
+.flat-pad-root .flat-pad-center {
+  transform: translate3d(calc(-50% + var(--layout-pad-center-x, 0px)), var(--layout-pad-center-y, 0px), 0) scale(var(--layout-pad-center-scale, 1));
+  transform-origin: center top;
+}
+.flat-pad-root .flat-pad-right {
+  transform: translate3d(var(--layout-pad-right-x, 0px), var(--layout-pad-right-y, 0px), 0) scale(var(--layout-pad-right-scale, 1));
+  transform-origin: right center;
+}
+.flat-pad-root .flat-pad-bottom {
+  transform: translate3d(-50%, var(--layout-pad-bottom-y, 0px), 0) scale(var(--layout-pad-bottom-scale, 1));
+  transform-origin: center bottom;
+}
+
+.flat-wheel-root .flat-wheel-header-stack {
+  transform: translate3d(0, var(--layout-wheel-controls-y, 0px), 0) scale(var(--layout-wheel-controls-scale, 1));
+  transform-origin: top center;
+}
+.flat-wheel-root .flat-wheel-telemetry {
+  transform: translate3d(-50%, var(--layout-wheel-telemetry-y, 0px), 0) scale(var(--layout-wheel-telemetry-scale, 1));
+  transform-origin: top center;
+}
+.flat-wheel-root .flat-wheel-root-title {
+  transform: translate3d(0, var(--layout-wheel-title-y, 0px), 0);
+}
+.flat-wheel-root .flat-wheel-hit {
+  transform: translate3d(var(--layout-wheel-x, 0px), var(--layout-wheel-y, 0px), 0) scale(var(--layout-wheel-size-scale, 1));
+  transform-origin: left bottom;
+}
+.flat-wheel-root .flat-wheel-pedals {
+  transform: translate3d(var(--layout-wheel-pedals-x, 0px), var(--layout-wheel-pedals-y, 0px), 0) scale(var(--layout-wheel-pedals-scale, 1));
+  transform-origin: right bottom;
+}
+.flat-wheel-root .flat-wheel-aux {
+  transform: translate3d(var(--layout-wheel-aux-x, 0px), var(--layout-wheel-aux-y, 0px), 0) scale(var(--layout-wheel-aux-scale, 1));
+  transform-origin: right bottom;
+}
+.flat-wheel-root .flat-wheel-stage {
+  transform: scale(var(--layout-wheel-scale, 1));
+  transform-origin: center center;
+}
+
+@media (max-width: 720px) {
+  .flat-pad-root .flat-pad-top,
+  .flat-pad-root .flat-pad-left,
+  .flat-pad-root .flat-pad-center,
+  .flat-pad-root .flat-pad-right,
+  .flat-pad-root .flat-pad-bottom,
+  .flat-wheel-root .flat-wheel-header-stack,
+  .flat-wheel-root .flat-wheel-hit,
+  .flat-wheel-root .flat-wheel-pedals,
+  .flat-wheel-root .flat-wheel-aux {
+    will-change: transform;
+  }
+}

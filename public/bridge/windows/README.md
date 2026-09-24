@@ -24,6 +24,14 @@ The first launch may ask for Windows administrator permission to install the bun
 - The driver is only needed on Windows because the virtual XInput/DS4 controller is provided by the Windows driver layer.
 - The bridge still accepts the same optional environment variables used by the developer version, including `RIG_PORT` and telemetry-port overrides.
 
+## Adaptive haptics
+
+The packaged bridge also listens to standard virtual-controller rumble callbacks from XInput/DS4 targets. When a game provides its own rumble data, those two motor values are forwarded to the phone as dual-rumble haptic events.
+
+For games that do not send controller rumble, the bridge includes a Windows WASAPI loopback audio analyzer. It watches the Windows render mix and heuristically classifies strong low-frequency impacts, sharp weapon/mechanical transients, small UI-like clicks, and sustained low-frequency engine texture into heavy, gunfire, UI, light, and engine haptic profiles. This is a compatibility fallback rather than a semantic guarantee; games with no rumble can still produce false positives from other audio.
+
+Set TTS_ADAPTIVE_HAPTICS=0 before launching the bridge to disable the audio-based fallback.
+
 ## Telemetry
 
 The packaged bridge contains the same native telemetry parsers as the web app bridge: Forza Data Out, EA F1/Codemasters UDP, DiRT UDP, Project CARS 2/Automobilista 2/KartKraft UDP, and OutGauge.

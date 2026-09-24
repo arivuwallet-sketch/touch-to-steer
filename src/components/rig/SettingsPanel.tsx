@@ -98,7 +98,7 @@ export function SettingsPanel({
               <p>Local WebSocket receiver</p>
               <p className={"spectral-settings-status " + (connected ? "is-online" : status === "error" ? "is-error" : "")}>
                 {status === "idle" ? "disconnected" : status}
-                {latency !== null ? ` · ${latency} ms` : ""}
+                · 3 ms target{latency !== null ? ` · ${latency} ms measured` : ""}
               </p>
             </div>
             <Button

@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { Settings } from "@/lib/controller-types";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
-import { CircleStop, Link2, X, SlidersHorizontal, RadioTower, ChevronRight } from "lucide-react";
+import { CircleStop, Link2, X, SlidersHorizontal, RadioTower, ChevronRight, Mouse, Gauge, Crosshair, Sparkles } from "lucide-react";
 
 type Props = {
   settings: Settings;
@@ -298,17 +298,22 @@ export function SettingsPanel({
           </Row>
         </div>
 
-        <div className="spectral-settings-block-label spectral-settings-block-label-mouse"><span>03</span><div><strong>MOUSE CONTROL SURFACE</strong><small>Viper profile, DPI, gyro and tracking</small></div><ChevronRight size={13} /></div>
+        <div className="spectral-settings-block-label spectral-settings-block-label-mouse"><span>03</span><div><strong>MOUSE CONTROL SURFACE</strong><small>Precision pointer / gyro / Viper profile</small></div><ChevronRight size={13} /></div>
         <div className="spectral-settings-mouse-block">
-          <div className="mb-2">
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-lime-300">
-              Mouse Mode • Viper V4 Pro profile
-            </p>
-            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-              Software equivalents for the Viper V4 Pro control model. Phone/browser hardware cannot
-              reproduce the physical mouse sensor, weight, optical switch hardware, or true 8 kHz
-              sensor scan rate; the bridge emits real Windows mouse input.
-            </p>
+          <div className="spectral-settings-mouse-hero">
+            <div className="spectral-settings-mouse-icon"><Mouse size={19} /></div>
+            <div className="spectral-settings-mouse-copy">
+              <div className="spectral-settings-mouse-kicker"><Sparkles size={10} /> PRECISION SURFACE / ACTIVE</div>
+              <strong>VIPER-STYLE POINTER SYSTEM</strong>
+              <p>
+                Tune DPI, polling, gyro aim, tracking and dynamic sensitivity for a desktop-class
+                cursor path through the Windows bridge.
+              </p>
+            </div>
+            <div className="spectral-settings-mouse-stats">
+              <span><Gauge size={11} /> {settings.mouseDpi.toLocaleString()} DPI</span>
+              <span><Crosshair size={11} /> {settings.mouseGyroEnabled ? "GYRO ON" : "GYRO OFF"}</span>
+            </div>
           </div>
 
           <Row label="On-board profile">

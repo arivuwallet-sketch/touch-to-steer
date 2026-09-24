@@ -172,7 +172,7 @@ const systemMatrix = [
       "Touch steering wheel with automatic return-to-centre",
       "Tilt steering through device gyroscope",
       "180° / 270° / 360° / 540° / 720° / 900° / 1080° lock range",
-      "3-clutch / brake / throttle pedal surface",
+      "2-brake / throttle pedal surface",
       "Racing handbrake + analog travel",
       "Nitro control",
       "Shift / gear state + selector dial transport",

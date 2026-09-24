@@ -775,11 +775,15 @@ const NON_GAME_PROCESSES = new Set([
 ]);
 
 function foregroundCanDriveAdaptiveHaptics() {
-  const processName = String(currentForegroundGame.process || "").toLowerCase().replace(/\.exe$/, "");
-  const title = String(currentForegroundGame.title || "").trim();
-  if (!processName || !title) return false;
-  if (NON_GAME_PROCESSES.has(processName)) return false;
-  return true;
+  const processName = String(currentForegroundGame.process || '')
+    .toLowerCase()
+    .replace('.exe', '');
+  const title = String(currentForegroundGame.title || '').trim();
+
+  // Some games expose a blank/protected window title. The process name is
+  // enough to keep adaptive haptics active for non-shell processes.
+  if (!processName || NON_GAME_PROCESSES.has(processName)) return false;
+  return Boolean(title || processName);
 }
 
 const foregroundGameTimer = setInterval(() => {

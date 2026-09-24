@@ -9011,3 +9011,63 @@ body {
     height: 46px !important;
   }
 }
+
+/* FINAL COMPACT MODE DOCK: keep mode switching + settings small, precise and touch-friendly. */
+.mode-toolbar {
+  width: max-content !important;
+  max-width: max-content !important;
+  min-width: 0 !important;
+  height: auto !important;
+  padding: 0 !important;
+  gap: 5px !important;
+}
+
+.mode-toolbar > .flex {
+  width: max-content !important;
+  max-width: max-content !important;
+  min-width: 0 !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 3px !important;
+  padding: 3px !important;
+  border-radius: 13px !important;
+}
+
+.mode-toolbar > .flex > button,
+.mode-toolbar > button {
+  width: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  max-height: 44px !important;
+  flex: 0 0 44px !important;
+  padding: 0 !important;
+  border-radius: 10px !important;
+}
+
+.mode-toolbar > .flex > button svg,
+.mode-toolbar > button svg {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+@media (pointer: coarse) {
+  .mode-toolbar > .flex > button,
+  .mode-toolbar > button {
+    width: 46px !important;
+    min-width: 46px !important;
+    max-width: 46px !important;
+    height: 46px !important;
+    min-height: 46px !important;
+    max-height: 46px !important;
+    flex-basis: 46px !important;
+  }
+
+  .mode-toolbar > .flex > button svg,
+  .mode-toolbar > button svg {
+    width: 21px !important;
+    height: 21px !important;
+  }
+}

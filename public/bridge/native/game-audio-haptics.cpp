@@ -3,8 +3,6 @@
 #include <audioclient.h>
 #include <mmdeviceapi.h>
 #include <mmreg.h>
-#include <ksmedia.h>
-#include <avrt.h>
 
 #include <algorithm>
 #include <cmath>
@@ -15,7 +13,6 @@
 #include <vector>
 
 #pragma comment(lib, "ole32.lib")
-#pragma comment(lib, "avrt.lib")
 
 namespace {
 constexpr double kSamplePeriodSeconds = 0.020; // ~20 ms analysis blocks
@@ -60,10 +57,15 @@ float readSample(const BYTE* p, WORD bitsPerSample, bool isFloat) {
 }
 
 bool isFloatFormat(const WAVEFORMATEX* format) {
+    if (!format) return false;
     if (format->wFormatTag == WAVE_FORMAT_IEEE_FLOAT) return true;
-    if (format->wFormatTag == WAVE_FORMAT_EXTENSIBLE) {
+    if (format->wFormatTag == WAVE_FORMAT_EXTENSIBLE &&
+        format->cbSize >= sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX)) {
         const auto* ext = reinterpret_cast<const WAVEFORMATEXTENSIBLE*>(format);
-        return IsEqualGUID(ext->SubFormat, KSDATAFORMAT_SUBTYPE_IEEE_FLOAT);
+        // The IEEE-float subtype GUID uses Data1=3, while PCM uses Data1=1.
+        return ext->SubFormat.Data1 == WAVE_FORMAT_IEEE_FLOAT &&
+               ext->SubFormat.Data2 == 0x0000 &&
+               ext->SubFormat.Data3 == 0x0010;
     }
     return false;
 }
@@ -77,8 +79,6 @@ void analyzeBlock(
     const float* samples,
     size_t frames,
     UINT channels,
-    UINT bytesPerSample,
-    bool isFloat,
     AnalyzerState& state
 ) {
     if (!frames || !channels) return;
@@ -255,7 +255,7 @@ int runCapture() {
                 }
             }
 
-            analyzeBlock(converted.data(), frames, channels, bytesPerSample, floatFormat, state);
+            analyzeBlock(converted.data(), frames, channels, state);
         } else {
             state.engineActive = false;
         }

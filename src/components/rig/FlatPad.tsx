@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
-import { HapticController3D } from "@/components/rig/HapticController3D";
 import { applyCurve, applyForceFlex, FORCEFLEX_DESCRIPTIONS, type ControllerState, type JoystickTensionGf, type Settings } from "@/lib/controller-types";
 
 type Props = {

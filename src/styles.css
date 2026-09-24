@@ -9208,3 +9208,164 @@ body {
     will-change: transform;
   }
 }
+
+
+/* Full Gamepad + Steering layout editor inside Settings. */
+.spectral-settings-layout-heading {
+  margin-top: 12px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(148,223,239,.1);
+}
+
+.spectral-layout-editor {
+  position: relative;
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid rgba(103,224,245,.11);
+  border-radius: 15px;
+  background:
+    radial-gradient(circle at 85% 0%, rgba(53,224,255,.07), transparent 34%),
+    radial-gradient(circle at 10% 100%, rgba(128,84,255,.055), transparent 32%),
+    linear-gradient(145deg, rgba(7,18,24,.82), rgba(3,8,13,.92));
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.035),
+    0 14px 34px rgba(0,0,0,.18);
+  overflow: hidden;
+}
+
+.spectral-layout-editor::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .25;
+  background-image:
+    linear-gradient(rgba(91,227,255,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(91,227,255,.045) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: linear-gradient(to bottom, black, transparent 92%);
+}
+
+.spectral-layout-editor-intro {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(148,223,239,.07);
+}
+
+.spectral-layout-editor-intro > div:first-child > span {
+  color: rgba(92,228,255,.58);
+  font-size: 6px;
+  font-weight: 900;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.spectral-layout-editor-intro > div:first-child > strong {
+  display: block;
+  margin-top: 4px;
+  color: rgba(240,253,255,.9);
+  font-family: "Chakra Petch", sans-serif;
+  font-size: 11px;
+  letter-spacing: .07em;
+}
+
+.spectral-layout-editor-intro > div:first-child > p {
+  margin-top: 5px;
+  color: rgba(180,208,217,.48);
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+.spectral-layout-preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.spectral-layout-preset-row .button,
+.spectral-layout-preset-row button {
+  min-height: 28px;
+  border-color: rgba(91,228,255,.11);
+  background: rgba(4,10,15,.62);
+  color: rgba(206,237,244,.62);
+  font-size: 6px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.spectral-layout-preset-row button:hover {
+  border-color: rgba(91,228,255,.24);
+  color: #eaffff;
+}
+
+.spectral-layout-editor-intro-steering {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(148,223,239,.08);
+}
+
+.spectral-layout-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.spectral-layout-control {
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid rgba(255,255,255,.045);
+  border-radius: 10px;
+  background: rgba(255,255,255,.014);
+}
+
+.spectral-layout-control-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.spectral-layout-control-head span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(182,209,216,.52);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.spectral-layout-control-head strong {
+  flex: 0 0 auto;
+  color: rgba(106,232,255,.74);
+  font-family: "Chakra Petch", sans-serif;
+  font-size: 7px;
+  letter-spacing: .08em;
+}
+
+.spectral-layout-control input[type="range"] {
+  display: block;
+  width: 100%;
+  margin-top: 7px;
+  accent-color: #55e5ff !important;
+}
+
+@media (max-width: 720px) {
+  .spectral-layout-editor {
+    padding: 10px;
+  }
+
+  .spectral-layout-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .spectral-layout-editor-intro > div:first-child > p {
+    font-size: 8px;
+  }
+}

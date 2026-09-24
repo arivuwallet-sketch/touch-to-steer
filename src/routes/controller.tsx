@@ -262,46 +262,64 @@ function Rig() {
         )}
       </div>
 
-      <div className="mode-toolbar absolute right-[max(0.75rem,env(safe-area-inset-right))] top-[max(0.75rem,env(safe-area-inset-top))] z-30 flex items-center gap-2">
-        <div className="flex rounded-xl border border-white/10 bg-black/45 p-1 shadow-xl backdrop-blur-md">
-          <Button
-            onClick={() => setMode("pad")}
-            variant={mode === "pad" ? "default" : "ghost"}
-            size="icon"
-            aria-label="Joystick controller"
-            title="Joystick controller"
-          >
-            <Gamepad2 />
-          </Button>
-          <Button
-            onClick={() => setMode("wheel")}
-            variant={mode === "wheel" ? "default" : "ghost"}
-            size="icon"
-            aria-label="Steering wheel controller"
-            title="Steering wheel controller"
-          >
-            <Gauge />
-          </Button>
-          <Button
-            onClick={() => setMode("mouse")}
-            variant={mode === "mouse" ? "default" : "ghost"}
-            size="icon"
-            aria-label="Mouse controller"
-            title="Mouse controller"
-          >
-            <Mouse />
-          </Button>
+      <div className="spectral-rig-toolbar mode-toolbar absolute right-[max(0.75rem,env(safe-area-inset-right))] top-[max(0.75rem,env(safe-area-inset-top))] z-30">
+        <div className="spectral-rig-mode-switch">
+          <span className="spectral-rig-toolbar-label">CONTROL SURFACE / LIVE</span>
+          <div className="spectral-rig-mode-buttons" role="tablist" aria-label="Controller mode">
+            <Button
+              onClick={() => setMode("pad")}
+              variant="ghost"
+              size="sm"
+              className={`mode-switch-button ${mode === "pad" ? "is-active" : ""}`}
+              aria-label="Gamepad controller"
+              aria-selected={mode === "pad"}
+              title="Gamepad controller"
+            >
+              <Gamepad2 />
+              <span>GAMEPAD</span>
+              <i>01</i>
+            </Button>
+            <Button
+              onClick={() => setMode("wheel")}
+              variant="ghost"
+              size="sm"
+              className={`mode-switch-button ${mode === "wheel" ? "is-active" : ""}`}
+              aria-label="Steering wheel controller"
+              aria-selected={mode === "wheel"}
+              title="Steering wheel controller"
+            >
+              <Gauge />
+              <span>STEERING</span>
+              <i>02</i>
+            </Button>
+            <Button
+              onClick={() => setMode("mouse")}
+              variant="ghost"
+              size="sm"
+              className={`mode-switch-button ${mode === "mouse" ? "is-active" : ""}`}
+              aria-label="Mouse controller"
+              aria-selected={mode === "mouse"}
+              title="Mouse controller"
+            >
+              <Mouse />
+              <span>MOUSE</span>
+              <i>03</i>
+            </Button>
+          </div>
         </div>
+
         <Button
           onClick={() => setShowSettings(true)}
-          variant="secondary"
+          variant="ghost"
           size="icon"
-          className="relative shadow-xl"
-          aria-label="Settings and steering sensitivity"
-          title="Settings and steering tuning"
+          className="spectral-rig-settings-trigger"
+          aria-label="Open settings"
+          title="Open settings"
         >
           <SettingsIcon />
-          <span className={`absolute right-0.5 top-0.5 size-2 rounded-full ${status === "connected" ? "bg-success" : status === "error" ? "bg-destructive" : "bg-muted-foreground"}`} />
+          <span
+            className={`spectral-rig-status-dot ${status === "connected" ? "is-connected" : status === "error" ? "is-error" : ""}`}
+          />
         </Button>
       </div>
 

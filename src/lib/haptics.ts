@@ -91,8 +91,8 @@ function getGamepadsWithActuators(): GamepadWithVibration[] {
 
 function phoneFallback(
   kind: DualRumbleKind,
-  strongMagnitude: number,
-  weakMagnitude: number,
+  _strongMagnitude: number,
+  _weakMagnitude: number,
   duration: number,
 ) {
   if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
@@ -136,7 +136,6 @@ export function playDualRumble(
   const startDelay = Math.max(0, Math.min(500, Math.round(options.startDelay ?? 0)));
 
   const gamepads = getGamepadsWithActuators();
-  let played = false;
 
   for (const gamepad of gamepads) {
     const actuator = gamepad.vibrationActuator;
@@ -150,7 +149,6 @@ export function playDualRumble(
         weakMagnitude,
       });
       void Promise.resolve(result).catch(() => undefined);
-      played = true;
     } catch {
       /* keep trying remaining actuators */
     }

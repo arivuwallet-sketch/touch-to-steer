@@ -7,6 +7,7 @@ type Props = {
   set: (p: Partial<ControllerState>) => void;
   press: (id: string, down: boolean) => void;
   onSettingsChange: (patch: Partial<Settings>) => void;
+  gameName?: string;
 };
 
 type TriggerMode = "regular" | "race" | "sniper" | "recoil" | "vibration" | "lock";
@@ -517,15 +518,17 @@ function MiniScreen({
   triggerMode,
   motion,
   turbo,
+  gameName,
 }: {
   profile: number;
   triggerMode: TriggerMode;
   motion: boolean;
   turbo: boolean;
+  gameName: string;
 }) {
   const [tick, setTick] = useState(0);
   useEffect(() => {
-    const id = window.setInterval(() => setTick((v) => (v + 1) % 4), 1100);
+    const id = window.setInterval(() => setTick((v) => (v + 1) % 5), 1100);
     return () => window.clearInterval(id);
   }, []);
 
@@ -538,7 +541,17 @@ function MiniScreen({
         FORCEADAPT
       </span>
       <span className="mt-1 max-w-full overflow-hidden text-center text-[9px] font-mono font-bold leading-none text-cyan-200 whitespace-nowrap">
-        {tick === 0 ? `P${profile}` : tick === 1 ? triggerMode.toUpperCase() : tick === 2 ? (motion ? "GYRO ON" : "GYRO OFF") : (turbo ? "TURBO ON" : "READY")}
+        {tick === 0
+          ? `P${profile}`
+          : tick === 1
+            ? triggerMode.toUpperCase()
+            : tick === 2
+              ? (motion ? "GYRO ON" : "GYRO OFF")
+              : tick === 3
+                ? (turbo ? "TURBO ON" : "READY")
+                : gameName.trim()
+                  ? gameName.trim().slice(0, 18).toUpperCase()
+                  : "DESKTOP"}
       </span>
     </div>
   );
@@ -588,7 +601,7 @@ function GyroControl({
   );
 }
 
-export function FlatPad({ settings, set, press, onSettingsChange }: Props) {
+export function FlatPad({ settings, set, press, onSettingsChange, gameName = "Desktop" }: Props) {
   const [turbo, setTurbo] = useState(false);
   const [profile, setProfile] = useState(1);
   const [triggerMode, setTriggerMode] = useState<TriggerMode>("regular");

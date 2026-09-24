@@ -569,6 +569,7 @@ function startHapticKeepalive(session) {
     }
 
     const rumble = session.currentRumble;
+    if (rumble.kind === "ui" || rumble.kind === "gunfire" || rumble.kind === "heartbeat") return;
     try {
       session.ws.send(
         JSON.stringify({
@@ -1196,6 +1197,57 @@ console.log(`EA WRC is not guessed: its native packet structure is configurable.
 console.log(`Wreckfest 2 native telemetry is supported by the game on UDP ${WRECKFEST2_PORT}, but its Pino packet is not decoded by this bridge yet rather than showing fabricated values.`);
 console.log("Live gauges use game telemetry only; no speed/RPM simulation is generated.");
 
+const FOREGROUND_GAME_COMMAND = String.raw\`
+Add-Type @"
+using System;
+using System.Text;
+using System.Runtime.InteropServices;
+public static class TtsWindow {
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+  [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
+}
+"@;
+$hwnd=[TtsWindow]::GetForegroundWindow();
+if ($hwnd -eq [IntPtr]::Zero) { exit 0 }
+$sb=New-Object Text.StringBuilder 512;
+[TtsWindow]::GetWindowText($hwnd,$sb,$sb.Capacity) | Out-Null;
+[uint32]$pid=0;
+[TtsWindow]::GetWindowThreadProcessId($hwnd,[ref]$pid) | Out-Null;
+$p=Get-Process -Id $pid -ErrorAction SilentlyContinue;
+if ($p) {
+  [pscustomobject]@{
+    title=$sb.ToString();
+    process=$p.ProcessName;
+    path=$p.Path
+  } | ConvertTo-Json -Compress
+}
+\`;
+
+function readForegroundGame() {
+  if (process.platform !== "win32") return null;
+
+  try {
+    const result = spawnSync(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-NonInteractive",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        FOREGROUND_GAME_COMMAND,
+      ],
+      { windowsHide: true, encoding: "utf8", timeout: 700 },
+    );
+
+    if (result.error || result.status !== 0) return null;
+    return String(result.stdout || "").trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 wss.on("connection", (ws) => {
   const socket = ws._socket;
   if (socket?.setNoDelay) socket.setNoDelay(true);
@@ -1527,26 +1579,3 @@ wss.on("connection", (ws) => {
     );
   });
 });
-function readForegroundGame() {
-  if (process.platform !== "win32") return null;
-
-  const command = Add-Type @"
-using System;
-using System.Text;
-using System.Runtime.InteropServices;
-public static class TtsWindow {
-  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
-  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
-  [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
-}
-"@;
-$hwnd=[TtsWindow]::GetForegroundWindow();
-if ($hwnd -eq [IntPtr]::Zero) { exit 0 }
-$sb=New-Object Text.StringBuilder 512;
-[TtsWindow]::GetWindowText($hwnd,$sb,$sb.Capacity) | Out-Null;
-[uint32]$pid=0;
-[TtsWindow]::GetWindowThreadProcessId($hwnd,[ref]$pid) | Out-Null;
-$p=Get-Process -Id $pid -ErrorAction SilentlyContinue;
-if ($p) { [pscustomobject]@{title=$sb.ToString(); process=$p.ProcessName; path=$p.Path} | ConvertTo-Json -Compress }
-
-

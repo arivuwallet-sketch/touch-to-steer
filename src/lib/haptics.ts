@@ -89,14 +89,29 @@ function getGamepadsWithActuators(): GamepadWithVibration[] {
   }
 }
 
-function phoneFallback(strongMagnitude: number, weakMagnitude: number, duration: number) {
+function phoneFallback(
+  kind: DualRumbleKind,
+  strongMagnitude: number,
+  weakMagnitude: number,
+  duration: number,
+) {
   if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
 
-  const energy = Math.max(strongMagnitude, weakMagnitude * 0.85);
-  const ms = Math.max(8, Math.min(500, Math.round(duration * (0.35 + energy * 0.65))));
+  // Phones expose one vibration motor to the browser, not two independently
+  // addressable motors. Preserve the requested texture with short patterns.
+  const pulse =
+    kind === "heartbeat"
+      ? [duration, 45, duration]
+      : kind === "gunfire"
+        ? [duration, 18, duration]
+        : kind === "engine"
+          ? [Math.max(45, Math.round(duration * 0.62)), 26, Math.max(35, Math.round(duration * 0.36))]
+          : kind === "heavy"
+            ? [Math.max(120, duration)]
+            : [Math.max(8, Math.min(500, duration))];
 
   try {
-    navigator.vibrate(ms);
+    navigator.vibrate(pulse);
   } catch {
     /* unsupported / permission-restricted */
   }
@@ -141,9 +156,10 @@ export function playDualRumble(
     }
   }
 
-  if (!played) {
-    phoneFallback(strongMagnitude, weakMagnitude, duration);
-  }
+  // Always provide phone feedback as well. This is important for the
+  // TouchToSteer use case because the phone is the haptic surface even when
+  // the browser has no GamepadHapticActuator exposed.
+  phoneFallback(kind, strongMagnitude, weakMagnitude, duration);
 }
 
 export function playHeartbeat() {

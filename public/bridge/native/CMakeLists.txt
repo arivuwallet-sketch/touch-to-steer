@@ -11,7 +11,7 @@ set_target_properties(mouse-injector PROPERTIES
 add_executable(game-audio-haptics game-audio-haptics.cpp)
 target_compile_features(game-audio-haptics PRIVATE cxx_std_17)
 target_compile_definitions(game-audio-haptics PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN)
-target_link_libraries(game-audio-haptics PRIVATE ole32 uuid avrt)
+target_link_libraries(game-audio-haptics PRIVATE ole32 uuid)
 set_target_properties(game-audio-haptics PROPERTIES
   OUTPUT_NAME "game-audio-haptics"
 )

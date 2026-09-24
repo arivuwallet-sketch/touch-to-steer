@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { Settings } from "@/lib/controller-types";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
-import { CircleStop, Link2, X } from "lucide-react";
+import { CircleStop, Link2, X, SlidersHorizontal, RadioTower, ChevronRight } from "lucide-react";
 
 type Props = {
   settings: Settings;
@@ -76,22 +76,27 @@ export function SettingsPanel({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-background/70 backdrop-blur-sm">
-      <div className="rig-settings-panel panel h-full w-full max-w-sm overflow-y-auto rounded-none p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
-          <h2 className="min-w-0 truncate text-lg font-bold">Rig setup</h2>
-          <Button onClick={onClose} variant="ghost" size="icon" aria-label="Close settings">
+    <div className="spectral-settings-overlay fixed inset-0 z-50 flex justify-end" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) onClose();
+    }}>
+      <div className="spectral-settings-panel rig-settings-panel panel h-full w-full max-w-sm overflow-y-auto rounded-none pb-[max(1.25rem,env(safe-area-inset-bottom))]" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="spectral-settings-header">
+          <div className="spectral-settings-heading">
+            <div className="spectral-settings-kicker"><SlidersHorizontal size={13} /> SYSTEM CONFIG / LIVE</div>
+            <h2>Rig setup</h2>
+            <p>Shape the control surface, bridge output and motion response.</p>
+          </div>
+          <Button onClick={onClose} variant="ghost" size="icon" className="spectral-settings-close" aria-label="Close settings">
             <X />
           </Button>
         </div>
 
-        <div className="mt-5 rounded-lg border border-border bg-secondary/60 p-3">
+        <div className="spectral-settings-connection">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-bold uppercase">PC connection</p>
-              <p
-                className={`text-xs ${connected ? "text-success" : status === "error" ? "text-destructive" : "text-muted-foreground"}`}
-              >
+            <div className="spectral-settings-section-title">
+              <span><RadioTower size={13} /> PC CONNECTION</span>
+              <p>Local WebSocket receiver</p>
+              <p className={"spectral-settings-status " + (connected ? "is-online" : status === "error" ? "is-error" : "")}>
                 {status === "idle" ? "disconnected" : status}
                 {latency !== null ? ` · ${latency} ms` : ""}
               </p>
@@ -100,6 +105,7 @@ export function SettingsPanel({
               onClick={connected ? onDisconnect : onConnect}
               variant={connected ? "outline" : "default"}
               size="sm"
+              className="spectral-settings-connect"
             >
               {connected ? <CircleStop /> : <Link2 />}
               {connected ? "Disconnect" : status === "connecting" ? "Connecting" : "Connect"}
@@ -111,11 +117,12 @@ export function SettingsPanel({
             onChange={(e) => onChange({ bridgeUrl: e.target.value })}
             maxLength={120}
             spellCheck={false}
-            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            className="spectral-settings-input h-10 w-full rounded-md px-3 text-sm"
           />
         </div>
 
-        <div className="mt-4 divide-y divide-border">
+        <div className="spectral-settings-body">
+          <div className="spectral-settings-block-label"><span>01</span><div><strong>OUTPUT + RESPONSE</strong><small>Virtual device and steering behavior</small></div><ChevronRight size={13} /></div>
           <Row label="PC controller output">
             <select
               value={settings.outputMode}
@@ -280,6 +287,7 @@ export function SettingsPanel({
               className="size-5 accent-[var(--primary)]"
             />
           </Row>
+          <div className="spectral-settings-block-label"><span>02</span><div><strong>FEEDBACK + HAPTICS</strong><small>Phone vibration and force response</small></div><ChevronRight size={13} /></div>
           <Row label="G29 FFB haptic assist">
             <input
               type="checkbox"
@@ -290,7 +298,8 @@ export function SettingsPanel({
           </Row>
         </div>
 
-        <div className="mt-5 border-t border-border pt-4">
+        <div className="spectral-settings-block-label spectral-settings-block-label-mouse"><span>03</span><div><strong>MOUSE CONTROL SURFACE</strong><small>Viper profile, DPI, gyro and tracking</small></div><ChevronRight size={13} /></div>
+        <div className="spectral-settings-mouse-block">
           <div className="mb-2">
             <p className="text-xs font-black uppercase tracking-[0.16em] text-lime-300">
               Mouse Mode • Viper V4 Pro profile
@@ -488,7 +497,7 @@ export function SettingsPanel({
           </Row>
         </div>
 
-        <div className="mt-4 rounded-lg border border-cyan-300/15 bg-cyan-300/5 p-3 text-[11px] leading-relaxed text-muted-foreground">
+        <div className="spectral-settings-note mt-4 rounded-lg p-3 text-[11px] leading-relaxed">
           <strong className="text-slate-200">Controller polling</strong> is selectable from 60 to 240 Hz.
           240 Hz is the current low-latency ceiling (about 4.17 ms between refresh packets). Actual end-to-end latency depends on the phone, browser,
           Wi-Fi/LAN path, PC load, and game input polling.

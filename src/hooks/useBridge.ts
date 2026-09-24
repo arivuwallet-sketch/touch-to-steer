@@ -14,7 +14,7 @@ export type BridgeTelemetry = {
   ffb?: number | undefined;
 };
 
-const clampRate = (hz: number) => Math.max(60, Math.min(240, Math.round(hz)));
+const clampRate = (hz: number) => Math.max(60, Math.min(333, Math.round(hz)));
 const nowMs = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
 
 /**

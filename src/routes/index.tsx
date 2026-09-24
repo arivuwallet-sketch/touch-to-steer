@@ -787,7 +787,7 @@ function LandingPage() {
           <span>TOUCHTOSTEER / SPECTRAL CONTROL SYSTEM</span>
           <span>GAMEPAD • STEERING • MOUSE</span>
           <h1>
-          <span>FOUNDER / SOORAJ</span></h1>
+          <span className="spectral-founder-credit">FOUNDER / SOORAJ</span></h1>
           <span>2026</span>
         </footer>
       </main>

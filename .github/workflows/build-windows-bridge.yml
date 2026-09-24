@@ -52,7 +52,7 @@ jobs:
             throw "CMake mouse-injector target failed with exit code $LASTEXITCODE."
           }
 
-          cmake --build public/bridge/native/build --config Release --target game-audio-haptics
+          cmake --build public/bridge/native/build --config Release --target game-audio-haptics --verbose
           if ($LASTEXITCODE -ne 0) {
             Write-Host "CMake audio-haptics target failed. Native build directory:"
             Get-ChildItem "public/bridge/native/build" -Force -Recurse |

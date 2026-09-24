@@ -121,7 +121,7 @@ export const defaultSettings: Settings = {
   autoCentre: true,
   vibration: true,
   ffbHaptics: true,
-  sendRateHz: 240,
+  sendRateHz: 333,
   invertTilt: false,
   invertLookY: false,
   wheelRotationDeg: 900,

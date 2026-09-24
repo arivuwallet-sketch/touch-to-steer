@@ -784,6 +784,13 @@ const foregroundGameTimer = setInterval(() => {
       t: Date.now(),
     };
 
+    // Window-title/process transitions are a useful generic compatibility
+    // signal for menus, loading screens and game-session changes when a title
+    // emits no controller-rumble packet.
+    if (foregroundCanDriveAdaptiveHaptics()) {
+      dispatchAdaptiveHaptic("ui", 0, 0.2, 40);
+    }
+
     for (const ws of wss.clients) {
       if (ws.readyState === 1 && ws.bufferedAmount < 8192) {
         try { ws.send(JSON.stringify(payload)); } catch {}

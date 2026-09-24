@@ -10,6 +10,7 @@ type Props = {
   telemetry: BridgeTelemetry;
   telemetryLive: boolean;
   onSettingsChange: (p: Partial<Settings>) => void;
+  gameName?: string;
 };
 
 /** Selectable lock-to-lock steering ranges, matching common wheel firmware options. */
@@ -489,7 +490,7 @@ function G29Wheel({
   );
 }
 
-export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSettingsChange }: Props) {
+export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSettingsChange, gameName = "Desktop" }: Props) {
   const wheelHitRef = useRef<HTMLDivElement>(null);
   const wheelVisualRef = useRef<HTMLDivElement>(null);
   const touchPointer = useRef<number | null>(null);
@@ -865,6 +866,9 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
         </div>
         <div className="mt-0.5 text-[11px] font-black tracking-tight text-white md:mt-1 md:text-sm">
           LOGITECH G29 STYLE
+        </div>
+        <div className="mt-1 max-w-[15rem] truncate text-[6px] font-black uppercase tracking-[0.16em] text-red-200/65 md:text-[8px]">
+          GAME • {gameName}
         </div>
         <div className="mt-0.5 text-[6px] font-semibold uppercase tracking-[0.15em] text-slate-500 md:text-[8px] md:tracking-[0.2em]">
           {settings.steerMode === "touch"

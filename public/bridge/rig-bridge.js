@@ -500,6 +500,7 @@ function sendGameRumble(session, strong, weak, source = "game") {
   if (!session?.ws || session.ws.readyState !== 1) return;
 
   const now = Date.now();
+  session.lastGameRumbleAt = now;
   const kind = classifyGameRumble(strong, weak);
   const duration =
     kind === "heavy"
@@ -716,14 +717,62 @@ console.log("TouchToSteer Bridge ready.");
 appendBridgeLog("TouchToSteer Bridge ready.");
 
 let lastForegroundGameKey = "";
+let currentForegroundGame = {
+  title: "Desktop",
+  process: "",
+  path: "",
+};
+
+const NON_GAME_PROCESSES = new Set([
+  "explorer",
+  "dwm",
+  "sihost",
+  "searchhost",
+  "startmenuexperiencehost",
+  "shellexperiencehost",
+  "applicationframehost",
+  "runtimebroker",
+  "textinputhost",
+  "lockapp",
+  "searchapp",
+  "taskmgr",
+  "steam",
+  "steamwebhelper",
+  "epicgameslauncher",
+  "epicwebhelper",
+  "goggalaxy",
+  "goggalaxycommunication",
+  "discord",
+  "chrome",
+  "msedge",
+  "firefox",
+  "brave",
+  "opera",
+]);
+
+function foregroundCanDriveAdaptiveHaptics() {
+  const processName = String(currentForegroundGame.process || "").toLowerCase().replace(/\.exe$/, "");
+  const title = String(currentForegroundGame.title || "").trim();
+  if (!processName || !title) return false;
+  if (NON_GAME_PROCESSES.has(processName)) return false;
+  return true;
+}
+
 const foregroundGameTimer = setInterval(() => {
   try {
     const raw = readForegroundGame();
     const info = raw ? JSON.parse(raw) : null;
     const title = String(info?.title || "").trim();
     const processName = String(info?.process || "").trim();
-    const key = processName + "|" + title;
+    const processPath = String(info?.path || "").trim();
 
+    currentForegroundGame = {
+      title: title || "Desktop",
+      process: processName,
+      path: processPath,
+    };
+
+    const key = processName + "|" + title;
     if (key === lastForegroundGameKey) return;
     lastForegroundGameKey = key;
 
@@ -745,6 +794,127 @@ const foregroundGameTimer = setInterval(() => {
   }
 }, 1200);
 
+const ADAPTIVE_HAPTICS_ENABLED =
+  !/^(0|false|off|no)$/i.test(String(process.env.TTS_ADAPTIVE_HAPTICS || "1"));
+
+function findGameAudioHaptics() {
+  const packaged = path.join(__dirname, "native", "game-audio-haptics.exe");
+  if (isPackagedBridge()) return packaged;
+  return fs.existsSync(packaged) ? packaged : null;
+}
+
+function preparePackagedGameAudioHaptics() {
+  const source = findGameAudioHaptics();
+  if (!source) return null;
+  if (!isPackagedBridge()) return source;
+
+  const outDir = path.join(os.tmpdir(), "TouchToSteer");
+  const outFile = path.join(outDir, "game-audio-haptics.exe");
+
+  try {
+    fs.mkdirSync(outDir, { recursive: true });
+    if (!fs.existsSync(outFile)) {
+      fs.writeFileSync(outFile, fs.readFileSync(source));
+    }
+    return outFile;
+  } catch (error) {
+    appendBridgeLog("Could not unpack adaptive haptic analyzer: " + (error?.message || error));
+    return null;
+  }
+}
+
+let gameAudioProcess = null;
+let gameAudioStdoutBuffer = "";
+
+function dispatchAdaptiveHaptic(kind, strongMagnitude, weakMagnitude, duration) {
+  if (!ADAPTIVE_HAPTICS_ENABLED || !foregroundCanDriveAdaptiveHaptics()) return;
+
+  const now = Date.now();
+  for (const session of controllerSessions) {
+    if (!session?.ws || session.ws.readyState !== 1) continue;
+
+    // Prefer the game's actual ViGEm rumble packet whenever it exists. The
+    // audio classifier is only the compatibility path for titles that emit
+    // no controller rumble at all.
+    if (now - Number(session.lastGameRumbleAt || 0) < 260) continue;
+
+    try {
+      session.ws.send(JSON.stringify({
+        type: "haptic",
+        source: "windows-audio-adaptive",
+        kind,
+        strongMagnitude,
+        weakMagnitude,
+        duration,
+        game: currentForegroundGame.title || currentForegroundGame.process || "Desktop",
+        process: currentForegroundGame.process || null,
+        t: now,
+      }));
+    } catch {
+      /* ignore racing socket close */
+    }
+  }
+}
+
+function startGameAudioHaptics() {
+  if (!ADAPTIVE_HAPTICS_ENABLED || process.platform !== "win32" || gameAudioProcess) return;
+
+  const executable = preparePackagedGameAudioHaptics();
+  if (!executable) {
+    appendBridgeLog("Adaptive Windows audio haptics unavailable: analyzer executable not found.");
+    return;
+  }
+
+  try {
+    gameAudioProcess = spawn(executable, [], {
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+    });
+
+    gameAudioProcess.stdout?.on("data", (chunk) => {
+      gameAudioStdoutBuffer += String(chunk);
+      const lines = gameAudioStdoutBuffer.split(/\r?\n/);
+      gameAudioStdoutBuffer = lines.pop() || "";
+
+      for (const line of lines) {
+        const match = /^HAPTIC\s+(ui|light|heavy|heartbeat|engine|gunfire)\s+([0-9.]+)\s+([0-9.]+)\s+(\d+)$/.exec(line.trim());
+        if (!match) continue;
+
+        dispatchAdaptiveHaptic(
+          match[1],
+          Math.max(0, Math.min(1, Number(match[2]))),
+          Math.max(0, Math.min(1, Number(match[3]))),
+          Math.max(20, Math.min(500, Number(match[4]))),
+        );
+      }
+    });
+
+    gameAudioProcess.stderr?.on("data", (chunk) => {
+      const message = String(chunk).trim();
+      if (message) appendBridgeLog("Adaptive haptic analyzer: " + message);
+    });
+
+    gameAudioProcess.on("error", (error) => {
+      appendBridgeLog("Adaptive haptic analyzer error: " + (error?.message || error));
+      gameAudioProcess = null;
+    });
+
+    gameAudioProcess.on("close", (code) => {
+      appendBridgeLog("Adaptive haptic analyzer exited with code " + String(code));
+      gameAudioProcess = null;
+      gameAudioStdoutBuffer = "";
+    });
+
+    appendBridgeLog("Adaptive Windows audio haptics started.");
+  } catch (error) {
+    appendBridgeLog("Could not start adaptive Windows audio haptics: " + (error?.message || error));
+    gameAudioProcess = null;
+  }
+}
+
+startGameAudioHaptics();
+
+
 const addresses = localIpv4Addresses();
 if (addresses.length) {
   console.log("Phone WebSocket address(es):");
@@ -757,6 +927,9 @@ console.log(
 );
 console.log(
   `Virtual controller sessions: up to ${MAX_CONTROLLER_SESSIONS} independent players`,
+);
+console.log(
+  `Adaptive Windows audio haptics: ${ADAPTIVE_HAPTICS_ENABLED ? "enabled" : "disabled"}`,
 );
 console.log(`Driver package source: ${isPackagedBridge() ? "bundled with this executable" : DRIVER_URL}`);
 
@@ -1260,6 +1433,7 @@ wss.on("connection", (ws) => {
     currentRumble: null,
     hapticTimer: null,
     activeGame: null,
+    lastGameRumbleAt: 0,
   };
 
   socketState.set(ws, session);

@@ -51,6 +51,8 @@ function Rig() {
     latency,
     telemetry,
     telemetryLive,
+    activeGame,
+    activeGameProcess,
     connect,
     disconnect,
     sendMouse,
@@ -253,9 +255,9 @@ function Rig() {
       {/* ---------- rig fills the screen ---------- */}
       <div className="absolute inset-0">
         {mode === "pad" ? (
-          <FlatPad settings={settings} set={set} press={press} onSettingsChange={patch} />
+          <FlatPad settings={settings} set={set} press={press} onSettingsChange={patch} gameName={activeGame} />
         ) : mode === "wheel" ? (
-          <FlatWheel settings={settings} set={set} press={press} telemetry={telemetry} telemetryLive={telemetryLive} onSettingsChange={patch} />
+          <FlatWheel settings={settings} set={set} press={press} telemetry={telemetry} telemetryLive={telemetryLive} onSettingsChange={patch} gameName={activeGame} />
         ) : (
           <FlatMouse settings={settings} onSettingsChange={patch} sendMouse={sendMouse} />
         )}

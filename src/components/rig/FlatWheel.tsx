@@ -768,7 +768,7 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
   }, [cancelCentre, maxLockDeg, setWheelRaw]);
 
   const cycleSendRate = () => {
-    const values: Settings["sendRateHz"][] = [60, 120, 144, 180, 240];
+    const values: Settings["sendRateHz"][] = [60, 120, 144, 180, 240, 333];
     const index = values.indexOf(settings.sendRateHz);
     const next = values[(index >= 0 ? index + 1 : 0) % values.length] ?? 240;
     buzz(settings.vibration, 8);

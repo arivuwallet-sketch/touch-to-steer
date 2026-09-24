@@ -272,3 +272,8 @@ int runCapture() {
     CoUninitialize();
     return 0;
 }
+
+
+int main() {
+    return runCapture();
+}

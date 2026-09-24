@@ -524,10 +524,12 @@ function MiniScreen({
   triggerMode: TriggerMode;
   motion: boolean;
   turbo: boolean;
-  gameName: string;
+  gameName?: string;
 }) {
-  const displayGame = gameName.trim()
-    ? gameName.trim().replace(/\s+/g, " ").slice(0, 18).toUpperCase()
+  const safeGameName = typeof gameName === "string" ? gameName : "Desktop";
+  const normalizedGameName = safeGameName.trim();
+  const displayGame = normalizedGameName
+    ? normalizedGameName.replace(/\s+/g, " ").slice(0, 18).toUpperCase()
     : "DESKTOP";
 
   return (
@@ -537,7 +539,7 @@ function MiniScreen({
       </span>
       <span
         className="mt-1 max-w-[94%] overflow-hidden text-center text-[8px] font-mono font-bold leading-none text-cyan-200 whitespace-nowrap"
-        title={gameName}
+        title={safeGameName}
       >
         {displayGame}
       </span>

@@ -480,6 +480,120 @@ function disconnectTarget(target) {
   }
 }
 
+const targetSession = new WeakMap();
+const HAPTIC_KEEPALIVE_MS = 120;
+
+function clampHaptic(value) {
+  return Math.max(0, Math.min(1, (Number(value) || 0) / 255));
+}
+
+function classifyGameRumble(strong, weak) {
+  if (strong >= 0.78 && weak >= 0.58) return "heavy";
+  if (strong <= 0.12 && weak >= 0.68) return "gunfire";
+  if (strong >= 0.28 && weak <= 0.08) return "heartbeat";
+  if (strong <= 0.08 && weak <= 0.26) return "ui";
+  if (strong <= 0.34 && weak <= 0.24) return "engine";
+  return "light";
+}
+
+function sendGameRumble(session, strong, weak, source = "game") {
+  if (!session?.ws || session.ws.readyState !== 1) return;
+
+  const now = Date.now();
+  const kind = classifyGameRumble(strong, weak);
+  const duration =
+    kind === "heavy"
+      ? 380
+      : kind === "gunfire"
+        ? 55
+        : kind === "heartbeat"
+          ? 105
+          : kind === "engine"
+            ? 120
+            : kind === "ui"
+              ? 40
+              : 70;
+
+  try {
+    session.ws.send(
+      JSON.stringify({
+        type: "haptic",
+        source,
+        kind,
+        strongMagnitude: strong,
+        weakMagnitude: weak,
+        duration,
+        t: now,
+      }),
+    );
+  } catch {
+    return;
+  }
+
+  if (strong > 0.015 || weak > 0.015) {
+    session.currentRumble = {
+      strongMagnitude: strong,
+      weakMagnitude: weak,
+      kind,
+      duration,
+      lastChangeAt: now,
+    };
+  } else {
+    session.currentRumble = null;
+  }
+}
+
+function registerTargetHaptics(target) {
+  if (!target?.on) return;
+  target.on("vibration", (data) => {
+    const session = targetSession.get(target);
+    if (!session) return;
+    sendGameRumble(
+      session,
+      clampHaptic(data?.large),
+      clampHaptic(data?.small),
+    );
+  });
+}
+
+function startHapticKeepalive(session) {
+  if (!session || session.hapticTimer) return;
+
+  session.hapticTimer = setInterval(() => {
+    if (!session.currentRumble || !session.ws || session.ws.readyState !== 1) return;
+
+    const elapsed = Date.now() - session.currentRumble.lastChangeAt;
+    if (elapsed > 650) {
+      session.currentRumble = null;
+      return;
+    }
+
+    const rumble = session.currentRumble;
+    try {
+      session.ws.send(
+        JSON.stringify({
+          type: "haptic",
+          source: "game-keepalive",
+          kind: rumble.kind,
+          strongMagnitude: rumble.strongMagnitude,
+          weakMagnitude: rumble.weakMagnitude,
+          duration: Math.min(HAPTIC_KEEPALIVE_MS, rumble.duration),
+          t: Date.now(),
+        }),
+      );
+    } catch {
+      /* ignore racing socket close */
+    }
+  }, HAPTIC_KEEPALIVE_MS);
+}
+
+function stopHapticKeepalive(session) {
+  if (!session?.hapticTimer) return;
+  clearInterval(session.hapticTimer);
+  session.hapticTimer = null;
+  session.currentRumble = null;
+}
+
 function createTarget(type) {
   if (!client) return null;
 
@@ -489,6 +603,7 @@ function createTarget(type) {
         ? client.createDS4Controller()
         : client.createX360Controller();
 
+    registerTargetHaptics(target);
     target.updateMode = "manual";
 
     const connectError = target.connect();
@@ -598,6 +713,37 @@ try {
 console.log("");
 console.log("TouchToSteer Bridge ready.");
 appendBridgeLog("TouchToSteer Bridge ready.");
+
+let lastForegroundGameKey = "";
+const foregroundGameTimer = setInterval(() => {
+  try {
+    const raw = readForegroundGame();
+    const info = raw ? JSON.parse(raw) : null;
+    const title = String(info?.title || "").trim();
+    const processName = String(info?.process || "").trim();
+    const key = processName + "|" + title;
+
+    if (key === lastForegroundGameKey) return;
+    lastForegroundGameKey = key;
+
+    const payload = {
+      type: "game",
+      name: title || processName || "Desktop",
+      process: processName || null,
+      title: title || null,
+      t: Date.now(),
+    };
+
+    for (const ws of wss.clients) {
+      if (ws.readyState === 1 && ws.bufferedAmount < 8192) {
+        try { ws.send(JSON.stringify(payload)); } catch {}
+      }
+    }
+  } catch {
+    /* game detection must never interrupt controller transport */
+  }
+}, 1200);
+
 const addresses = localIpv4Addresses();
 if (addresses.length) {
   console.log("Phone WebSocket address(es):");
@@ -1063,6 +1209,9 @@ wss.on("connection", (ws) => {
     applyScheduled: false,
     lastAppliedSignature: "",
     lastAppliedSeq: 0,
+    currentRumble: null,
+    hapticTimer: null,
+    activeGame: null,
   };
 
   socketState.set(ws, session);
@@ -1095,6 +1244,8 @@ wss.on("connection", (ws) => {
   }
 
   function disconnectSessionTargets() {
+    stopHapticKeepalive(session);
+      targetSession.delete(entry.target);
     for (const entry of session.targets) {
       disconnectTarget(entry.target);
     }
@@ -1185,6 +1336,10 @@ wss.on("connection", (ws) => {
 
     session.mode = requestedMode;
     session.targets = created;
+    for (const entry of created) {
+      targetSession.set(entry.target, session);
+    }
+    startHapticKeepalive(session);
     session.lastAppliedSignature = "";
     session.lastAppliedSeq = 0;
     controllerSessions.add(session);
@@ -1372,3 +1527,26 @@ wss.on("connection", (ws) => {
     );
   });
 });
+function readForegroundGame() {
+  if (process.platform !== "win32") return null;
+
+  const command = Add-Type @"
+using System;
+using System.Text;
+using System.Runtime.InteropServices;
+public static class TtsWindow {
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+  [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
+}
+"@;
+$hwnd=[TtsWindow]::GetForegroundWindow();
+if ($hwnd -eq [IntPtr]::Zero) { exit 0 }
+$sb=New-Object Text.StringBuilder 512;
+[TtsWindow]::GetWindowText($hwnd,$sb,$sb.Capacity) | Out-Null;
+[uint32]$pid=0;
+[TtsWindow]::GetWindowThreadProcessId($hwnd,[ref]$pid) | Out-Null;
+$p=Get-Process -Id $pid -ErrorAction SilentlyContinue;
+if ($p) { [pscustomobject]@{title=$sb.ToString(); process=$p.ProcessName; path=$p.Path} | ConvertTo-Json -Compress }
+
+

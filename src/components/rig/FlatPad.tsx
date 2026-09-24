@@ -52,28 +52,7 @@ const buzz = (enabled: boolean, pattern: number | number[] = 10, kind: DualRumbl
   });
 };
 
-  // The 3D controller listens to the same haptic event as the phone's
-  // vibration motor, so every real input feedback event has a matching
-  // physical-looking chassis response.
-  const values = Array.isArray(pattern) ? pattern : [pattern];
-  const strongest = Math.max(...values, 0);
-  const intensity = Math.max(0.12, Math.min(1, strongest / 18 + values.length * 0.035));
-  window.dispatchEvent(
-    new CustomEvent("touch-to-steer:haptic", {
-      detail: { intensity },
-    }),
-  );
 
-  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-    setTimeout(() => {
-      try {
-        navigator.vibrate(pattern);
-      } catch {
-        /* ignore */
-      }
-    }, 0);
-  }
-};
 
 const feelBuzz = (enabled: boolean, intensity: number) => {
   if (!enabled) return;

@@ -5,10 +5,10 @@ import { SettingsPanel } from "@/components/rig/SettingsPanel";
 import { FlatPad } from "@/components/rig/FlatPad";
 import { FlatWheel } from "@/components/rig/FlatWheel";
 import { FlatMouse } from "@/components/rig/FlatMouse";
-import { HapticController3D } from "@/components/rig/HapticController3D";
 import { RotateGate } from "@/components/rig/RotateGate";
 import { Button } from "@/components/ui/button";
 import { useBridge } from "@/hooks/useBridge";
+import { playDualRumble } from "@/lib/haptics";
 import {
   defaultSettings,
   emptyState,
@@ -130,18 +130,20 @@ function Rig() {
     };
   }, []);
 
-  const lastVisualHapticAt = useRef(0);
+  const lastAnalogHapticAt = useRef(0);
 
-  const triggerVisualHaptic = useCallback((intensity = 0.28) => {
-    if (typeof window === "undefined") return;
+  const triggerAnalogHaptic = useCallback((changeMagnitude: number) => {
+    if (typeof window === "undefined" || changeMagnitude < 0.04) return;
     const now = performance.now();
-    if (now - lastVisualHapticAt.current < 22) return;
-    lastVisualHapticAt.current = now;
-    window.dispatchEvent(
-      new CustomEvent("touch-to-steer:haptic", {
-        detail: { intensity: Math.max(0.12, Math.min(1, intensity)) },
-      }),
-    );
+    if (now - lastAnalogHapticAt.current < 42) return;
+    lastAnalogHapticAt.current = now;
+
+    const level = Math.max(0.14, Math.min(0.65, 0.14 + changeMagnitude * 0.9));
+    playDualRumble("light", {
+      strongMagnitude: level * 0.55,
+      weakMagnitude: Math.min(0.9, level * 0.95),
+      duration: 55,
+    });
   }, []);
 
   const set = useCallback((p: Partial<ControllerState>) => {
@@ -159,7 +161,7 @@ function Rig() {
         return Number.isFinite(before) && Number.isFinite(after) ? Math.abs(after - before) : 0;
       });
     const changeMagnitude = Math.max(...numericChanges, 0);
-    triggerVisualHaptic(0.18 + Math.min(0.62, changeMagnitude * 0.7));
+    triggerAnalogHaptic(changeMagnitude);
 
     // Send analog changes immediately from the input event instead of waiting
     // for the 240 Hz watchdog. The watchdog remains as a safety/refresh lane.
@@ -199,10 +201,14 @@ function Rig() {
     });
 
     if (digitalEdge) sendControllerEdge();
-  }, [sendControllerEdge, sendControllerStateNow, triggerVisualHaptic]);
+  }, [sendControllerEdge, sendControllerStateNow, triggerAnalogHaptic]);
 
   const press = useCallback((id: string, down: boolean) => {
-    triggerVisualHaptic(down ? 0.46 : 0.28);
+    playDualRumble("ui", {
+      strongMagnitude: 0,
+      weakMagnitude: down ? 0.22 : 0.12,
+      duration: down ? 45 : 30,
+    });
     const previous = Boolean(stateRef.current.buttons?.[id]);
     stateRef.current = {
       ...stateRef.current,
@@ -212,7 +218,7 @@ function Rig() {
     // Send every real digital edge immediately instead of waiting for the
     // 240 Hz transport sampler. This preserves sub-frame taps in joy.cpl.
     if (previous !== down) sendControllerEdge();
-  }, [sendControllerEdge, triggerVisualHaptic]);
+  }, [sendControllerEdge]);
 
   const releaseAll = useCallback(() => {
     stateRef.current = emptyState();
@@ -244,10 +250,6 @@ function Rig() {
       <RotateGate mode={mode} />
 
       {/* ---------- rig fills the screen ---------- */}
-      {mode !== "mouse" && (
-        <HapticController3D mode={mode === "pad" ? "gamepad" : "steering"} />
-      )}
-
       <div className="absolute inset-0">
         {mode === "pad" ? (
           <FlatPad settings={settings} set={set} press={press} onSettingsChange={patch} />

@@ -20,6 +20,7 @@
       "node_modules/vigemclient/**/*.node",
       "drivers/ViGEmBus_1.22.0_x64_x86_arm64.exe",
       "native/mouse-injector.exe",
+      "native/game-audio-haptics.exe",
       "node_modules/vigemclient/build/Release/ViGEmClient.dll"
     ]
   }

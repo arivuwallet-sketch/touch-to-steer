@@ -8,7 +8,6 @@ import { FlatMouse } from "@/components/rig/FlatMouse";
 import { RotateGate } from "@/components/rig/RotateGate";
 import { Button } from "@/components/ui/button";
 import { useBridge } from "@/hooks/useBridge";
-import { playDualRumble } from "@/lib/haptics";
 import {
   defaultSettings,
   emptyState,

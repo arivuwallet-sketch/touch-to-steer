@@ -5,6 +5,7 @@ import { SettingsPanel } from "@/components/rig/SettingsPanel";
 import { FlatPad } from "@/components/rig/FlatPad";
 import { FlatWheel } from "@/components/rig/FlatWheel";
 import { FlatMouse } from "@/components/rig/FlatMouse";
+import { HapticController3D } from "@/components/rig/HapticController3D";
 import { RotateGate } from "@/components/rig/RotateGate";
 import { Button } from "@/components/ui/button";
 import { useBridge } from "@/hooks/useBridge";
@@ -129,10 +130,36 @@ function Rig() {
     };
   }, []);
 
+  const lastVisualHapticAt = useRef(0);
+
+  const triggerVisualHaptic = useCallback((intensity = 0.28) => {
+    if (typeof window === "undefined") return;
+    const now = performance.now();
+    if (now - lastVisualHapticAt.current < 22) return;
+    lastVisualHapticAt.current = now;
+    window.dispatchEvent(
+      new CustomEvent("touch-to-steer:haptic", {
+        detail: { intensity: Math.max(0.12, Math.min(1, intensity)) },
+      }),
+    );
+  }, []);
+
   const set = useCallback((p: Partial<ControllerState>) => {
     const previous = stateRef.current;
     const next = { ...previous, ...p };
     stateRef.current = next;
+
+    // Global visual haptic lane: every controller state event produces a small
+    // chassis response independent of XInput / DS4 / Universal output selection
+    // and independent of the phone-vibration setting.
+    const numericChanges = Object.entries(p)
+      .map(([key, value]) => {
+        const before = Number((previous as Record<string, unknown>)[key] ?? 0);
+        const after = Number(value ?? 0);
+        return Number.isFinite(before) && Number.isFinite(after) ? Math.abs(after - before) : 0;
+      });
+    const changeMagnitude = Math.max(...numericChanges, 0);
+    triggerVisualHaptic(0.18 + Math.min(0.62, changeMagnitude * 0.7));
 
     // Send analog changes immediately from the input event instead of waiting
     // for the 240 Hz watchdog. The watchdog remains as a safety/refresh lane.
@@ -172,9 +199,10 @@ function Rig() {
     });
 
     if (digitalEdge) sendControllerEdge();
-  }, [sendControllerEdge, sendControllerStateNow]);
+  }, [sendControllerEdge, sendControllerStateNow, triggerVisualHaptic]);
 
   const press = useCallback((id: string, down: boolean) => {
+    triggerVisualHaptic(down ? 0.46 : 0.28);
     const previous = Boolean(stateRef.current.buttons?.[id]);
     stateRef.current = {
       ...stateRef.current,
@@ -184,7 +212,7 @@ function Rig() {
     // Send every real digital edge immediately instead of waiting for the
     // 240 Hz transport sampler. This preserves sub-frame taps in joy.cpl.
     if (previous !== down) sendControllerEdge();
-  }, [sendControllerEdge]);
+  }, [sendControllerEdge, triggerVisualHaptic]);
 
   const releaseAll = useCallback(() => {
     stateRef.current = emptyState();
@@ -216,6 +244,10 @@ function Rig() {
       <RotateGate mode={mode} />
 
       {/* ---------- rig fills the screen ---------- */}
+      {mode !== "mouse" && (
+        <HapticController3D mode={mode === "pad" ? "gamepad" : "steering"} />
+      )}
+
       <div className="absolute inset-0">
         {mode === "pad" ? (
           <FlatPad settings={settings} set={set} press={press} onSettingsChange={patch} />

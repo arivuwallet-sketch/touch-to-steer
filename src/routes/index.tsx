@@ -23,6 +23,10 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { LandingScene } from "@/components/landing/LandingScene";
 import { UploadedControllerScene } from "@/components/landing/UploadedControllerScene";
 import { StarDust } from "@/components/landing/StarDust";
+import { Button } from "@/components/ui/button";
+import gamepadModeAsset from "@/assets/gamepad-mode.jpg.asset.json";
+import mouseModeAsset from "@/assets/mouse-mode.jpg.asset.json";
+import steeringModeAsset from "@/assets/steering-mode.jpg.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -52,6 +56,42 @@ const capabilities = [
   ["MOUSE", "Precision cursor, wheel, side buttons, gyro aim and sensitivity tuning."],
   ["BRIDGE", "Windows virtual-controller and native mouse injection through the packaged bridge."],
 ];
+
+const modeProofs = [
+  {
+    id: "gamepad",
+    label: "Gamepad",
+    eyebrow: "APEX-STYLE CONTROL DECK",
+    title: "Every essential control stays under your thumbs.",
+    description:
+      "Dual analog sticks, separated D-pad and ABXY controls, ForceAdapt triggers, shoulder buttons, turbo, gyro, profiles and four rear mappings share one touch-safe landscape surface.",
+    detail: "DUAL STICKS · FORCEADAPT · 240 HZ · GYRO",
+    image: gamepadModeAsset.url,
+    alt: "TouchToSteer gamepad mode showing dual sticks, D-pad, ABXY buttons, ForceAdapt triggers and profile controls",
+  },
+  {
+    id: "mouse",
+    label: "Mouse",
+    eyebrow: "VIPER-STYLE PRECISION SURFACE",
+    title: "A full phone-sized precision mouse.",
+    description:
+      "Move, click, scroll and use side buttons from a familiar mouse-shaped surface, with selectable DPI, polling rate, gyro aiming and one-tap center synchronization.",
+    detail: "50K DPI · 8K POLLING · GYRO AIM · CENTER SYNC",
+    image: mouseModeAsset.url,
+    alt: "TouchToSteer mouse mode showing a full-screen precision mouse with DPI, polling, gyro and center sync controls",
+  },
+  {
+    id: "steering",
+    label: "Steering",
+    eyebrow: "G29-STYLE DRIVING COCKPIT",
+    title: "Wheel, pedals and race controls in one cockpit.",
+    description:
+      "Touch or tilt to steer through selectable lock ranges, then feather brake and throttle, pull the analog handbrake, trigger nitro and read live speed, RPM and gear telemetry.",
+    detail: "180°–1080° · TOUCH + GYRO · ANALOG PEDALS · TELEMETRY",
+    image: steeringModeAsset.url,
+    alt: "TouchToSteer steering mode showing a wheel, telemetry gauges, brake and throttle pedals, handbrake and nitro",
+  },
+] as const;
 
 const featureCards = [
   {
@@ -281,6 +321,7 @@ function FeatureCard({
 
 function LandingPage() {
   const [ready, setReady] = useState(false);
+  const [activeProof, setActiveProof] = useState(0);
   const [gyroSupported, setGyroSupported] = useState(false);
   const [gyroEnabled, setGyroEnabled] = useState(false);
   const gyroCleanupRef = useRef<(() => void) | null>(null);
@@ -541,6 +582,63 @@ function LandingPage() {
               <strong>REAL 3D ASSET / POINTER + DRAG</strong>
             </div>
           </div>
+        </section>
+
+        <section className="spectral-section spectral-mode-proof" id="modes">
+          <div className="spectral-section-head">
+            <div>
+              <span>02 / REAL CONTROL SURFACES</span>
+              <h2>See exactly what you control.</h2>
+            </div>
+            <p>
+              These are real screenshots of the three working controller modes. Select a mode to
+              inspect its complete phone interface before you launch it.
+            </p>
+          </div>
+
+          <div className="spectral-proof-tabs" role="tablist" aria-label="Controller mode screenshots">
+            {modeProofs.map((proof, index) => (
+              <Button
+                key={proof.id}
+                type="button"
+                variant="ghost"
+                role="tab"
+                aria-selected={activeProof === index}
+                aria-controls={`mode-proof-${proof.id}`}
+                id={`mode-tab-${proof.id}`}
+                className={activeProof === index ? "is-active" : ""}
+                onClick={() => setActiveProof(index)}
+              >
+                <span>0{index + 1}</span>
+                {proof.label}
+              </Button>
+            ))}
+          </div>
+
+          {modeProofs.map((proof, index) => (
+            <article
+              key={proof.id}
+              id={`mode-proof-${proof.id}`}
+              role="tabpanel"
+              aria-labelledby={`mode-tab-${proof.id}`}
+              hidden={activeProof !== index}
+              className={`spectral-proof-view spectral-proof-view-${proof.id}`}
+            >
+              <div className="spectral-proof-screen">
+                <img src={proof.image} alt={proof.alt} />
+                <span className="spectral-proof-live"><i /> REAL INTERFACE</span>
+              </div>
+              <div className="spectral-proof-copy">
+                <span>{proof.eyebrow}</span>
+                <h3>{proof.title}</h3>
+                <p>{proof.description}</p>
+                <strong>{proof.detail}</strong>
+                <Link to="/controller" className="spectral-inline-link">
+                  Open {proof.label} mode <ArrowUpRight size={14} />
+                </Link>
+              </div>
+            </article>
+          ))}
         </section>
 
         <section className="spectral-section spectral-section-dark" id="features">

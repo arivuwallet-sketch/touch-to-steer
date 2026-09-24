@@ -52,7 +52,6 @@ function Rig() {
     telemetry,
     telemetryLive,
     activeGame,
-    activeGameProcess,
     connect,
     disconnect,
     sendMouse,

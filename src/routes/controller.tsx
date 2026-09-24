@@ -56,7 +56,7 @@ function Rig() {
     sendMouse,
     sendControllerStateNow,
     sendControllerEdge,
-  } = useBridge(stateRef, settings.sendRateHz, settings.outputMode);
+  } = useBridge(stateRef, settings.sendRateHz, settings.outputMode, settings.vibration);
 
   useEffect(() => {
     const migrationKey = "mobile-rig-universal-migration-v3";
@@ -94,7 +94,7 @@ function Rig() {
     } else {
       localStorage.setItem(migrationKey, "1");
     }
-  }, []);
+  }, [settings.vibration]);
 
   const patch = useCallback((p: Partial<Settings>) => {
     setSettings((s) => {
@@ -133,7 +133,7 @@ function Rig() {
   const lastAnalogHapticAt = useRef(0);
 
   const triggerAnalogHaptic = useCallback((changeMagnitude: number) => {
-    if (typeof window === "undefined" || changeMagnitude < 0.04) return;
+    if (typeof window === "undefined" || !settings.vibration || changeMagnitude < 0.04) return;
     const now = performance.now();
     if (now - lastAnalogHapticAt.current < 42) return;
     lastAnalogHapticAt.current = now;
@@ -151,9 +151,8 @@ function Rig() {
     const next = { ...previous, ...p };
     stateRef.current = next;
 
-    // Global visual haptic lane: every controller state event produces a small
-    // chassis response independent of XInput / DS4 / Universal output selection
-    // and independent of the phone-vibration setting.
+    // Global dual-rumble lane: every meaningful controller state event gets
+    // haptic feedback independent of XInput / DS4 / Universal output mode.
     const numericChanges = Object.entries(p)
       .map(([key, value]) => {
         const before = Number((previous as Record<string, unknown>)[key] ?? 0);
@@ -204,11 +203,13 @@ function Rig() {
   }, [sendControllerEdge, sendControllerStateNow, triggerAnalogHaptic]);
 
   const press = useCallback((id: string, down: boolean) => {
-    playDualRumble("ui", {
-      strongMagnitude: 0,
+    if (settings.vibration) {
+      playDualRumble("ui", {
+        strongMagnitude: 0,
       weakMagnitude: down ? 0.22 : 0.12,
-      duration: down ? 45 : 30,
-    });
+        duration: down ? 45 : 30,
+      });
+    }
     const previous = Boolean(stateRef.current.buttons?.[id]);
     stateRef.current = {
       ...stateRef.current,
@@ -218,7 +219,7 @@ function Rig() {
     // Send every real digital edge immediately instead of waiting for the
     // 240 Hz transport sampler. This preserves sub-frame taps in joy.cpl.
     if (previous !== down) sendControllerEdge();
-  }, [sendControllerEdge]);
+  }, [sendControllerEdge, settings.vibration]);
 
   const releaseAll = useCallback(() => {
     stateRef.current = emptyState();

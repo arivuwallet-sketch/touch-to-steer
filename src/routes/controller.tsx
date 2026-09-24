@@ -144,7 +144,7 @@ function Rig() {
       weakMagnitude: Math.min(0.9, level * 0.95),
       duration: 55,
     });
-  }, []);
+  }, [settings.vibration]);
 
   const set = useCallback((p: Partial<ControllerState>) => {
     const previous = stateRef.current;
@@ -206,7 +206,7 @@ function Rig() {
     if (settings.vibration) {
       playDualRumble("ui", {
         strongMagnitude: 0,
-      weakMagnitude: down ? 0.22 : 0.12,
+        weakMagnitude: down ? 0.22 : 0.12,
         duration: down ? 45 : 30,
       });
     }

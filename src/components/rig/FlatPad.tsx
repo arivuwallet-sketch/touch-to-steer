@@ -350,7 +350,13 @@ function Trigger({
   const pulseFeedback = useCallback(
     (pattern: number | number[]) => {
       if (!settings.vibration) return;
-      buzz(true, pattern);
+      const kind =
+        mode === "recoil"
+          ? "gunfire"
+          : mode === "vibration"
+            ? "engine"
+            : "heavy";
+      buzz(true, pattern, kind);
       setPulse3d(true);
       if (pulseTimer.current !== null) window.clearTimeout(pulseTimer.current);
       pulseTimer.current = window.setTimeout(() => setPulse3d(false), 90);

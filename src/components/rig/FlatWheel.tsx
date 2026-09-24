@@ -58,25 +58,7 @@ const buzz = (enabled: boolean, ms: number | number[] = 10, kind: DualRumbleKind
   });
 };
 
-  const values = Array.isArray(ms) ? ms : [ms];
-  const strongest = Math.max(...values, 0);
-  const intensity = Math.max(0.12, Math.min(1, strongest / 18 + values.length * 0.035));
-  window.dispatchEvent(
-    new CustomEvent("touch-to-steer:haptic", {
-      detail: { intensity },
-    }),
-  );
 
-  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-    setTimeout(() => {
-      try {
-        navigator.vibrate(ms);
-      } catch {
-        /* ignore */
-      }
-    }, 0);
-  }
-};
 
 function TelemetryGauge({
   label,

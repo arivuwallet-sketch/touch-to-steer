@@ -47,37 +47,9 @@ jobs:
         shell: pwsh
         run: |
           cmake -S public/bridge/native -B public/bridge/native/build -G "Visual Studio 17 2022" -A x64
-          cmake --build public/bridge/native/build --config Release --target mouse-injector game-audio-haptics --parallel
-
-          $mouse = Get-ChildItem "public/bridge/native/build" -Recurse -File -Filter "mouse-injector.exe" |
-            Where-Object { $_.FullName -match "\\Release\\|/Release/" } |
-            Select-Object -First 1
-          $audio = Get-ChildItem "public/bridge/native/build" -Recurse -File -Filter "game-audio-haptics.exe" |
-            Where-Object { $_.FullName -match "\\Release\\|/Release/" } |
-            Select-Object -First 1
-
-          if (-not $mouse) {
-            Write-Host "Native build output:"
-            Get-ChildItem "public/bridge/native/build" -Recurse -File |
-              Select-Object FullName, Length |
-              Format-Table -AutoSize |
-              Out-String |
-              Write-Host
-            throw "mouse-injector.exe was not produced by the Release build."
-          }
-
-          if (-not $audio) {
-            Write-Host "Native build output:"
-            Get-ChildItem "public/bridge/native/build" -Recurse -File |
-              Select-Object FullName, Length |
-              Format-Table -AutoSize |
-              Out-String |
-              Write-Host
-            throw "game-audio-haptics.exe was not produced by the Release build."
-          }
-
-          Copy-Item $mouse.FullName "public/bridge/native/mouse-injector.exe" -Force
-          Copy-Item $audio.FullName "public/bridge/native/game-audio-haptics.exe" -Force
+          cmake --build public/bridge/native/build --config Release
+          Copy-Item "public/bridge/native/build/Release/mouse-injector.exe" "public/bridge/native/mouse-injector.exe"
+          Copy-Item "public/bridge/native/build/Release/game-audio-haptics.exe" "public/bridge/native/game-audio-haptics.exe"
 
       - name: Verify native haptic helpers
         shell: pwsh

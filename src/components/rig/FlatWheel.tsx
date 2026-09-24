@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type RefObject } from "react";
+import { useCallback, useEffect, useRef, useState, type PointerEvent, type RefObject } from "react";
 import { applyCurve, type ControllerState, type Settings } from "@/lib/controller-types";
 import { playDualRumble, type DualRumbleKind } from "@/lib/haptics";
 import type { BridgeTelemetry } from "@/hooks/useBridge";
@@ -768,7 +768,7 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
   }, [cancelCentre, maxLockDeg, setWheelRaw]);
 
   const cycleSendRate = () => {
-    const values: Settings["sendRateHz"][] = [60, 120, 144, 180, 240, 333];
+    const values: Settings["sendRateHz"][] = [60, 120, 144, 180, 240];
     const index = values.indexOf(settings.sendRateHz);
     const next = values[(index >= 0 ? index + 1 : 0) % values.length] ?? 240;
     buzz(settings.vibration, 8);
@@ -783,26 +783,7 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
 
 
   return (
-    <div
-      className="flat-wheel-root absolute inset-0 overflow-hidden bg-[#080a0d] text-slate-100"
-      style={{
-        "--layout-wheel-scale": settings.steeringLayout.scale,
-        "--layout-wheel-title-y": settings.steeringLayout.titleY,
-        "--layout-wheel-telemetry-scale": settings.steeringLayout.telemetryScale * settings.steeringLayout.scale,
-        "--layout-wheel-telemetry-y": settings.steeringLayout.telemetryY,
-        "--layout-wheel-controls-scale": settings.steeringLayout.controlsScale * settings.steeringLayout.scale,
-        "--layout-wheel-controls-y": settings.steeringLayout.controlsY,
-        "--layout-wheel-size-scale": settings.steeringLayout.wheelScale * settings.steeringLayout.scale,
-        "--layout-wheel-x": settings.steeringLayout.wheelX,
-        "--layout-wheel-y": settings.steeringLayout.wheelY,
-        "--layout-wheel-pedals-scale": settings.steeringLayout.pedalsScale * settings.steeringLayout.scale,
-        "--layout-wheel-pedals-x": settings.steeringLayout.pedalsX,
-        "--layout-wheel-pedals-y": settings.steeringLayout.pedalsY,
-        "--layout-wheel-aux-scale": settings.steeringLayout.auxScale * settings.steeringLayout.scale,
-        "--layout-wheel-aux-x": settings.steeringLayout.auxX,
-        "--layout-wheel-aux-y": settings.steeringLayout.auxY,
-      } as CSSProperties}
-    >
+    <div className="flat-wheel-root absolute inset-0 overflow-hidden bg-[#080a0d] text-slate-100">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_95%_at_50%_6%,#1a222b_0%,#080a0d_55%,#030405_100%)]" />
       <div className="pointer-events-none absolute inset-2 rounded-[1.7rem] border border-white/15" />
       <div className="pointer-events-none absolute inset-4 rounded-[1.4rem] border border-[#e11d2e]/15" />

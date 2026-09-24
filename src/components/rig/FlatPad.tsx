@@ -610,7 +610,7 @@ export function FlatPad({ settings, set, press, onSettingsChange, gameName = "De
   }, [onSettingsChange, settings.joystickTensionGf, settings.vibration]);
 
   const cycleSendRate = useCallback(() => {
-    const values: Settings["sendRateHz"][] = [60, 120, 144, 180, 240, 333];
+    const values: Settings["sendRateHz"][] = [60, 120, 144, 180, 240];
     const index = values.indexOf(settings.sendRateHz);
     const next = values[(index >= 0 ? index + 1 : 0) % values.length] ?? 240;
     onSettingsChange({ sendRateHz: next });
@@ -680,22 +680,6 @@ export function FlatPad({ settings, set, press, onSettingsChange, gameName = "De
   return (
     <div
       className="flat-pad-root absolute inset-0 overflow-hidden bg-[#05080d] text-slate-100"
-      style={{
-        "--layout-pad-scale": settings.gamepadLayout.scale,
-        "--layout-pad-top-scale": settings.gamepadLayout.topScale * settings.gamepadLayout.scale,
-        "--layout-pad-top-y": settings.gamepadLayout.topY,
-        "--layout-pad-left-scale": settings.gamepadLayout.leftScale * settings.gamepadLayout.scale,
-        "--layout-pad-left-x": settings.gamepadLayout.leftX,
-        "--layout-pad-left-y": settings.gamepadLayout.leftY,
-        "--layout-pad-center-scale": settings.gamepadLayout.centerScale * settings.gamepadLayout.scale,
-        "--layout-pad-center-x": settings.gamepadLayout.centerX,
-        "--layout-pad-center-y": settings.gamepadLayout.centerY,
-        "--layout-pad-right-scale": settings.gamepadLayout.rightScale * settings.gamepadLayout.scale,
-        "--layout-pad-right-x": settings.gamepadLayout.rightX,
-        "--layout-pad-right-y": settings.gamepadLayout.rightY,
-        "--layout-pad-bottom-scale": settings.gamepadLayout.bottomScale * settings.gamepadLayout.scale,
-        "--layout-pad-bottom-y": settings.gamepadLayout.bottomY,
-      } as CSSProperties}
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(100%_75%_at_50%_8%,#172333_0%,#04070b_68%)]" />
       <div className="pointer-events-none absolute inset-2 rounded-[1.8rem] border border-white/15 shadow-[0_0_40px_rgba(34,211,238,.08)]" />
@@ -742,7 +726,7 @@ export function FlatPad({ settings, set, press, onSettingsChange, gameName = "De
         <Stick side="right" settings={settings} onMove={(x, y) => set({ rx: x, ry: settings.invertLookY ? y : -y })} onClick3={(d) => press("r3", d)} />
       </div>
 
-      <div className="flat-pad-bottom absolute bottom-[4%] left-1/2 flex -translate-x-1/2 gap-1 md:gap-1.5">
+      <div className="flat-pad-bottom absolute bottom-[4%] left-1/2 flex -translate-x-1/2 gap-2">
         <ExtraButton label="M1" id="m1" settings={settings} press={press} />
         <ExtraButton label="M2" id="m2" settings={settings} press={press} />
         <ExtraButton label="M3" id="m3" settings={settings} press={press} />

@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { defaultSettings, type Settings } from "@/lib/controller-types";
+import type { Settings } from "@/lib/controller-types";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
-import { CircleStop, Link2, X, SlidersHorizontal, RadioTower, ChevronRight, Mouse, Gauge, Crosshair, Sparkles } from "lucide-react";
+import { CircleStop, Link2, X, SlidersHorizontal, RadioTower, ChevronRight } from "lucide-react";
 
 type Props = {
   settings: Settings;
@@ -23,43 +23,6 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-
-function LayoutSlider({
-  label,
-  value,
-  min,
-  max,
-  step,
-  onChange,
-  unit = "",
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  onChange: (value: number) => void;
-  unit?: string;
-}) {
-  return (
-    <div className="spectral-layout-control">
-      <div className="spectral-layout-control-head">
-        <span>{label}</span>
-        <strong>{value > 0 && max <= 2 ? value.toFixed(2) : Math.round(value)}{unit}</strong>
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
-        className="w-full accent-[var(--primary)]"
-      />
-    </div>
-  );
-}
-
 export function SettingsPanel({
   settings,
   onChange,
@@ -71,60 +34,6 @@ export function SettingsPanel({
 }: Props) {
   const connected = status === "connected";
   const [matcherDpi, setMatcherDpi] = useState(settings.mouseDpi);
-
-  const updateGamepadLayout = (patch: Partial<Settings["gamepadLayout"]>) =>
-    onChange({ gamepadLayout: { ...settings.gamepadLayout, ...patch } });
-
-  const updateSteeringLayout = (patch: Partial<Settings["steeringLayout"]>) =>
-    onChange({ steeringLayout: { ...settings.steeringLayout, ...patch } });
-
-  const compactGamepad = () =>
-    onChange({
-      gamepadLayout: {
-        ...settings.gamepadLayout,
-        scale: 0.9,
-        topScale: 0.9,
-        leftScale: 0.9,
-        centerScale: 0.92,
-        rightScale: 0.9,
-        bottomScale: 0.9,
-      },
-    });
-
-  const spreadGamepad = () =>
-    onChange({
-      gamepadLayout: {
-        ...settings.gamepadLayout,
-        scale: 0.96,
-        topScale: 1.05,
-        leftScale: 1.06,
-        centerScale: 0.95,
-        rightScale: 1.06,
-        bottomScale: 1.02,
-      },
-    });
-
-  const focusSteeringWheel = () =>
-    onChange({
-      steeringLayout: {
-        ...settings.steeringLayout,
-        wheelScale: 1.12,
-        pedalsScale: 0.92,
-        auxScale: 0.9,
-        telemetryScale: 0.96,
-      },
-    });
-
-  const focusSteeringPedals = () =>
-    onChange({
-      steeringLayout: {
-        ...settings.steeringLayout,
-        wheelScale: 0.92,
-        pedalsScale: 1.12,
-        auxScale: 1.02,
-        telemetryScale: 1.04,
-      },
-    });
 
   const applyMouseProfile = (profile: string) => {
     const profiles: Record<string, Partial<Settings>> = {
@@ -189,7 +98,7 @@ export function SettingsPanel({
               <p>Local WebSocket receiver</p>
               <p className={"spectral-settings-status " + (connected ? "is-online" : status === "error" ? "is-error" : "")}>
                 {status === "idle" ? "disconnected" : status}
-                · 3 ms target{latency !== null ? ` · ${latency} ms measured` : ""}
+                {latency !== null ? ` · ${latency} ms` : ""}
               </p>
             </div>
             <Button
@@ -355,7 +264,6 @@ export function SettingsPanel({
               <option value={144}>144 Hz</option>
               <option value={180}>180 Hz</option>
               <option value={240}>240 Hz</option>
-              <option value={333}>333 Hz · ~3 ms</option>
             </select>
           </Row>
           <Row label="Invert tilt">
@@ -390,106 +298,17 @@ export function SettingsPanel({
           </Row>
         </div>
 
-        <div className="spectral-settings-block-label spectral-settings-layout-heading">
-          <span>03</span>
-          <div>
-            <strong>LAYOUT / TOUCH SURFACE</strong>
-            <small>Move, scale and rebalance every major control cluster</small>
-          </div>
-          <ChevronRight size={13} />
-        </div>
-
-        <div className="spectral-layout-editor">
-          <div className="spectral-layout-editor-intro">
-            <div>
-              <span>GAMEPAD DECK</span>
-              <strong>FULL SURFACE EDITOR</strong>
-              <p>Adjust the whole deck, top controls, left/right clusters, centre console and bottom keys. Changes are visual only and are saved with your rig settings.</p>
-            </div>
-            <div className="spectral-layout-preset-row">
-              <Button type="button" size="sm" variant="outline" onClick={() => onChange({ gamepadLayout: defaultSettings.gamepadLayout })}>
-                RESET
-              </Button>
-              <Button type="button" size="sm" variant="outline" onClick={compactGamepad}>
-                COMPACT
-              </Button>
-              <Button type="button" size="sm" variant="outline" onClick={spreadGamepad}>
-                SPREAD
-              </Button>
-            </div>
-          </div>
-
-          <div className="spectral-layout-grid">
-            <LayoutSlider label="Global scale" value={settings.gamepadLayout.scale} min={0.7} max={1.25} step={0.01} onChange={(value) => updateGamepadLayout({ scale: value })} />
-            <LayoutSlider label="Top controls scale" value={settings.gamepadLayout.topScale} min={0.65} max={1.35} step={0.01} onChange={(value) => updateGamepadLayout({ topScale: value })} />
-            <LayoutSlider label="Top controls Y" value={settings.gamepadLayout.topY} min={-90} max={90} step={1} unit="px" onChange={(value) => updateGamepadLayout({ topY: value })} />
-            <LayoutSlider label="Left cluster scale" value={settings.gamepadLayout.leftScale} min={0.65} max={1.35} step={0.01} onChange={(value) => updateGamepadLayout({ leftScale: value })} />
-            <LayoutSlider label="Left cluster X" value={settings.gamepadLayout.leftX} min={-180} max={180} step={1} unit="px" onChange={(value) => updateGamepadLayout({ leftX: value })} />
-            <LayoutSlider label="Left cluster Y" value={settings.gamepadLayout.leftY} min={-120} max={120} step={1} unit="px" onChange={(value) => updateGamepadLayout({ leftY: value })} />
-            <LayoutSlider label="Centre scale" value={settings.gamepadLayout.centerScale} min={0.65} max={1.35} step={0.01} onChange={(value) => updateGamepadLayout({ centerScale: value })} />
-            <LayoutSlider label="Centre X" value={settings.gamepadLayout.centerX} min={-180} max={180} step={1} unit="px" onChange={(value) => updateGamepadLayout({ centerX: value })} />
-            <LayoutSlider label="Centre Y" value={settings.gamepadLayout.centerY} min={-120} max={120} step={1} unit="px" onChange={(value) => updateGamepadLayout({ centerY: value })} />
-            <LayoutSlider label="Right cluster scale" value={settings.gamepadLayout.rightScale} min={0.65} max={1.35} step={0.01} onChange={(value) => updateGamepadLayout({ rightScale: value })} />
-            <LayoutSlider label="Right cluster X" value={settings.gamepadLayout.rightX} min={-180} max={180} step={1} unit="px" onChange={(value) => updateGamepadLayout({ rightX: value })} />
-            <LayoutSlider label="Right cluster Y" value={settings.gamepadLayout.rightY} min={-120} max={120} step={1} unit="px" onChange={(value) => updateGamepadLayout({ rightY: value })} />
-            <LayoutSlider label="Bottom keys scale" value={settings.gamepadLayout.bottomScale} min={0.65} max={1.35} step={0.01} onChange={(value) => updateGamepadLayout({ bottomScale: value })} />
-            <LayoutSlider label="Bottom keys Y" value={settings.gamepadLayout.bottomY} min={-100} max={100} step={1} unit="px" onChange={(value) => updateGamepadLayout({ bottomY: value })} />
-          </div>
-
-          <div className="spectral-layout-editor-intro spectral-layout-editor-intro-steering">
-            <div>
-              <span>STEERING COCKPIT</span>
-              <strong>FULL SURFACE EDITOR</strong>
-              <p>Resize and reposition the wheel, telemetry, pedals, handbrake/nitro stack and steering controls without changing the underlying input mapping.</p>
-            </div>
-            <div className="spectral-layout-preset-row">
-              <Button type="button" size="sm" variant="outline" onClick={() => onChange({ steeringLayout: defaultSettings.steeringLayout })}>
-                RESET
-              </Button>
-              <Button type="button" size="sm" variant="outline" onClick={focusSteeringWheel}>
-                WHEEL FOCUS
-              </Button>
-              <Button type="button" size="sm" variant="outline" onClick={focusSteeringPedals}>
-                PEDAL FOCUS
-              </Button>
-            </div>
-          </div>
-
-          <div className="spectral-layout-grid">
-            <LayoutSlider label="Global scale" value={settings.steeringLayout.scale} min={0.7} max={1.25} step={0.01} onChange={(value) => updateSteeringLayout({ scale: value })} />
-            <LayoutSlider label="Telemetry scale" value={settings.steeringLayout.telemetryScale} min={0.65} max={1.35} step={0.01} onChange={(value) => updateSteeringLayout({ telemetryScale: value })} />
-            <LayoutSlider label="Telemetry Y" value={settings.steeringLayout.telemetryY} min={-120} max={120} step={1} unit="px" onChange={(value) => updateSteeringLayout({ telemetryY: value })} />
-            <LayoutSlider label="Wheel scale" value={settings.steeringLayout.wheelScale} min={0.65} max={1.35} step={0.01} onChange={(value) => updateSteeringLayout({ wheelScale: value })} />
-            <LayoutSlider label="Wheel X" value={settings.steeringLayout.wheelX} min={-180} max={180} step={1} unit="px" onChange={(value) => updateSteeringLayout({ wheelX: value })} />
-            <LayoutSlider label="Wheel Y" value={settings.steeringLayout.wheelY} min={-120} max={120} step={1} unit="px" onChange={(value) => updateSteeringLayout({ wheelY: value })} />
-            <LayoutSlider label="Pedals scale" value={settings.steeringLayout.pedalsScale} min={0.65} max={1.35} step={0.01} onChange={(value) => updateSteeringLayout({ pedalsScale: value })} />
-            <LayoutSlider label="Pedals X" value={settings.steeringLayout.pedalsX} min={-180} max={180} step={1} unit="px" onChange={(value) => updateSteeringLayout({ pedalsX: value })} />
-            <LayoutSlider label="Pedals Y" value={settings.steeringLayout.pedalsY} min={-120} max={120} step={1} unit="px" onChange={(value) => updateSteeringLayout({ pedalsY: value })} />
-            <LayoutSlider label="Aux scale" value={settings.steeringLayout.auxScale} min={0.65} max={1.35} step={0.01} onChange={(value) => updateSteeringLayout({ auxScale: value })} />
-            <LayoutSlider label="Aux X" value={settings.steeringLayout.auxX} min={-180} max={180} step={1} unit="px" onChange={(value) => updateSteeringLayout({ auxX: value })} />
-            <LayoutSlider label="Aux Y" value={settings.steeringLayout.auxY} min={-120} max={120} step={1} unit="px" onChange={(value) => updateSteeringLayout({ auxY: value })} />
-            <LayoutSlider label="Header / lock Y" value={settings.steeringLayout.controlsY} min={-100} max={100} step={1} unit="px" onChange={(value) => updateSteeringLayout({ controlsY: value })} />
-            <LayoutSlider label="Header scale" value={settings.steeringLayout.controlsScale} min={0.65} max={1.35} step={0.01} onChange={(value) => updateSteeringLayout({ controlsScale: value })} />
-            <LayoutSlider label="Mode title Y" value={settings.steeringLayout.titleY} min={-80} max={80} step={1} unit="px" onChange={(value) => updateSteeringLayout({ titleY: value })} />
-          </div>
-        </div>
-
-        <div className="spectral-settings-block-label spectral-settings-block-label-mouse"><span>04</span><div><strong>MOUSE CONTROL SURFACE</strong><small>Precision pointer / gyro / Viper profile</small></div><ChevronRight size={13} /></div>
+        <div className="spectral-settings-block-label spectral-settings-block-label-mouse"><span>03</span><div><strong>MOUSE CONTROL SURFACE</strong><small>Viper profile, DPI, gyro and tracking</small></div><ChevronRight size={13} /></div>
         <div className="spectral-settings-mouse-block">
-          <div className="spectral-settings-mouse-hero">
-            <div className="spectral-settings-mouse-icon"><Mouse size={19} /></div>
-            <div className="spectral-settings-mouse-copy">
-              <div className="spectral-settings-mouse-kicker"><Sparkles size={10} /> PRECISION SURFACE / ACTIVE</div>
-              <strong>VIPER-STYLE POINTER SYSTEM</strong>
-              <p>
-                Tune DPI, polling, gyro aim, tracking and dynamic sensitivity for a desktop-class
-                cursor path through the Windows bridge.
-              </p>
-            </div>
-            <div className="spectral-settings-mouse-stats">
-              <span><Gauge size={11} /> {settings.mouseDpi.toLocaleString()} DPI</span>
-              <span><Crosshair size={11} /> {settings.mouseGyroEnabled ? "GYRO ON" : "GYRO OFF"}</span>
-            </div>
+          <div className="mb-2">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-lime-300">
+              Mouse Mode • Viper V4 Pro profile
+            </p>
+            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+              Software equivalents for the Viper V4 Pro control model. Phone/browser hardware cannot
+              reproduce the physical mouse sensor, weight, optical switch hardware, or true 8 kHz
+              sensor scan rate; the bridge emits real Windows mouse input.
+            </p>
           </div>
 
           <Row label="On-board profile">
@@ -679,8 +498,8 @@ export function SettingsPanel({
         </div>
 
         <div className="spectral-settings-note mt-4 rounded-lg p-3 text-[11px] leading-relaxed">
-          <strong className="text-slate-200">Controller polling</strong> is selectable from 60 to 333 Hz.
-          333 Hz is the ~3 ms cadence target. Actual measured end-to-end latency is reported above and depends on the phone, browser,
+          <strong className="text-slate-200">Controller polling</strong> is selectable from 60 to 240 Hz.
+          240 Hz is the current low-latency ceiling (about 4.17 ms between refresh packets). Actual end-to-end latency depends on the phone, browser,
           Wi-Fi/LAN path, PC load, and game input polling.
         </div>
 

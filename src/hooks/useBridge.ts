@@ -14,12 +14,12 @@ export type BridgeTelemetry = {
   ffb?: number | undefined;
 };
 
-const clampRate = (hz: number) => Math.max(60, Math.min(333, Math.round(hz)));
+const clampRate = (hz: number) => Math.max(60, Math.min(240, Math.round(hz)));
 const nowMs = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
 
 /**
  * Low-latency state transport:
- * - target rate is selectable up to 333 Hz (~3.00 ms cadence target)
+ * - target rate is selectable up to 240 Hz (~4.17 ms minimum cadence)
  * - self-scheduling avoids interval drift
  * - only the newest controller state is sent
  * - browser/transport buffering is bounded so stale input is not accumulated

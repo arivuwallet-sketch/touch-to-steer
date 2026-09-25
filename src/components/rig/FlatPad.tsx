@@ -602,9 +602,9 @@ export function FlatPad({ settings, set, press, onSettingsChange, gameName = "De
   }, [onSettingsChange, settings.joystickTensionGf, settings.vibration]);
 
   const cycleSendRate = useCallback(() => {
-    const values: Settings["sendRateHz"][] = [60, 120, 144, 180, 240];
+    const values: Settings["sendRateHz"][] = [60, 120, 144, 180, 240, 333];
     const index = values.indexOf(settings.sendRateHz);
-    const next = values[(index >= 0 ? index + 1 : 0) % values.length] ?? 240;
+    const next = values[(index >= 0 ? index + 1 : 0) % values.length] ?? 333;
     onSettingsChange({ sendRateHz: next });
     buzz(settings.vibration, 8);
   }, [onSettingsChange, settings.sendRateHz, settings.vibration]);

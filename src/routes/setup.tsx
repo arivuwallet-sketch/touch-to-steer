@@ -201,7 +201,7 @@ function Setup() {
           <div className="spectral-setup-utility-metrics">
             <span><Wifi size={13} /> SAME LAN</span>
             <span><RadioTower size={13} /> WEBSOCKET</span>
-            <span>240 HZ CEILING</span>
+            <span>3 MS POLLING TARGET</span>
           </div>
         </div>
       </section>

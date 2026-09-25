@@ -15,12 +15,12 @@ export type BridgeTelemetry = {
   ffb?: number | undefined;
 };
 
-const clampRate = (hz: number) => Math.max(60, Math.min(240, Math.round(hz)));
+const clampRate = (hz: number) => Math.max(60, Math.min(333, Math.round(hz)));
 const nowMs = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
 
 /**
  * Low-latency state transport:
- * - target rate is selectable up to 240 Hz (~4.17 ms minimum cadence)
+ * - target rate is selectable up to 333 Hz (3 ms scheduling target; browser timing is best-effort)
  * - self-scheduling avoids interval drift
  * - only the newest controller state is sent
  * - browser/transport buffering is bounded so stale input is not accumulated
@@ -43,6 +43,7 @@ export function useBridge(
   const moveFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const telemetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pumpChannelRef = useRef<MessageChannel | null>(null);
   const packetCounterRef = useRef(0);
   const lastStatsPaintRef = useRef(0);
   const lastLatencyPaintRef = useRef(0);
@@ -59,6 +60,9 @@ export function useBridge(
   const clearLoop = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = null;
+    pumpChannelRef.current?.port1.close();
+    pumpChannelRef.current?.port2.close();
+    pumpChannelRef.current = null;
   }, []);
 
   const clearTelemetryTimer = useCallback(() => {
@@ -210,12 +214,24 @@ export function useBridge(
             }
           }
 
-          const period = 1000 / clampRate(rateHzRef.current);
+          const rate = clampRate(rateHzRef.current);
+          const period = rate === 333 ? 3 : 1000 / rate;
           nextDue += period;
           if (nextDue < currentTime - period * 2) nextDue = currentTime + period;
-          timerRef.current = setTimeout(pump, Math.max(0, nextDue - currentTime));
+          timerRef.current = setTimeout(() => {
+            // A message task breaks nested timer clamping (normally 4 ms).
+            // No busy loop: every sample still waits for its scheduled timer.
+            const channel = pumpChannelRef.current;
+            if (rate === 333 && channel) channel.port2.postMessage(null);
+            else pump();
+          }, Math.max(0, nextDue - nowMs()));
         };
 
+        if (typeof MessageChannel !== "undefined") {
+          const channel = new MessageChannel();
+          channel.port1.onmessage = pump;
+          pumpChannelRef.current = channel;
+        }
         pump();
       };
 
@@ -432,7 +448,7 @@ export function useBridge(
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return false;
 
-    // Digital button transitions must not wait for the 240 Hz state sampler.
+    // Digital button transitions must not wait for the background state sampler.
     // A lightning-fast tap can otherwise happen entirely between two pump
     // ticks and never reach the bridge at all. Send the complete current
     // controller snapshot immediately; the bridge applies edge snapshots

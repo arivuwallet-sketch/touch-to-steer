@@ -82,3 +82,10 @@ These automated checks do not establish physical input latency, Wi-Fi performanc
 These are controller bindings, not guaranteed game actions: games assign their own controls. Gear-down and nitro share LB/L1; choose the game binding for the action you use. Test in your game and adjust its bindings if its defaults differ.
 
 For the follow-up check, start a game **before** connecting the phone, switch to another game, then disconnect/reconnect. Check the LED title each time. Sweep the wheel past 180° repeatedly with a 900°/1080° range, reverse at full lock, cross the hub, and re-grab during auto-centre. Repeat while holding GAS. The screen's game-name update must not interrupt these inputs.
+
+
+## 3 ms polling target
+
+Both gamepad and wheel now default to the 333 Hz option, which schedules the background state check with a 3 ms target. Existing installations adopt it once on the next app load; subsequent manual rate selections remain saved. Existing rate buttons and Settings can still select 60/120/144/180/240 Hz.
+
+Input changes still transmit immediately, button edges retain priority, and unchanged snapshots retain the 250 ms recovery heartbeat. No extra smoothing, input batching, steering changes, mapping changes or layout changes are introduced. A message task between timer callbacks avoids the nested-timer 4 ms minimum where supported; scheduling remains subject to browser throttling and device load. This is not a claim of measured 3 ms network or end-to-end gameplay latency. Auto-centering remains 120 ms.

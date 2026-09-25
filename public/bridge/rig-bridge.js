@@ -1470,7 +1470,7 @@ wss.on("connection", (ws) => {
           t: msg.t ?? Date.now(),
           seq: msg.seq ?? 0,
           output: session.mode,
-          rateHz: Number(msg.rateHz) || 240,
+          rateHz: Math.max(60, Math.min(333, Number(msg.rateHz) || 333)),
           mouse: {
             supported: process.platform === "win32",
             injectorAvailable: Boolean(startMouseInjector()),
@@ -1537,7 +1537,7 @@ wss.on("connection", (ws) => {
         try {
           // Edge buttons AND live touch/analog events bypass the background
           // mailbox. Pedals, steering and sticks therefore reach ViGEm in the
-          // same browser event rather than waiting for the 240 Hz safety pump.
+          // same browser event rather than waiting for the background safety pump.
           // The mailbox remains intact for the continuous watchdog lane, so
           // Claude's stale-state protection is preserved.
           applySessionState(session, msg);

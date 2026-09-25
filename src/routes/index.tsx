@@ -65,7 +65,7 @@ const modeProofs = [
     title: "Every essential control stays under your thumbs.",
     description:
       "Dual analog sticks, separated D-pad and ABXY controls, ForceAdapt triggers, shoulder buttons, turbo, gyro, profiles and four rear mappings share one touch-safe landscape surface.",
-    detail: "DUAL STICKS · FORCEADAPT · 240 HZ · GYRO",
+    detail: "DUAL STICKS · FORCEADAPT · 333 HZ · GYRO",
     image: gamepadModeAsset.url,
     alt: "TouchToSteer gamepad mode showing dual sticks, D-pad, ABXY buttons, ForceAdapt triggers and profile controls",
   },
@@ -161,7 +161,7 @@ const systemMatrix = [
       "Gyro aim with invert-Y support",
       "FORCEFLEX 30 / 50 / 80 / 100 gf response profiles",
       "Dead zone + linearity + stick sensitivity tuning",
-      "60 / 120 / 144 / 180 / 240 Hz controller transport",
+      "60 / 120 / 144 / 180 / 240 / 333 Hz controller transport",
       "Phone haptics + visual 3D DualShock-style vibration feedback",
     ],
   },

@@ -199,7 +199,15 @@ test('All keyboard bindings and mixed touch/keyboard ownership preserve held inp
   assert.equal(wheel.buttons.horn,true);assert.equal(wheel.buttons.reset,true);
 });
 
-test('Transport sends every press/release immediately, bounds analog backlog, and checks driver readiness', t => {
+for (const rate of [240,333]) test(`Transport at ${rate} Hz sends every press/release immediately, bounds backlog, and checks readiness`, t => {
+  const originalChannel=globalThis.MessageChannel;
+  let posts=0,closed=0;
+  globalThis.MessageChannel=class {
+    constructor() {
+      this.port1={onmessage:null,close(){closed++;}};
+      this.port2={postMessage:()=>{posts++;this.port1.onmessage?.();},close(){closed++;}};
+    }
+  };
   t.mock.timers.enable({apis:['setTimeout']});
   const { useBridge }=loadTS('src/hooks/useBridge.ts');
   class FakeSocket {
@@ -213,12 +221,13 @@ test('Transport sends every press/release immediately, bounds analog backlog, an
   }
   globalThis.WebSocket=FakeSocket;
   const ref={current:emptyState()};let api;
-  function Harness() {api=useBridge(ref,240,'xinput',false);return null;}
+  function Harness() {api=useBridge(ref,rate,'xinput',false);return null;}
   const app=mount(Harness);
   try {
     act(()=>api.connect('ws://127.0.0.1:8787'));
     const ws=FakeSocket.instances.at(-1);
     act(()=>ws.open());
+    assert.equal(ws.sent.find(m=>m.type==='hello').rateHz,rate);
     assert.equal(api.status,'connecting');
     act(()=>ws.receive({type:'ready',controller:{connected:true}}));
     assert.equal(api.status,'connected');
@@ -237,13 +246,15 @@ test('Transport sends every press/release immediately, bounds analog backlog, an
     ws.bufferedAmount=0;
     act(()=>t.mock.timers.tick(5));
     assert.equal(ws.sent.at(-1).lx,0.9);
+    assert.equal(posts>0,rate===333);
     act(()=>api.connect('ws://127.0.0.1:8787'));
     const latest=FakeSocket.instances.at(-1);
     act(()=>ws.onerror());assert.equal(api.status,'connecting'); // stale socket cannot change new status
     act(()=>latest.open());
     act(()=>latest.receive({type:'ready',controller:{connected:false}}));
     assert.equal(api.status,'error');
-  } finally {app.unmount();}
+  } finally {app.unmount();globalThis.MessageChannel=originalChannel;}
+  assert.ok(closed>=4,'both connections close their message ports');
 });
 
 
@@ -301,4 +312,19 @@ test('Wheel preserves steering on settings rerender and re-grab cancels auto-cen
     act(()=>window.dispatchEvent(new Event('blur')));
     assert.equal(app.state().steer,0);assert.equal(frames.size,0);
   } finally {app.unmount();}
+});
+
+
+test('Both rate buttons retain old options and select the 3 ms default', () => {
+  assert.equal(defaultSettings.sendRateHz,333);
+  for(const Component of [FlatPad,FlatWheel]) {
+    const changes=[];
+    const app=mount(Component,{settings:{...settings,sendRateHz:240},onSettingsChange:p=>changes.push(p)});
+    try {
+      const button=app.button('Controller polling rate 240 Hz. Tap to change.');
+      if(Component===FlatPad) act(()=>button.click());
+      else pointer(button,'pointerdown');
+      assert.equal(changes.at(-1).sendRateHz,333);
+    } finally {app.unmount();}
+  }
 });

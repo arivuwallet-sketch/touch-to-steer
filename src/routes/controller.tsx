@@ -67,6 +67,7 @@ function Rig() {
 
   useEffect(() => {
     const migrationKey = "mobile-rig-universal-migration-v3";
+    const timingMigrationKey = "mobile-rig-3ms-v1";
     const migrated = localStorage.getItem(migrationKey) === "1";
     const raw = localStorage.getItem(STORAGE_KEY);
 
@@ -82,6 +83,12 @@ function Rig() {
             100;
         }
         const saved = { ...defaultSettings, ...parsed } as Settings;
+        // Apply the new timing target once without altering other saved controls.
+        if (localStorage.getItem(timingMigrationKey) !== "1") {
+          saved.sendRateHz = 333;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+          localStorage.setItem(timingMigrationKey, "1");
+        }
 
         // Use the broad compatibility target for existing installs unless the
         // user explicitly chose it as DS4-only. Universal keeps one mirrored
@@ -99,6 +106,7 @@ function Rig() {
         /* keep defaults */
       }
     } else {
+      localStorage.setItem(timingMigrationKey, "1");
       localStorage.setItem(migrationKey, "1");
     }
   }, []);
@@ -171,7 +179,7 @@ function Rig() {
     triggerAnalogHaptic(changeMagnitude);
 
     // Send analog changes immediately from the input event instead of waiting
-    // for the 240 Hz watchdog. The watchdog remains as a safety/refresh lane.
+    // for the background watchdog. The watchdog remains as a safety/refresh lane.
     const analogChanged = [
       "steer",
       "throttle",
@@ -226,7 +234,7 @@ function Rig() {
     stateRef.current = mergeControllerInputs(touchStateRef.current, keyboardStateRef.current);
 
     // Send every real digital edge immediately instead of waiting for the
-    // 240 Hz transport sampler. This preserves sub-frame taps in joy.cpl.
+    // background transport sampler. This preserves sub-frame taps in joy.cpl.
     if (previous !== Boolean(stateRef.current.buttons[id])) sendControllerEdge();
   }, [sendControllerEdge, settings.vibration]);
 

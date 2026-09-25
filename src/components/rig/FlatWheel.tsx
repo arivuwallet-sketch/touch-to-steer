@@ -489,7 +489,8 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
   const wheelHitRef = useRef<HTMLDivElement>(null);
   const wheelVisualRef = useRef<HTMLDivElement>(null);
   const touchPointer = useRef<number | null>(null);
-  const lastAngle = useRef(0);
+  const lastAngle = useRef<number | null>(null);
+  const wheelRect = useRef<DOMRect | null>(null);
   const wheelAngleDeg = useRef(0);
   const centreAnimationRef = useRef<number | null>(null);
   const lastHapticAt = useRef(0);
@@ -498,6 +499,7 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
 
   const maxLockDeg = Math.max(90, settings.wheelRotationDeg / 2);
   const prevLockRef = useRef(maxLockDeg);
+  const previousMode = useRef(settings.steerMode);
 
 
   const paintWheel = useCallback((angleDeg: number) => {
@@ -519,7 +521,7 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
       );
       set({ steer: value });
     },
-    [set, settings.deadzone, settings.linearity, settings.steerSensitivity],
+    [set, settings.deadzone, settings.linearity],
   );
 
   const cancelCentre = useCallback(() => {
@@ -605,11 +607,18 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
   }, []);
 
   useEffect(() => {
+    const changed = previousMode.current !== settings.steerMode;
+    previousMode.current = settings.steerMode;
+    if (changed) {
+      touchPointer.current = null;
+      wheelRect.current = null;
+      lastAngle.current = null;
+      cancelCentre();
+      setWheelRaw(0);
+    }
     if (settings.steerMode !== "tilt") {
       setGyroReady(false);
       setGyroDenied(false);
-      cancelCentre();
-      setWheelRaw(0);
       return;
     }
 
@@ -679,10 +688,11 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
     e.currentTarget.setPointerCapture(e.pointerId);
     touchPointer.current = e.pointerId;
 
-    const rect = el.getBoundingClientRect();
+    const rect = wheelRect.current = el.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
-    lastAngle.current = Math.atan2(e.clientY - cy, e.clientX - cx);
+    lastAngle.current = Math.hypot(e.clientX - cx, e.clientY - cy) < Math.min(rect.width, rect.height) * 0.12
+      ? null : Math.atan2(e.clientY - cy, e.clientX - cx);
     buzz(settings.vibration, 8);
   };
 
@@ -695,11 +705,21 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
 
     e.preventDefault();
 
-    const rect = el.getBoundingClientRect();
+    const rect = wheelRect.current;
+    if (!rect) return;
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
+    // Rebase after crossing the hub: atan2 is undefined at the centre and
+    // otherwise a tiny finger movement can jump half a turn into full lock.
+    if (Math.hypot(e.clientX - cx, e.clientY - cy) < Math.min(rect.width, rect.height) * 0.12) {
+      lastAngle.current = null;
+      return;
+    }
     const angle = Math.atan2(e.clientY - cy, e.clientX - cx);
-
+    if (lastAngle.current === null) {
+      lastAngle.current = angle;
+      return;
+    }
     let delta = angle - lastAngle.current;
     while (delta > Math.PI) delta -= Math.PI * 2;
     while (delta < -Math.PI) delta += Math.PI * 2;
@@ -714,8 +734,8 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
       ),
     );
 
-    paintWheel(next);
     emitRaw(next / maxLockDeg);
+    paintWheel(next);
 
     if (settings.ffbHaptics && Math.abs(delta) > 0.012) {
       const now = typeof performance !== "undefined" ? performance.now() : Date.now();
@@ -743,10 +763,14 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
   const releaseWheel = (e?: PointerEvent<HTMLElement>) => {
     if (touchPointer.current === null || (e && touchPointer.current !== e.pointerId)) return;
     touchPointer.current = null;
+    wheelRect.current = null;
+    lastAngle.current = null;
     if (settings.autoCentre) centreWheel();
   };
   useInputReset(() => {
     touchPointer.current = null;
+    wheelRect.current = null;
+    lastAngle.current = null;
     cancelCentre();
     setWheelRaw(0);
   });
@@ -871,7 +895,7 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
         </div>
         <div className="mt-0.5 text-[6px] font-semibold uppercase tracking-[0.15em] text-slate-500 md:text-[8px] md:tracking-[0.2em]">
           {settings.steerMode === "touch"
-            ? `Touch ${settings.wheelRotationDeg}° wheel • Auto-centre`
+            ? `Touch ${settings.wheelRotationDeg}° wheel • ${settings.autoCentre ? "Auto-centre" : "Hold position"}`
             : gyroReady
               ? "Gyro steering"
               : "Gyro permission required"} • {settings.sendRateHz} Hz

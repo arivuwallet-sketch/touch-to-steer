@@ -1,6 +1,6 @@
 # Controller response fixes
 
-This update keeps the existing gamepad and wheel layout. It replaces the recurring synchronous foreground-game query, which could stop all bridge input for up to 700 ms every 1.2 seconds, with an asynchronous query that cannot overlap itself. The PowerShell query also uses its own writable process-ID variable.
+This update keeps the existing gamepad and wheel layout. It replaces the recurring synchronous foreground-game query, which could stop all bridge input for up to 700 ms every 1.2 seconds, with a persistent asynchronous helper sampling every 250 ms. The bridge reads its cache every 250 ms; window changes normally reach the phone within about 500 ms after helper startup, independently of controller input. The PowerShell query also uses its own writable process-ID variable.
 
 Other fixes:
 
@@ -61,3 +61,24 @@ M1–M6 map to existing standard controller buttons, not extra hardware buttons.
 `npm run test:controller` checks production report mapping, real React pointer/key handlers, turbo timing, transport sequencing, a real loopback WebSocket session with a simulated native driver, and unchanged layout markup. `npm run typecheck` and `npm run build` verify the app. The Windows build checks native helper compilation, packaged bridge startup and the diagnostic script's XInput interop compilation.
 
 These automated checks do not establish physical input latency, Wi-Fi performance, game polling behavior, or successful joy.cpl operation on a particular PC. The on-device checks above cover those remaining integration steps.
+
+
+## Game display and steering follow-up
+
+- The gamepad LED screen now receives the live foreground title. A new or reconnected phone gets the cached title immediately; blank titles fall back to the process name. A closed connection clears the display. Failed or stale detection shows unavailable rather than the previous game.
+- Detection reports the foreground Windows application, including games without a built-in profile. Alt-tab to another application updates the title. This is not a universal telemetry decoder: speed/RPM still require a supported game's telemetry feed.
+- Wheel dragging caches geometry per grab, rebases when a finger crosses the hub, and does not reset steering when sensitivity or unrelated callbacks change. Full lock still respects the chosen rotation range. Immediate input reports, the configurable 60–240 Hz watchdog and 120 ms auto-centre remain in place.
+- DS4 pedals now send LT/RT axes and their trigger bits only. GAS no longer also presses Cross, and BRAKE no longer also presses Square. Handbrake and nitro no longer send extra R1/Circle aliases. Legacy games requiring face-button driving must bind the canonical controls in their own input settings.
+
+| Wheel action | Xbox output | DS4 output |
+| --- | --- | --- |
+| Steering | Left stick X | Left stick X |
+| GAS / BRAKE | RT / LT | R2 / L2 |
+| Handbrake | A | Cross |
+| Nitro | LB | L1 |
+| Horn | L3 | L3 |
+| Gear up / down (keyboard E/Q) | RB / LB | R1 / L1 |
+
+These are controller bindings, not guaranteed game actions: games assign their own controls. Gear-down and nitro share LB/L1; choose the game binding for the action you use. Test in your game and adjust its bindings if its defaults differ.
+
+For the follow-up check, start a game **before** connecting the phone, switch to another game, then disconnect/reconnect. Check the LED title each time. Sweep the wheel past 180° repeatedly with a 900°/1080° range, reverse at full lock, cross the hub, and re-grab during auto-centre. Repeat while holding GAS. The screen's game-name update must not interrupt these inputs.

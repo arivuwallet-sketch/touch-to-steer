@@ -126,6 +126,8 @@ export function useBridge(
       }
     }
     setStatus("idle");
+    setActiveGame("Disconnected");
+    setActiveGameProcess(null);
     setLatency(null);
     setTelemetry({});
     setTelemetryLive(false);
@@ -357,6 +359,8 @@ export function useBridge(
         if (wsRef.current === ws) {
           window.dispatchEvent(new Event(RELEASE_INPUTS));
           wsRef.current = null;
+          setActiveGame("Disconnected");
+          setActiveGameProcess(null);
           clearLoop();
           clearMoveFlush();
           setStatus((s) => (s === "error" ? "error" : "idle"));

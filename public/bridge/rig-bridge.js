@@ -747,7 +747,7 @@ appendBridgeLog("TouchToSteer Bridge ready.");
 
 let lastForegroundGameKey = "";
 let currentForegroundGame = {
-  title: "Desktop",
+  title: "Detecting game…",
   process: "",
   path: "",
 };
@@ -792,20 +792,24 @@ function foregroundCanDriveAdaptiveHaptics() {
 }
 
 const readForegroundGame = require("./foreground-game.cjs").createForegroundReader();
+process.on("exit", () => readForegroundGame.stop?.());
+function foregroundPayload() {
+  return { type: "game", name: currentForegroundGame.title || currentForegroundGame.process || "Desktop",
+    process: currentForegroundGame.process || null, title: currentForegroundGame.title || null, t: Date.now() };
+}
 let foregroundPollBusy = false;
 const foregroundGameTimer = setInterval(async () => {
   if (foregroundPollBusy) return;
   foregroundPollBusy = true;
   try {
     const raw = await readForegroundGame();
-    if (!raw) return;
-    const info = raw ? JSON.parse(raw) : null;
+    const info = raw ? JSON.parse(raw) : { title: "Game detection unavailable", process: "" };
     const title = String(info?.title || "").trim();
     const processName = String(info?.process || "").trim();
     const processPath = String(info?.path || "").trim();
 
     currentForegroundGame = {
-      title: title || "Desktop",
+      title: title,
       process: processName,
       path: processPath,
     };
@@ -814,13 +818,7 @@ const foregroundGameTimer = setInterval(async () => {
     if (key === lastForegroundGameKey) return;
     lastForegroundGameKey = key;
 
-    const payload = {
-      type: "game",
-      name: title || processName || "Desktop",
-      process: processName || null,
-      title: title || null,
-      t: Date.now(),
-    };
+    const payload = foregroundPayload();
 
     // Window-title/process transitions are a useful generic compatibility
     // signal for menus, loading screens and game-session changes when a title
@@ -839,7 +837,7 @@ const foregroundGameTimer = setInterval(async () => {
   } finally {
     foregroundPollBusy = false;
   }
-}, 1200);
+}, 250);
 foregroundGameTimer.unref();
 
 const ADAPTIVE_HAPTICS_ENABLED =
@@ -1504,6 +1502,9 @@ wss.on("connection", (ws) => {
             live: Boolean(latestTelemetry),
           },
         }));
+        // A late/reconnecting phone needs the current game even if it has
+        // not changed since the last foreground broadcast.
+        ws.send(JSON.stringify(foregroundPayload()));
       } catch {
         /* ignore a racing socket close */
       }

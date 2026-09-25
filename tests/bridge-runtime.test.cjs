@@ -57,7 +57,7 @@ test('Bridge forwards presses during a pending game lookup, rejects stale state,
     const ready=once(client,'message');client.send(JSON.stringify({type:'hello',output:'universal'}));
     assert.equal(JSON.parse((await ready)[0]).controller.connected,true);
     assert.equal(targets.length,2);
-    const foreground=intervals.find(t=>t.delay===1200);
+    const foreground=intervals.find(t=>t.delay===250);
     const query=foreground.callback();assert.equal(typeof finishLookup,'function');
     const first=once(targets[0],'report');
     client.send(JSON.stringify({type:'state',priority:'edge',seq:1,buttons:{a:true,lb:true},steer:-1,rt:0.45}));
@@ -74,8 +74,14 @@ test('Bridge forwards presses during a pending game lookup, rejects stale state,
     assert.equal(targets[0].reports.at(-1).buttons.A,false);
     assert.equal(targets[0].reports.at(-1).buttons.LEFT_SHOULDER,true);
     finishLookup('{"title":"Game","process":"game"}');await query;
+    // A phone joining after detection gets the cached game in its handshake.
+    const late=new WebSocket(`ws://127.0.0.1:${server.address().port}`);
+    const game=new Promise(resolve=>late.on('message',raw=>{const m=JSON.parse(raw);if(m.type==='game')resolve(m);}));
+    await once(late,'open');late.send(JSON.stringify({type:'hello',output:'xinput'}));
+    assert.equal((await game).name,'Game');
+    const lateClose=once(late,'close');late.close();await lateClose;
     clock=2000;
-    const watchdog=intervals.find(t=>t.delay===250);
+    const watchdog=intervals.filter(t=>t.delay===250)[1];
     watchdog.callback();
     assert.ok(Object.values(targets[0].reports.at(-1).buttons).every(value=>!value));
     const close=once(server.clients.values().next().value,'close');client.close();await close;

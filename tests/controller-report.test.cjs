@@ -106,3 +106,19 @@ test('Failed native update is not cached as applied; the next heartbeat retries 
   assert.equal(target.reports.length,2);
   assert.equal(session.lastAppliedSeq,2);
 });
+
+
+test('DS4 driving inputs do not activate extra face/shoulder actions', () => {
+  const target=targetFor(DSBTN);
+  for(const state of [{throttle:1},{brake:1}]) {
+    applyToTarget(target,state,DSBTN);
+    const buttons=target.reports.at(-1).buttons;
+    for(const name of ['CROSS','CIRCLE','SQUARE','TRIANGLE']) assert.equal(buttons[name],false);
+  }
+  applyToTarget(target,{handbrake:1},DSBTN);
+  assert.equal(target.reports.at(-1).buttons.CROSS,true);
+  assert.equal(target.reports.at(-1).buttons.SHOULDER_RIGHT,false);
+  applyToTarget(target,{nitro:1},DSBTN);
+  assert.equal(target.reports.at(-1).buttons.SHOULDER_LEFT,true);
+  assert.equal(target.reports.at(-1).buttons.CIRCLE,false);
+});

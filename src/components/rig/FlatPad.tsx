@@ -527,7 +527,7 @@ function MiniScreen({
   return (
     <div className="flat-pad-screen flex h-[clamp(2.75rem,7.8svh,3.5rem)] w-[clamp(5rem,7vw,7rem)] flex-col items-center justify-center rounded-lg border border-cyan-300/25 bg-[#071018] shadow-[inset_0_0_14px_rgba(34,211,238,.12),0_0_12px_rgba(34,211,238,.1)]">
       <span className="max-w-full overflow-hidden text-center text-[4px] font-black leading-none tracking-[0.07em] text-cyan-400/70 whitespace-nowrap">
-        TOUCHTOSTEER • P1
+        TOUCHTOSTEER • P{profile}
       </span>
       <span
         className="mt-1 max-w-[94%] overflow-hidden text-center text-[8px] font-mono font-bold leading-none text-cyan-200 whitespace-nowrap"
@@ -699,7 +699,7 @@ export function FlatPad({ settings, set, press, onSettingsChange, gameName = "De
         <div className="flat-pad-center-box relative w-[clamp(14rem,27vw,20rem)] rounded-[2rem] bg-[linear-gradient(145deg,#39434f,#171d24)] px-5 py-4 shadow-[inset_0_2px_2px_rgba(255,255,255,.09),0_12px_24px_rgba(0,0,0,.48)]">
           <div className="flex items-center justify-center gap-3">
             <SurfaceButton label="VIEW" id="back" settings={settings} press={press} className="flat-pad-nav-button h-[clamp(1.9rem,4.8svh,2.2rem)] min-w-[clamp(3.4rem,5vw,4rem)] rounded-lg px-2 text-[8px] text-slate-300" />
-            <MiniScreen profile={profile} triggerMode={triggerMode} motion={gyroEnabled} turbo={turbo} />
+            <MiniScreen profile={profile} triggerMode={triggerMode} motion={gyroEnabled} turbo={turbo} gameName={gameName} />
             <SurfaceButton label="MENU" id="start" settings={settings} press={press} className="flat-pad-nav-button h-[clamp(1.9rem,4.8svh,2.2rem)] min-w-[clamp(3.4rem,5vw,4rem)] rounded-lg px-2 text-[8px] text-slate-300" />
           </div>
           <div className="mt-2 flex items-center justify-center gap-2">

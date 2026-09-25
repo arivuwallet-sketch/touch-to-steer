@@ -37,6 +37,7 @@ function mount(Component, extra={}) {
   act(()=>root.render(React.createElement(Component,props)));
   return { host, reports, state:()=>state,
     button:label=>{ const el=[...host.querySelectorAll('button')].find(el=>el.getAttribute('aria-label')===label || el.textContent===label);assert.ok(el,`button ${label}`);return el; },
+    rerender:patch=>{Object.assign(props,patch);act(()=>root.render(React.createElement(Component,props)));},
     unmount:()=>{act(()=>root.unmount());host.remove();},
   };
 }
@@ -242,5 +243,62 @@ test('Transport sends every press/release immediately, bounds analog backlog, an
     act(()=>latest.open());
     act(()=>latest.receive({type:'ready',controller:{connected:false}}));
     assert.equal(api.status,'error');
+  } finally {app.unmount();}
+});
+
+
+test('LED screen receives live game names and updates after a game switch', () => {
+  const app=mount(FlatPad,{gameName:'Forza Horizon 5'});
+  try {
+    assert.match(app.host.querySelector('.flat-pad-screen').textContent,/FORZA HORIZON 5/);
+    app.rerender({gameName:'Assetto Corsa'});
+    assert.match(app.host.querySelector('.flat-pad-screen').textContent,/ASSETTO CORSA/);
+    app.rerender({gameName:'Disconnected'});
+    assert.match(app.host.querySelector('.flat-pad-screen').textContent,/DISCONNECTED/);
+  } finally {app.unmount();}
+});
+
+test('Wheel crosses angle wrap continuously, reverses at lock and ignores the hub singularity', () => {
+  const app=mount(FlatWheel,{settings:{...settings,wheelRotationDeg:1080,steerSensitivity:1,deadzone:0,linearity:1}});
+  const coords=deg=>({clientX:50+50*Math.cos(deg*Math.PI/180),clientY:50+50*Math.sin(deg*Math.PI/180)});
+  try {
+    const wheel=app.host.querySelector('.flat-wheel-hit');
+    pointer(wheel,'pointerdown',1,coords(0));
+    let previous=0;
+    for(let deg=30;deg<=720;deg+=30) {
+      pointer(wheel,'pointermove',1,coords(deg));
+      assert.ok(app.state().steer>=previous-1e-10);
+      previous=app.state().steer;
+    }
+    assert.equal(app.state().steer,1);
+    pointer(wheel,'pointermove',1,coords(690));assert.ok(app.state().steer<1);
+    const before=app.state().steer;
+    pointer(wheel,'pointermove',1,{clientX:50,clientY:50});
+    pointer(wheel,'pointermove',1,coords(180));
+    assert.equal(app.state().steer,before);
+    pointer(wheel,'pointermove',99,coords(90));assert.equal(app.state().steer,before);
+    pointer(wheel,'pointercancel');
+    const pending=[...frames.values()];frames.clear();
+    act(()=>pending.forEach(frame=>frame(performance.now()+150)));
+    assert.equal(app.state().steer,0);
+  } finally {app.unmount();}
+});
+
+test('Wheel preserves steering on settings rerender and re-grab cancels auto-centre', () => {
+  const app=mount(FlatWheel);
+  try {
+    const wheel=app.host.querySelector('.flat-wheel-hit');
+    pointer(wheel,'pointerdown',1,{clientX:100,clientY:50});
+    pointer(wheel,'pointermove',1,{clientX:50,clientY:100});
+    const before=app.state().steer;
+    app.rerender({settings:{...settings,steerSensitivity:2}});
+    assert.equal(app.state().steer,before);
+    pointer(wheel,'pointerup');assert.ok(frames.size>0);
+    pointer(wheel,'pointerdown',2,{clientX:50,clientY:100});
+    assert.equal(frames.size,0);assert.equal(app.state().steer,before);
+    pointer(wheel,'pointermove',2,{clientX:100,clientY:50});
+    assert.ok(app.state().steer<before);
+    act(()=>window.dispatchEvent(new Event('blur')));
+    assert.equal(app.state().steer,0);assert.equal(frames.size,0);
   } finally {app.unmount();}
 });

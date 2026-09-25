@@ -117,7 +117,7 @@ function phoneFallback(
   }
 }
 
-export function playDualRumble(
+function performDualRumble(
   kind: DualRumbleKind = "ui",
   options: DualRumbleOptions = {},
 ) {
@@ -174,4 +174,20 @@ export function playGunfireBurst(cycles = 1, interval = 68) {
 
 export function playEngineIdle(duration = 180) {
   playDualRumble("engine", { duration });
+}
+
+// Coalesce local/game feedback; never scan Gamepads or invoke vibration APIs
+// in the task that is sending a controller press/release.
+let pendingHaptic: { kind: DualRumbleKind; options: DualRumbleOptions } | null = null;
+let hapticTask: ReturnType<typeof setTimeout> | null = null;
+export function playDualRumble(kind: DualRumbleKind = "ui", options: DualRumbleOptions = {}) {
+  if (typeof window === "undefined") return;
+  pendingHaptic = { kind, options };
+  if (hapticTask !== null) return;
+  hapticTask = setTimeout(() => {
+    hapticTask = null;
+    const request = pendingHaptic;
+    pendingHaptic = null;
+    if (request) performDualRumble(request.kind, request.options);
+  }, 0);
 }

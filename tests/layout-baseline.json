@@ -1,0 +1,5 @@
+{
+  "src/components/rig/FlatPad.tsx": "8fe1449fcba8a46b42988afb1129b5726f55b207f3bfd57c9e0d02b27b4a1353",
+  "src/components/rig/FlatWheel.tsx": "89b5a819bf458e0c02d7ee6aefc712b51a2ab4e1a64a6748026c5d3d06f8c2e4",
+  "src/routes/controller.tsx": "b43ab25b08cc7549c46e6da0462b56ec87e0841593abfe07e0900bf37320a318"
+}

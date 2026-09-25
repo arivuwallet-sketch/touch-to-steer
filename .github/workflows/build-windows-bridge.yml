@@ -97,6 +97,13 @@ jobs:
         run: |
           node --check public/bridge/rig-bridge.js
 
+      - name: Verify controller reports and asynchronous foreground detection
+        run: node --test tests/controller-report.test.cjs tests/foreground-game.test.cjs
+
+      - name: Verify Windows XInput diagnostic interop
+        shell: pwsh
+        run: ./public/bridge/windows/Test-Controller.ps1 -ListOnly
+
       - name: Package bridge as a Windows executable
         working-directory: public/bridge
         run: npm run build:exe
@@ -164,7 +171,9 @@ jobs:
           New-Item -ItemType Directory -Force -Path release | Out-Null
           Copy-Item "public/bridge/dist/TouchToSteer-Bridge.exe" "release/TouchToSteer-Bridge.exe"
           Copy-Item "public/bridge/windows/README.md" "release/README.md"
-          Compress-Archive -Path "release/TouchToSteer-Bridge.exe", "release/README.md" -DestinationPath "public/bridge/dist/TouchToSteer-Bridge-Windows.zip" -Force
+          Copy-Item "public/bridge/windows/INPUT-CHECK.md" "release/INPUT-CHECK.md"
+          Copy-Item "public/bridge/windows/Test-Controller.ps1" "release/Test-Controller.ps1"
+          Compress-Archive -Path "release/TouchToSteer-Bridge.exe", "release/README.md", "release/INPUT-CHECK.md", "release/Test-Controller.ps1" -DestinationPath "public/bridge/dist/TouchToSteer-Bridge-Windows.zip" -Force
 
       - name: Build TouchToSteer Windows desktop package
         shell: pwsh

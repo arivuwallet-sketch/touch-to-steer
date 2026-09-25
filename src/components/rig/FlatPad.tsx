@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties, type Poin
 import { applyCurve, applyForceFlex, FORCEFLEX_DESCRIPTIONS, type ControllerState, type JoystickTensionGf, type Settings } from "@/lib/controller-types";
 import { playDualRumble, type DualRumbleKind } from "@/lib/haptics";
 
+import { useHoldControl } from "@/hooks/useHoldControl";
+import { useInputReset } from "@/hooks/useInputReset";
+
 type Props = {
   settings: Settings;
   set: (p: Partial<ControllerState>) => void;
@@ -80,44 +83,16 @@ function SurfaceButton({
   turbo?: boolean;
   onClick?: () => void;
 }) {
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const lastHapticAt = useRef(0);
-  const stopTurbo = useCallback(() => {
-    if (timer.current) clearInterval(timer.current);
-    timer.current = null;
-    press(id, false);
-  }, [id, press]);
-
-  const down = (e: PointerEvent<HTMLButtonElement>) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
-    e.stopPropagation();
-    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-    if (now - lastHapticAt.current > 50) {
-      lastHapticAt.current = now;
-      feelBuzz(settings.vibration, 0.35);
-    }
-    press(id, true);
-
-    if (turbo) {
-      timer.current = setInterval(() => {
-        press(id, false);
-        feelBuzz(settings.vibration, 0.6);
-        window.setTimeout(() => press(id, true), 18);
-      }, 92);
-    }
-  };
-
-  useEffect(() => () => {
-    if (timer.current) clearInterval(timer.current);
-  }, []);
+  const held = useHoldControl((down) => {
+    press(id, down);
+    if (down) feelBuzz(settings.vibration, 0.35);
+  }, turbo);
 
   return (
     <button
       type="button"
       aria-label={typeof label === "string" ? label : id}
-      onPointerDown={down}
-      onPointerUp={stopTurbo}
-      onPointerCancel={stopTurbo}
+      {...held}
       onClick={onClick}
       className={`grid touch-none select-none place-items-center rounded-xl border border-white/10 bg-[linear-gradient(145deg,#3a4551,#151b22)] font-black text-slate-100 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),inset_0_-5px_9px_rgba(0,0,0,.62),0_5px_0_#06090d,0_9px_14px_rgba(0,0,0,.5)] transition-transform active:translate-y-[3px] active:shadow-[inset_0_2px_6px_rgba(0,0,0,.65),0_2px_0_#06090d] ${className}`}
       style={style}
@@ -144,6 +119,7 @@ function Stick({
   const rect = useRef<DOMRect | null>(null);
   const lastHapticMagnitude = useRef(0);
   const pointMagnitude = useRef(0);
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Zero-lag path: no React state on pointer move. Geometry is measured once
   // per grab (no per-sample layout read) and the thumb is written straight to
@@ -200,7 +176,8 @@ function Stick({
     apply(latest.clientX, latest.clientY);
   };
 
-  const release = () => {
+  const release = (e?: PointerEvent<HTMLElement>) => {
+    if (pointer.current === null || (e && pointer.current !== e.pointerId)) return;
     pointer.current = null;
     pointMagnitude.current = 0;
     rect.current = null;
@@ -208,6 +185,15 @@ function Stick({
     if (thumb) thumb.style.transform = "translate3d(-50%,-50%,0)";
     onMove(0, 0);
   };
+
+  useInputReset(() => {
+    release();
+    if (clickTimer.current !== null) {
+      clearTimeout(clickTimer.current);
+      clickTimer.current = null;
+      onClick3(false);
+    }
+  });
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -219,6 +205,7 @@ function Stick({
         aria-valuemax={1}
         aria-valuenow={0}
         onPointerDown={(e) => {
+          if (pointer.current !== null) return;
           e.preventDefault();
           e.currentTarget.setPointerCapture(e.pointerId);
           pointer.current = e.pointerId;
@@ -232,7 +219,8 @@ function Stick({
         onLostPointerCapture={release}
         onDoubleClick={() => {
           onClick3(true);
-          window.setTimeout(() => onClick3(false), 90);
+          if (clickTimer.current !== null) clearTimeout(clickTimer.current);
+          clickTimer.current = setTimeout(() => { clickTimer.current = null; onClick3(false); }, 90);
         }}
         className="flat-pad-stick relative size-[clamp(5.25rem,23svh,10.5rem)] touch-none rounded-full border border-white/10 bg-[#0c1117] shadow-[inset_0_0_22px_rgba(0,0,0,.95),0_8px_20px_rgba(0,0,0,.45)]"
       >
@@ -384,9 +372,8 @@ function Trigger({
       // reaches the PC in the same input task with no render in between.
       valueRef.current = clamped;
       set({ [id]: clamped } as Partial<ControllerState>);
-      // Also expose a digital trigger alias so games/bindings that treat LT/RT
-      // as buttons still receive a clean press while the analog value is sent.
-      press(id === "lt" ? "l2" : "r2", clamped > 0.02);
+      // The bridge derives DS4 digital trigger bits from this same report.
+      // A separate l2/r2=true packet would force partial travel back to 100%.
 
       const plate = plateRef.current;
       if (plate) {
@@ -450,6 +437,7 @@ function Trigger({
 
 
   const pressToFull = (e: PointerEvent<HTMLButtonElement>) => {
+    if (pointer.current !== null) return;
     e.preventDefault();
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -461,6 +449,7 @@ function Trigger({
   };
 
   const release = (e?: PointerEvent<HTMLButtonElement>) => {
+    if (pointer.current === null || (e && pointer.current !== e.pointerId)) return;
     e?.preventDefault();
     e?.stopPropagation();
     pointer.current = null;
@@ -471,6 +460,8 @@ function Trigger({
   };
 
 
+  useInputReset(() => release());
+
   return (
     <button
       type="button"
@@ -479,6 +470,7 @@ function Trigger({
       onPointerMove={(e) => pointer.current === e.pointerId && (e.preventDefault(), move(e))}
       onPointerUp={release}
       onPointerCancel={release}
+      onLostPointerCapture={release}
       className="flat-pad-trigger group relative grid h-[clamp(2.75rem,7.8svh,3.5rem)] w-[clamp(4.5rem,8vw,6rem)] touch-none select-none place-items-center overflow-hidden rounded-[1rem] border border-white/10 bg-[linear-gradient(180deg,#394754,#11171e)] text-[10px] font-black tracking-[0.25em] text-cyan-200 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),inset_0_-7px_14px_rgba(0,0,0,.72),0_7px_0_#05080b,0_11px_18px_rgba(0,0,0,.58)]"
       style={{ perspective: "700px" }}
     >
@@ -651,6 +643,7 @@ export function FlatPad({ settings, set, press, onSettingsChange, gameName = "De
     if (!gyroEnabled) return;
 
     const handler = (e: DeviceOrientationEvent) => {
+      if (document.visibilityState !== "visible" || !document.hasFocus()) return;
       const gamma = e.gamma ?? 0;
       const beta = e.beta ?? 0;
       const angle = window.screen.orientation?.angle ?? 0;

@@ -3,6 +3,9 @@ import { applyCurve, type ControllerState, type Settings } from "@/lib/controlle
 import { playDualRumble, type DualRumbleKind } from "@/lib/haptics";
 import type { BridgeTelemetry } from "@/hooks/useBridge";
 
+import { useHoldControl } from "@/hooks/useHoldControl";
+import { useInputReset } from "@/hooks/useInputReset";
+
 type Props = {
   settings: Settings;
   set: (p: Partial<ControllerState>) => void;
@@ -183,10 +186,6 @@ function TelemetryCluster({
   );
 }
 
-function stopWheelGesture(e: PointerEvent<HTMLElement>) {
-  e.stopPropagation();
-}
-
 function Pedal({
   id,
   label,
@@ -247,7 +246,8 @@ function Pedal({
     }
   };
 
-  const release = () => {
+  const release = (e?: PointerEvent<HTMLElement>) => {
+    if (active.current === null || (e && active.current !== e.pointerId)) return;
     active.current = null;
     lastBand.current = -1;
     rect.current = null;
@@ -256,12 +256,16 @@ function Pedal({
     if (settings.vibration) buzz(true, id === "brake" ? [5, 11, 4] : 4);
   };
 
+  useInputReset(() => release());
+
   return (
     <button
       ref={pedalRef}
       type="button"
       aria-label={label}
       onPointerDown={(e) => {
+        if (active.current !== null) return;
+        e.preventDefault();
         e.currentTarget.setPointerCapture(e.pointerId);
         active.current = e.pointerId;
         rect.current = e.currentTarget.getBoundingClientRect();
@@ -272,6 +276,7 @@ function Pedal({
       onPointerMove={(e) => active.current === e.pointerId && update(e.clientY)}
       onPointerUp={release}
       onPointerCancel={release}
+      onLostPointerCapture={release}
       className="group relative h-[62svh] min-h-0 w-[clamp(4.25rem,8.4vw,6rem)] touch-none select-none overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#080b0f]/95 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_14px_28px_rgba(0,0,0,.6)] active:brightness-110 md:h-[42vh] md:min-h-44 md:w-[clamp(4.6rem,7vw,6.4rem)]"
     >
       <span className="absolute inset-1.5 rounded-[1.15rem] border border-white/5 bg-[linear-gradient(180deg,#1a2027,#090c10)] shadow-[inset_0_0_20px_rgba(0,0,0,.85)]" />
@@ -315,7 +320,7 @@ function Pedal({
   );
 }
 function Handbrake({ settings, set }: { settings: Settings; set: Props["set"] }) {
-  const active = useRef(false);
+  const active = useRef<number | null>(null);
   const startY = useRef(0);
   const leverRef = useRef<HTMLSpanElement>(null);
 
@@ -325,33 +330,39 @@ function Handbrake({ settings, set }: { settings: Settings; set: Props["set"] })
   };
 
   const move = (y: number) => {
-    const next = Math.max(0, Math.min(1, (startY.current - y) / 125));
+    const next = Math.max(0, Math.min(1, 1 + (startY.current - y) / 125));
     set({ handbrake: next });
     paint(next);
   };
 
-  const release = () => {
-    active.current = false;
+  const release = (e?: PointerEvent<HTMLElement>) => {
+    if (active.current === null || (e && active.current !== e.pointerId)) return;
+    active.current = null;
     set({ handbrake: 0 });
     paint(0);
     if (settings.vibration) buzz(true, [5, 12, 4]);
   };
+
+  useInputReset(() => release());
 
   return (
     <button
       type="button"
       aria-label="Handbrake"
       onPointerDown={(e) => {
+        if (active.current !== null) return;
+        e.preventDefault();
         e.currentTarget.setPointerCapture(e.pointerId);
-        active.current = true;
+        active.current = e.pointerId;
         startY.current = e.clientY;
         set({ handbrake: 1 });
         paint(1);
         buzz(settings.vibration, [7, 16, 6]);
       }}
-      onPointerMove={(e) => active.current && move(e.clientY)}
+      onPointerMove={(e) => active.current === e.pointerId && move(e.clientY)}
       onPointerUp={release}
       onPointerCancel={release}
+      onLostPointerCapture={release}
       className="relative h-[38svh] w-[clamp(4.25rem,9vw,6rem)] touch-none select-none overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#080b0f] shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_12px_24px_rgba(0,0,0,.58)] active:brightness-125 md:h-40 md:w-24"
     >
       <span className="absolute inset-2 rounded-[1.05rem] border border-white/5 bg-[linear-gradient(180deg,#1a2027,#07090d)] shadow-[inset_0_0_18px_rgba(0,0,0,.9)]" />
@@ -376,24 +387,17 @@ function Handbrake({ settings, set }: { settings: Settings; set: Props["set"] })
 function Nitro({ settings, set }: { settings: Settings; set: Props["set"] }) {
   const [down, setDown] = useState(false);
 
-  const release = () => {
-    // Input goes out first; the visual state change renders afterwards.
-    set({ nitro: 0 });
-    setDown(false);
-  };
+  const held = useHoldControl((pressed) => {
+    set({ nitro: pressed ? 1 : 0 });
+    setDown(pressed);
+    if (pressed) buzz(settings.vibration, [5, 18, 5, 18, 8]);
+  });
 
   return (
     <button
       type="button"
       aria-label="Nitro"
-      onPointerDown={(e) => {
-        e.currentTarget.setPointerCapture(e.pointerId);
-        set({ nitro: 1 });
-        setDown(true);
-        buzz(settings.vibration, [5, 18, 5, 18, 8]);
-      }}
-      onPointerUp={release}
-      onPointerCancel={release}
+      {...held}
       className={
         "relative h-[clamp(6.5rem,18svh,8.25rem)] w-[clamp(4.4rem,7.5vw,5.6rem)] touch-none select-none overflow-hidden rounded-[1.15rem] border border-cyan-200/15 bg-[#070a0e] shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_12px_26px_rgba(0,0,0,.58)] active:translate-y-0.5 " +
         (down ? "brightness-125 ring-2 ring-cyan-300/30" : "")
@@ -445,6 +449,10 @@ function G29Wheel({
   settings: Settings;
   press: Props["press"];
 }) {
+  const horn = useHoldControl((down) => {
+    press("horn", down);
+    if (down) buzz(settings.vibration, 10);
+  });
   return (
     <div className="pointer-events-none absolute inset-0">
       <div className="absolute inset-0 rounded-full bg-[#0b0d10] shadow-[0_30px_50px_rgba(0,0,0,.7),inset_0_0_0_1px_rgba(255,255,255,.08)]" />
@@ -464,20 +472,7 @@ function G29Wheel({
           type="button"
           aria-label="Horn"
           title="Horn"
-          onPointerDown={(e) => {
-            stopWheelGesture(e);
-            e.currentTarget.setPointerCapture(e.pointerId);
-            press("horn", true);
-            buzz(settings.vibration, 10);
-          }}
-          onPointerUp={(e) => {
-            e.stopPropagation();
-            press("horn", false);
-          }}
-          onPointerCancel={(e) => {
-            e.stopPropagation();
-            press("horn", false);
-          }}
+          {...horn}
           className="pointer-events-auto absolute left-1/2 top-1/2 z-50 grid size-[27%] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-[clamp(.4rem,1vh,.75rem)] border-[#20252b] bg-[radial-gradient(circle_at_40%_28%,#4a5159,#1b1f24_58%,#0d1014_100%)] text-white shadow-[inset_0_0_20px_rgba(0,0,0,.75),0_12px_18px_rgba(0,0,0,.55)] active:brightness-150"
         >
           <span className="text-[clamp(.75rem,1.5vw,1.35rem)] font-black tracking-tight">G</span>
@@ -553,17 +548,14 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
       return;
     }
 
-    // Medium-smooth return: deliberate enough to feel like a real wheel
-    // settling back to center, without taking so long that it feels sluggish.
-    const duration = Math.min(760, 520 + Math.round(Math.abs(startAngle) * 0.32));
+    // Begin returning immediately; the old 520–760ms ease-in felt stuck.
+    const duration = 120;
     const startedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
 
     const frame = (time: number) => {
       const elapsed = time - startedAt;
       const t = Math.min(1, elapsed / duration);
-      const eased = t < 0.5
-        ? 4 * t * t * t
-        : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      const eased = 1 - Math.pow(1 - t, 3);
       const angle = startAngle * (1 - eased);
 
       paintWheel(angle);
@@ -636,6 +628,7 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
     if (settings.steerMode !== "tilt" || !gyroReady) return;
 
     const onOrientation = (event: DeviceOrientationEvent) => {
+      if (document.visibilityState !== "visible" || !document.hasFocus()) return;
       const beta = event.beta ?? 0;
       const gamma = event.gamma ?? 0;
       const screenAngle =
@@ -747,10 +740,16 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
     }
   };
 
-  const releaseWheel = () => {
+  const releaseWheel = (e?: PointerEvent<HTMLElement>) => {
+    if (touchPointer.current === null || (e && touchPointer.current !== e.pointerId)) return;
     touchPointer.current = null;
-    centreWheel();
+    if (settings.autoCentre) centreWheel();
   };
+  useInputReset(() => {
+    touchPointer.current = null;
+    cancelCentre();
+    setWheelRaw(0);
+  });
 
   useEffect(() => {
     return () => cancelCentre();
@@ -888,6 +887,7 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
             onPointerMove={dragWheel}
             onPointerUp={releaseWheel}
             onPointerCancel={releaseWheel}
+            onLostPointerCapture={releaseWheel}
           >
             <G29Wheel
               wheelVisualRef={wheelVisualRef}

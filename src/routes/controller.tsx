@@ -38,6 +38,10 @@ export const Route = createFileRoute("/controller")({
   component: Rig,
 });
 
+import { mergeControllerInputs } from "@/lib/keyboard-controller";
+import { useKeyboardController } from "@/hooks/useKeyboardController";
+import { RELEASE_INPUTS } from "@/hooks/useInputReset";
+
 const STORAGE_KEY = "mobile-rig-settings";
 
 function Rig() {
@@ -46,6 +50,8 @@ function Rig() {
   const [mode, setMode] = useState<"pad" | "wheel" | "mouse">("pad");
   const [mobileLayout, setMobileLayout] = useState(false);
   const stateRef = useRef<ControllerState>(emptyState());
+  const touchStateRef = useRef<ControllerState>(emptyState());
+  const keyboardStateRef = useRef<ControllerState>(emptyState());
   const {
     status,
     latency,
@@ -95,7 +101,7 @@ function Rig() {
     } else {
       localStorage.setItem(migrationKey, "1");
     }
-  }, [settings.vibration]);
+  }, []);
 
   const patch = useCallback((p: Partial<Settings>) => {
     setSettings((s) => {
@@ -149,7 +155,8 @@ function Rig() {
 
   const set = useCallback((p: Partial<ControllerState>) => {
     const previous = stateRef.current;
-    const next = { ...previous, ...p };
+    touchStateRef.current = { ...touchStateRef.current, ...p };
+    const next = mergeControllerInputs(touchStateRef.current, keyboardStateRef.current);
     stateRef.current = next;
 
     // Global dual-rumble lane: every meaningful controller state event gets
@@ -179,7 +186,7 @@ function Rig() {
       "handbrake",
       "nitro",
       "dial",
-    ].some((key) => key in p);
+    ].some((key) => key in p && previous[key as keyof ControllerState] !== next[key as keyof ControllerState]);
 
     if (analogChanged) {
       sendControllerStateNow();
@@ -212,20 +219,30 @@ function Rig() {
       });
     }
     const previous = Boolean(stateRef.current.buttons?.[id]);
-    stateRef.current = {
-      ...stateRef.current,
-      buttons: { ...stateRef.current.buttons, [id]: down },
+    touchStateRef.current = {
+      ...touchStateRef.current,
+      buttons: { ...touchStateRef.current.buttons, [id]: down },
     };
+    stateRef.current = mergeControllerInputs(touchStateRef.current, keyboardStateRef.current);
 
     // Send every real digital edge immediately instead of waiting for the
     // 240 Hz transport sampler. This preserves sub-frame taps in joy.cpl.
-    if (previous !== down) sendControllerEdge();
+    if (previous !== Boolean(stateRef.current.buttons[id])) sendControllerEdge();
   }, [sendControllerEdge, settings.vibration]);
 
   const releaseAll = useCallback(() => {
+    window.dispatchEvent(new Event(RELEASE_INPUTS));
+    touchStateRef.current = emptyState();
+    keyboardStateRef.current = emptyState();
     stateRef.current = emptyState();
     sendControllerEdge();
   }, [sendControllerEdge]);
+
+  useKeyboardController(mode, !showSettings, (keyboard) => {
+    keyboardStateRef.current = keyboard;
+    stateRef.current = mergeControllerInputs(touchStateRef.current, keyboard);
+    sendControllerEdge();
+  });
 
   useEffect(() => {
     const handleVisibility = () => {
@@ -245,7 +262,7 @@ function Rig() {
   useEffect(() => {
     // Never carry a pressed/analog state from one controller mode into the other.
     releaseAll();
-  }, [mode, releaseAll]);
+  }, [mode, showSettings, releaseAll]);
 
   return (
     <main className={`rig-shell ${mobileLayout ? "mobile-controller" : ""} mode-${mode} relative h-[100dvh] overflow-hidden bg-background`}>

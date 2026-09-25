@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ControllerState } from "@/lib/controller-types";
+import { RELEASE_INPUTS } from "./useInputReset";
 import { playDualRumble } from "@/lib/haptics";
 
 export type BridgeStatus = "idle" | "connecting" | "connected" | "error";
@@ -112,6 +113,7 @@ export function useBridge(
   }, []);
 
   const disconnect = useCallback(() => {
+    if (typeof window !== "undefined") window.dispatchEvent(new Event(RELEASE_INPUTS));
     clearLoop();
     clearMoveFlush();
     const ws = wsRef.current;
@@ -148,7 +150,7 @@ export function useBridge(
       setStatus("connecting");
 
       ws.onopen = () => {
-        setStatus("connected");
+        if (wsRef.current !== ws) { ws.close(); return; }
         lastSentStateRef.current = "";
         lastHeartbeatRef.current = 0;
         try {
@@ -187,7 +189,7 @@ export function useBridge(
           // interested in the newest state, not hundreds of identical refreshes.
           // Input events take the immediate hot/edge lane; this loop is only a
           // change detector and 4 Hz recovery heartbeat.
-          if ((changed || heartbeatDue) && ws.bufferedAmount < 8_192) {
+          if ((changed || heartbeatDue) && ws.bufferedAmount < 2_048) {
             try {
               ws.send(JSON.stringify({
                 type: "state",
@@ -216,8 +218,20 @@ export function useBridge(
       };
 
       ws.onmessage = (ev) => {
+        if (wsRef.current !== ws) return;
         try {
           const msg = JSON.parse(String(ev.data));
+
+          if (msg.type === "ready") {
+            if (msg.controller?.connected) {
+              setStatus("connected");
+              lastSentStateRef.current = "";
+            } else {
+              clearLoop();
+              setStatus("error");
+            }
+            return;
+          }
 
           if (msg.type === "ack" && typeof msg.t === "number") {
             const value = Math.max(0, Math.round(Date.now() - msg.t));
@@ -338,11 +352,13 @@ export function useBridge(
         }
       };
 
-      ws.onerror = () => setStatus("error");
+      ws.onerror = () => { if (wsRef.current === ws) setStatus("error"); };
       ws.onclose = () => {
         if (wsRef.current === ws) {
+          window.dispatchEvent(new Event(RELEASE_INPUTS));
           wsRef.current = null;
           clearLoop();
+          clearMoveFlush();
           setStatus((s) => (s === "error" ? "error" : "idle"));
         }
       };
@@ -388,7 +404,7 @@ export function useBridge(
     // Live analog controls use a dedicated hot lane. The bridge applies these
     // snapshots immediately; the selected-rate pump remains as a safety/refresh lane.
     // This matters most for steering, accelerator, brake and other pedal axes.
-    if (ws.bufferedAmount >= 32_768) return false;
+    if (ws.bufferedAmount >= 2_048) return false;
 
     try {
       ws.send(

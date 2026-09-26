@@ -8,21 +8,12 @@ type Props = {
 /** Orientation gate styled as part of the TouchToSteer spectral visual system. */
 export function RotateGate({ mode = "pad" }: Props) {
   const [wrongOrientation, setWrongOrientation] = useState(false);
-  const [embeddedPreview, setEmbeddedPreview] = useState(false);
 
   useEffect(() => {
     const check = () => {
       const portrait = window.innerHeight > window.innerWidth;
-      const touchDevice =
-        navigator.maxTouchPoints > 0 ||
-        window.matchMedia("(pointer: coarse)").matches;
-      // An iframe retains the desktop pointer type even at phone dimensions.
-      // Comparing WindowProxy identities is safe across origins.
-      const preview = window.self !== window.top &&
-        Math.min(window.innerWidth, window.innerHeight) <= 600 &&
-        Math.max(window.innerWidth, window.innerHeight) <= 1200;
-      setEmbeddedPreview(preview);
-      setWrongOrientation((touchDevice || preview) && (mode === "mouse" ? !portrait : portrait));
+      const touchDevice = window.matchMedia("(pointer: coarse)").matches;
+      setWrongOrientation(touchDevice && (mode === "mouse" ? !portrait : portrait));
     };
 
     check();
@@ -35,8 +26,6 @@ export function RotateGate({ mode = "pad" }: Props) {
   }, [mode]);
 
   const goToPreferredOrientation = async () => {
-    // The parent preview owns its viewport; fullscreen would escape that frame.
-    if (embeddedPreview) return;
     try {
       if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
       const orientation = screen.orientation as ScreenOrientation & {
@@ -109,16 +98,14 @@ export function RotateGate({ mode = "pad" }: Props) {
               </div>
             </div>
 
-            {!embeddedPreview && <button type="button" onClick={goToPreferredOrientation} className="spectral-orientation-button">
+            <button type="button" onClick={goToPreferredOrientation} className="spectral-orientation-button">
               <span>ENTER {target}</span>
               <Maximize2 size={15} />
               <ArrowRight size={15} />
-            </button>}
+            </button>
             <div className="spectral-orientation-hint">
               <RotateCw size={12} />
-              <span>{embeddedPreview
-                ? `Use the preview toolbar to switch to ${mouse ? "Portrait" : "Landscape"}. If rotation is locked, change the app orientation setting to Auto.`
-                : mouse ? "Rotate upright if the browser does not lock automatically." : "Rotate sideways if the browser does not lock automatically."}</span>
+              <span>{mouse ? "Rotate upright if the browser does not lock automatically." : "Rotate sideways if the browser does not lock automatically."}</span>
             </div>
           </div>
 

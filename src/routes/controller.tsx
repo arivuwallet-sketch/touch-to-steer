@@ -63,11 +63,12 @@ function Rig() {
     sendMouse,
     sendControllerStateNow,
     sendControllerEdge,
-  } = useBridge(stateRef, settings.sendRateHz, settings.outputMode, settings.vibration);
+  } = useBridge(stateRef, settings.sendRateHz, settings.outputMode, settings.vibration, settings.wheelBindings);
 
   useEffect(() => {
     const migrationKey = "mobile-rig-universal-migration-v3";
     const timingMigrationKey = "mobile-rig-3ms-v1";
+    const centreMigrationKey = "mobile-rig-autocentre-v1";
     const migrated = localStorage.getItem(migrationKey) === "1";
     const raw = localStorage.getItem(STORAGE_KEY);
 
@@ -90,6 +91,12 @@ function Rig() {
           localStorage.setItem(timingMigrationKey, "1");
         }
 
+        if (localStorage.getItem(centreMigrationKey) !== "1") {
+          saved.autoCentre = true;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+          localStorage.setItem(centreMigrationKey, "1");
+        }
+
         // Use the broad compatibility target for existing installs unless the
         // user explicitly chose it as DS4-only. Universal keeps one mirrored
         // XInput target for current games and one DS4/HID target for legacy
@@ -106,6 +113,7 @@ function Rig() {
         /* keep defaults */
       }
     } else {
+      localStorage.setItem(centreMigrationKey, "1");
       localStorage.setItem(timingMigrationKey, "1");
       localStorage.setItem(migrationKey, "1");
     }

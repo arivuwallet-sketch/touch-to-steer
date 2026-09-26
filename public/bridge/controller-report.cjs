@@ -56,6 +56,13 @@ function setDpad(target, s) {
   target.axis.dpadVert.setValue(v);
 }
 
+const DEFAULT_WHEEL_BINDINGS = { throttle: "rt", brake: "lt", handbrake: "a", nitro: "lb", clutch: "x", gearUp: "rb", gearDown: "lb", horn: "l3" };
+const WHEEL_OUTPUTS = new Set(["rt", "lt", "a", "b", "x", "y", "lb", "rb", "l3", "r3", "none"]);
+function wheelBindings(s) {
+  return Object.fromEntries(Object.entries(DEFAULT_WHEEL_BINDINGS).map(([action, fallback]) =>
+    [action, WHEEL_OUTPUTS.has(s.wheelBindings?.[action]) ? s.wheelBindings[action] : fallback]));
+}
+
 function applyToTarget(target, s, buttonMap) {
   if (!target) return;
 
@@ -79,18 +86,27 @@ function applyToTarget(target, s, buttonMap) {
   const lt = clamp(s.lt, 0, 1);
   const rt = clamp(s.rt, 0, 1);
 
-  // Steering pedals are delivered through the canonical trigger axes:
-  // accelerator -> Right Trigger (RT), brake -> Left Trigger (LT).
-  // The same analog values are mirrored to DS4 trigger buttons for legacy
-  // HID titles that bind LT/RT as digital controls. The native ViGEm binding
-  // exposes both trigger axes on X360 and DS4 targets.
-  //
-  target.axis.leftTrigger.setValue(
-    Math.max(brake, clutch * 0.6, lt, buttons.l2 ? 1 : 0),
-  );
-  target.axis.rightTrigger.setValue(
-    Math.max(throttle, rt, buttons.r2 ? 1 : 0),
-  );
+  let leftTrigger = Math.max(lt, buttons.l2 ? 1 : 0);
+  let rightTrigger = Math.max(rt, buttons.r2 ? 1 : 0);
+  const bindings = wheelBindings(s);
+  const drive = (action, value) => {
+    const output = bindings[action];
+    if (output === "lt") leftTrigger = Math.max(leftTrigger, value);
+    else if (output === "rt") rightTrigger = Math.max(rightTrigger, value);
+    else if (value > 0.5 && output !== "none") mark(buttonMap[output]);
+  };
+  drive("throttle", throttle);
+  drive("brake", brake);
+  drive("clutch", clutch);
+  drive("handbrake", clamp(s.handbrake, 0, 1));
+  drive("nitro", clamp(s.nitro, 0, 1));
+  drive("horn", buttons.horn ? 1 : 0);
+  drive("gearUp", s.gear === 1 ? 1 : 0);
+  drive("gearDown", s.gear === -1 ? 1 : 0);
+  target.axis.leftTrigger.setValue(leftTrigger);
+  target.axis.rightTrigger.setValue(rightTrigger);
+  if (buttonMap.__brakeTrigger && leftTrigger > 0.02) mark(buttonMap.__brakeTrigger);
+  if (buttonMap.__throttleTrigger && rightTrigger > 0.02) mark(buttonMap.__throttleTrigger);
 
   for (const [id, name] of Object.entries(buttonMap)) {
     if (buttons[id]) mark(name);
@@ -98,23 +114,11 @@ function applyToTarget(target, s, buttonMap) {
 
   setDpad(target, s);
 
-  if (buttons.horn) mark(buttonMap.__horn);
   if (buttons.look) mark(buttonMap.__look);
   if (buttons.reset) mark(buttonMap.__reset);
-  if (clamp(s.handbrake, 0, 1) > 0.5) mark(buttonMap.__handbrake);
-  if (clamp(s.nitro, 0, 1) > 0.5) mark(buttonMap.__nitro);
-  if (buttonMap.__brakeTrigger && Math.max(brake, clutch * 0.6, lt, buttons.l2 ? 1 : 0) > 0.02) mark(buttonMap.__brakeTrigger);
-  if (buttonMap.__throttleTrigger && Math.max(throttle, rt, buttons.r2 ? 1 : 0) > 0.02) mark(buttonMap.__throttleTrigger);
-
-  // DS4 already carries the analog triggers and matching trigger buttons.
-  // Do not also press face buttons: accelerating must not activate Cross,
-  // and braking must not activate Square in menus or modern games.
-
   if (s.dial === 1) mark(buttonMap.plus);
   if (s.dial === -1) mark(buttonMap.minus);
 
-  if (s.gear === 1) mark(buttonMap.__gearUp);
-  if (s.gear === -1) mark(buttonMap.__gearDown);
 
   for (const name of Object.keys(target.button)) {
     target.button[name].setValue(!!held[name]);
@@ -141,6 +145,7 @@ function stateSignature(s) {
     clamp(s.nitro, 0, 1),
     Number(s.gear) || 0,
     Number(s.dial) || 0,
+    Object.values(wheelBindings(s)).join(","),
     Object.keys(buttons).filter((id) => buttons[id]).sort().join(","),
   ].join("|");
 }

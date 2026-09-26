@@ -122,3 +122,39 @@ test('DS4 driving inputs do not activate extra face/shoulder actions', () => {
   assert.equal(target.reports.at(-1).buttons.SHOULDER_LEFT,true);
   assert.equal(target.reports.at(-1).buttons.CIRCLE,false);
 });
+
+for (const [kind,map] of [['XInput',XBTN],['DS4',DSBTN]]) {
+  test(`${kind}: custom racing bindings keep gas, nitro and handbrake independent`,()=> {
+    const target=targetFor(map);
+    const bindings={throttle:'rt',brake:'lt',nitro:'b',handbrake:'x',clutch:'a'};
+    applyToTarget(target,{wheelBindings:bindings,throttle:1},map);
+    assert.equal(target.reports.at(-1).axes.rightTrigger,1);
+    assert.equal(target.reports.at(-1).axes.leftTrigger,0);
+    assert.equal(target.reports.at(-1).buttons[map.b],false);
+    applyToTarget(target,{wheelBindings:bindings,nitro:1},map);
+    assert.equal(target.reports.at(-1).buttons[map.b],true);
+    assert.equal(target.reports.at(-1).buttons[map.x],false);
+    assert.equal(target.reports.at(-1).axes.leftTrigger,0);
+    assert.equal(target.reports.at(-1).axes.rightTrigger,0);
+    applyToTarget(target,{wheelBindings:bindings,handbrake:1,throttle:0.4,nitro:1},map);
+    assert.equal(target.reports.at(-1).buttons[map.x],true);
+    assert.equal(target.reports.at(-1).buttons[map.b],true);
+    assert.equal(target.reports.at(-1).axes.rightTrigger,0.4);
+    applyToTarget(target,{clutch:1},map);
+    assert.equal(target.reports.at(-1).axes.leftTrigger,0,'clutch must never apply brake/reverse');
+    applyToTarget(target,{wheelBindings:{nitro:'none'},nitro:1},map);
+    assert.ok(Object.values(target.reports.at(-1).buttons).every(v=>!v));
+  });
+}
+
+test('Rebinding a held action releases the old output even without another input edge',()=> {
+  const target=targetFor(XBTN);
+  const session={targets:[{target,map:XBTN}],lastAppliedSeq:0,lastAppliedSignature:''};
+  applySessionState(session,{seq:1,nitro:1,wheelBindings:{nitro:'lb'}});
+  applySessionState(session,{seq:2,nitro:1,wheelBindings:{nitro:'b'}});
+  assert.equal(target.reports.length,2);
+  assert.equal(target.reports.at(-1).buttons.LEFT_SHOULDER,false);
+  assert.equal(target.reports.at(-1).buttons.B,true);
+  applySessionState(session,{seq:3,nitro:1,wheelBindings:{nitro:'invalid'}});
+  assert.equal(target.reports.at(-1).buttons.LEFT_SHOULDER,true);
+});

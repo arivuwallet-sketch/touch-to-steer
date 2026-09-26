@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Settings } from "@/lib/controller-types";
+import { defaultWheelBindings, type WheelBindings, type WheelOutput, type Settings } from "@/lib/controller-types";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { CircleStop, Link2, X, SlidersHorizontal, RadioTower, ChevronRight } from "lucide-react";
@@ -138,13 +138,28 @@ export function SettingsPanel({
             <strong className="text-emerald-200">Universal compatibility</strong> keeps one
             synchronized Xbox 360/XInput target for modern games and one DualShock/HID target
             for legacy DirectInput-style games. Steering accelerator/brake are sent on RT/LT
-            analog axes and mirrored to legacy HID trigger/button paths; handbrake and nitro also
-            have legacy vehicle-button mappings. Windows may therefore show both devices in
+            analog axes with matching DS4 trigger bits. Games can bind these controls differently;
+            choose one output device if the game responds to both. Windows may therefore show both devices in
             <code className="mx-1 text-slate-300">joy.cpl</code>.
             For local co-op and split-screen, use <strong className="text-slate-200">XInput-only</strong>
             on each phone when the game expects Xbox controllers; the bridge assigns each phone
             its own virtual player, up to 4 simultaneous players.
           </div>
+          <details className="mt-3 rounded-lg border border-input p-3">
+            <summary className="cursor-pointer text-xs">Wheel action bindings</summary>
+            <p className="my-2 text-xs text-muted-foreground">Match these outputs to your game's controller settings. Requires the updated PC bridge. Gamepad buttons keep their normal assignments.</p>
+            {(Object.keys(defaultWheelBindings) as (keyof WheelBindings)[]).map((action) => (
+              <Row key={action} label={{ throttle: "GAS", brake: "BRAKE / reverse", handbrake: "HANDBRAKE", nitro: "NITRO", clutch: "CLUTCH", gearUp: "GEAR UP", gearDown: "GEAR DOWN", horn: "HORN" }[action]}>
+                <select aria-label={`Wheel ${action} output`}
+                  value={settings.wheelBindings?.[action] ?? defaultWheelBindings[action]}
+                  onChange={(e) => onChange({ wheelBindings: { ...defaultWheelBindings, ...settings.wheelBindings, [action]: e.target.value as WheelOutput } })}
+                  className="rounded-lg border border-input bg-background px-2 py-1.5 text-xs">
+                  {Object.entries({rt:"RT / R2",lt:"LT / L2",a:"A / Cross",b:"B / Circle",x:"X / Square",y:"Y / Triangle",lb:"LB / L1",rb:"RB / R1",l3:"L3",r3:"R3",none:"Disabled"}).map(([value,label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </Row>
+            ))}
+            <button type="button" className="mt-2 text-xs underline" onClick={() => onChange({ wheelBindings: { ...defaultWheelBindings } })}>Reset wheel bindings</button>
+          </details>
           <Row label="Steering input">
             <select
               value={settings.steerMode}

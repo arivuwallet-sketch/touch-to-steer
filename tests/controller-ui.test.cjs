@@ -221,7 +221,7 @@ for (const rate of [240,333]) test(`Transport at ${rate} Hz sends every press/re
   }
   globalThis.WebSocket=FakeSocket;
   const ref={current:emptyState()};let api;
-  function Harness() {api=useBridge(ref,rate,'xinput',false);return null;}
+  function Harness({bindings}) {api=useBridge(ref,rate,'xinput',false,bindings);return null;}
   const app=mount(Harness);
   try {
     act(()=>api.connect('ws://127.0.0.1:8787'));
@@ -231,6 +231,7 @@ for (const rate of [240,333]) test(`Transport at ${rate} Hz sends every press/re
     assert.equal(api.status,'connecting');
     act(()=>ws.receive({type:'ready',controller:{connected:true}}));
     assert.equal(api.status,'connected');
+    app.rerender({bindings:{...defaultSettings.wheelBindings,nitro:'b'}});
     const before=ws.sent.length;
     for(let i=0;i<50;i++) {
       ref.current={...ref.current,buttons:{a:true}};api.sendControllerEdge();
@@ -238,6 +239,7 @@ for (const rate of [240,333]) test(`Transport at ${rate} Hz sends every press/re
     }
     const edges=ws.sent.slice(before);
     assert.equal(edges.length,100);
+    assert.ok(edges.every(msg=>msg.wheelBindings.nitro==='b'));
     assert.ok(edges.every((msg,i)=>msg.priority==='edge' && msg.buttons.a===(i%2===0)));
     assert.ok(edges.every((msg,i)=>i===0 || msg.seq>edges[i-1].seq));
     ws.bufferedAmount=2048;
@@ -327,4 +329,53 @@ test('Both rate buttons retain old options and select the 3 ms default', () => {
       assert.equal(changes.at(-1).sendRateHz,333);
     } finally {app.unmount();}
   }
+});
+
+test('Wheel releases outside its element even when another control stops bubbling', () => {
+  const app=mount(FlatWheel);
+  try {
+    const wheel=app.host.querySelector('.flat-wheel-hit');
+    pointer(wheel,'pointerdown',1,{clientX:100,clientY:50});
+    pointer(wheel,'pointermove',1,{clientX:50,clientY:100});
+    assert.ok(app.state().steer>0);
+    pointer(app.button('Horn'),'pointerup',1);
+    const pending=[...frames.values()];frames.clear();
+    act(()=>pending.forEach(frame=>frame(performance.now()+150)));
+    assert.equal(app.state().steer,0);
+  } finally {app.unmount();}
+});
+
+test('Wheel reaches neutral when animation frames stall and touch-end recovers a missed pointer-up', t => {
+  t.mock.timers.enable({apis:['setTimeout']});
+  const app=mount(FlatWheel);
+  try {
+    const wheel=app.host.querySelector('.flat-wheel-hit');
+    pointer(wheel,'pointerdown',1,{clientX:100,clientY:50});
+    pointer(wheel,'pointermove',1,{clientX:50,clientY:100});
+    const end=new Event('touchend',{bubbles:true});Object.defineProperty(end,'touches',{value:[]});
+    act(()=>document.dispatchEvent(end));
+    act(()=>t.mock.timers.tick(125));
+    assert.equal(app.state().steer,0);assert.equal(frames.size,0);
+    pointer(wheel,'pointerdown',2,{clientX:100,clientY:50});
+    pointer(wheel,'pointermove',2,{clientX:50,clientY:100});
+    assert.ok(app.state().steer>0,'next gesture is not blocked by stale ownership');
+  } finally {app.unmount();}
+});
+
+test('Wheel capture failure still moves outside the wheel, releases and cancels an old centering deadline on re-grab', t=> {
+  t.mock.timers.enable({apis:['setTimeout']});
+  const app=mount(FlatWheel);
+  try {
+    const wheel=app.host.querySelector('.flat-wheel-hit');
+    wheel.setPointerCapture=()=>{throw Error('capture unavailable');};
+    pointer(wheel,'pointerdown',1,{clientX:100,clientY:50});
+    pointer(document.body,'pointermove',1,{clientX:50,clientY:100});
+    assert.ok(app.state().steer>0);
+    pointer(document.body,'pointerup',1);
+    pointer(wheel,'pointerdown',2,{clientX:50,clientY:100});
+    const held=app.state().steer;
+    act(()=>t.mock.timers.tick(200));assert.equal(app.state().steer,held);
+    pointer(document.body,'pointercancel',2);
+    act(()=>t.mock.timers.tick(125));assert.equal(app.state().steer,0);
+  } finally {app.unmount();}
 });

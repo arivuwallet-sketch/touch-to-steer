@@ -89,3 +89,12 @@ For the follow-up check, start a game **before** connecting the phone, switch to
 Both gamepad and wheel now default to the 333 Hz option, which schedules the background state check with a 3 ms target. Existing installations adopt it once on the next app load; subsequent manual rate selections remain saved. Existing rate buttons and Settings can still select 60/120/144/180/240 Hz.
 
 Input changes still transmit immediately, button edges retain priority, and unchanged snapshots retain the 250 ms recovery heartbeat. No extra smoothing, input batching, steering changes, mapping changes or layout changes are introduced. A message task between timer callbacks avoids the nested-timer 4 ms minimum where supported; scheduling remains subject to browser throttling and device load. This is not a claim of measured 3 ms network or end-to-end gameplay latency. Auto-centering remains 120 ms.
+
+
+## Steering release and action bindings
+
+Wheel release is now captured at the window before other controls can stop propagation. Movement outside the wheel works when pointer capture fails, and a final touch-end clears missed pointer ownership. The 120 ms centering timer guarantees a neutral report even if animation frames stall; re-grabbing cancels both return paths. Auto-centre is enabled once for existing saved installations by this update, and can subsequently be changed in Settings.
+
+Settings > Wheel action bindings assigns GAS, BRAKE, HANDBRAKE, NITRO, CLUTCH, gear shifts and HORN individually to a controller output. Match these to the game's own controller bindings; there is no universal nitro assignment. These settings affect wheel actions, not gamepad face-button identities. Clutch no longer applies 60% brake: its default is now X/Square. Analog RT/LT assignments preserve partial travel; face-button assignments are digital.
+
+Install the bridge built from this commit as well as the updated app. Old bridges do not understand the custom binding field. If a game reacts to both virtual devices in Universal mode, select XInput only and bind that controller in the game. Test GAS alone, NITRO alone and HANDBRAKE alone, then GAS+NITRO; NITRO must not move either trigger unless you explicitly assigned it to a trigger. Share the game name, controller output mode and its current bindings if its actions still differ.

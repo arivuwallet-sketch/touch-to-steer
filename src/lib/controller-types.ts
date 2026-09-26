@@ -1,3 +1,10 @@
+export type WheelOutput = "rt" | "lt" | "a" | "b" | "x" | "y" | "lb" | "rb" | "l3" | "r3" | "none";
+export const defaultWheelBindings = {
+  throttle: "rt", brake: "lt", handbrake: "a", nitro: "lb", clutch: "x",
+  gearUp: "rb", gearDown: "lb", horn: "l3",
+} satisfies Record<string, WheelOutput>;
+export type WheelBindings = Record<keyof typeof defaultWheelBindings, WheelOutput>;
+
 export type ControllerState = {
   /** -1 (full left) .. 1 (full right) */
   steer: number;
@@ -67,6 +74,7 @@ export function applyForceFlex(v: number, tensionGf: JoystickTensionGf) {
 }
 
 export type Settings = {
+  wheelBindings: WheelBindings;
   bridgeUrl: string;
   /** Virtual PC controller output. Universal creates synchronized XInput + DirectInput/HID-compatible targets for broad legacy/modern coverage. */
   outputMode: "xinput" | "ds4" | "universal";
@@ -122,6 +130,7 @@ export const defaultSettings: Settings = {
   vibration: true,
   ffbHaptics: true,
   sendRateHz: 333,
+  wheelBindings: { ...defaultWheelBindings },
   invertTilt: false,
   invertLookY: false,
   wheelRotationDeg: 900,

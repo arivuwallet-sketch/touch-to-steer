@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ControllerState } from "@/lib/controller-types";
+import { defaultWheelBindings, type WheelBindings, type ControllerState } from "@/lib/controller-types";
 import { RELEASE_INPUTS } from "./useInputReset";
 import { playDualRumble } from "@/lib/haptics";
 
@@ -30,6 +30,7 @@ export function useBridge(
   rateHz: number,
   outputMode: "xinput" | "ds4" | "universal" = "xinput",
   vibrationEnabled = true,
+  wheelBindings: WheelBindings = defaultWheelBindings,
 ) {
   const [status, setStatus] = useState<BridgeStatus>("idle");
   const [latency, setLatency] = useState<number | null>(null);
@@ -55,7 +56,9 @@ export function useBridge(
     rateHzRef.current = rateHz;
   }, [rateHz]);
 
-  const stateSignature = useCallback(() => JSON.stringify(stateRef.current), [stateRef]);
+  const bindingsRef = useRef(wheelBindings);
+  bindingsRef.current = wheelBindings;
+  const stateSignature = useCallback(() => JSON.stringify([stateRef.current, bindingsRef.current]), [stateRef]);
 
   const clearLoop = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -202,6 +205,7 @@ export function useBridge(
                 t: Date.now(),
                 seq: ++packetCounterRef.current,
                 ...stateRef.current,
+                wheelBindings: bindingsRef.current,
               }));
               lastSentStateRef.current = signature;
               lastHeartbeatRef.current = currentTime;
@@ -434,6 +438,7 @@ export function useBridge(
           t: Date.now(),
           seq: ++packetCounterRef.current,
           ...stateRef.current,
+                wheelBindings: bindingsRef.current,
         }),
       );
       lastSentStateRef.current = stateSignature();
@@ -461,6 +466,7 @@ export function useBridge(
           t: Date.now(),
           seq: ++packetCounterRef.current,
           ...stateRef.current,
+                wheelBindings: bindingsRef.current,
         }),
       );
       lastSentStateRef.current = stateSignature();

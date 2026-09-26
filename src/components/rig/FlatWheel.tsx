@@ -493,6 +493,7 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
   const wheelRect = useRef<DOMRect | null>(null);
   const wheelAngleDeg = useRef(0);
   const centreAnimationRef = useRef<number | null>(null);
+  const centreDeadlineRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastHapticAt = useRef(0);
   const [gyroReady, setGyroReady] = useState(false);
   const [gyroDenied, setGyroDenied] = useState(false);
@@ -525,6 +526,8 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
   );
 
   const cancelCentre = useCallback(() => {
+    if (centreDeadlineRef.current !== null) clearTimeout(centreDeadlineRef.current);
+    centreDeadlineRef.current = null;
     if (centreAnimationRef.current !== null) {
       cancelAnimationFrame(centreAnimationRef.current);
       centreAnimationRef.current = null;
@@ -566,12 +569,18 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
       if (t < 1) {
         centreAnimationRef.current = requestAnimationFrame(frame);
       } else {
-        centreAnimationRef.current = null;
+        cancelCentre();
         paintWheel(0);
         emitRaw(0);
       }
     };
 
+    // rAF can stall in a busy mobile WebView; never leave the last steering
+    // report held just because no animation frame arrived after finger-up.
+    centreDeadlineRef.current = setTimeout(() => {
+      cancelCentre();
+      setWheelRaw(0);
+    }, duration);
     centreAnimationRef.current = requestAnimationFrame(frame);
   }, [cancelCentre, emitRaw, maxLockDeg, paintWheel, setWheelRaw]);
 
@@ -685,8 +694,10 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
 
     cancelCentre();
     e.preventDefault();
-    e.currentTarget.setPointerCapture(e.pointerId);
     touchPointer.current = e.pointerId;
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch {
+      // Global listeners below also cover WebViews without reliable capture.
+    }
 
     const rect = wheelRect.current = el.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
@@ -696,7 +707,7 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
     buzz(settings.vibration, 8);
   };
 
-  const dragWheel = (e: PointerEvent<HTMLDivElement>) => {
+  const dragWheel = (e: PointerEvent<HTMLDivElement> | globalThis.PointerEvent) => {
     if (settings.steerMode !== "touch") return;
     if (touchPointer.current !== e.pointerId) return;
 
@@ -760,13 +771,37 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
     }
   };
 
-  const releaseWheel = (e?: PointerEvent<HTMLElement>) => {
+  const releaseWheel = (e?: { pointerId: number }) => {
     if (touchPointer.current === null || (e && touchPointer.current !== e.pointerId)) return;
     touchPointer.current = null;
     wheelRect.current = null;
     lastAngle.current = null;
     if (settings.autoCentre) centreWheel();
   };
+  const gestureRef = useRef({ dragWheel, releaseWheel });
+  gestureRef.current = { dragWheel, releaseWheel };
+  useEffect(() => {
+    // Capture phase runs before horn/pedal handlers can stop propagation.
+    const up = (e: globalThis.PointerEvent) => gestureRef.current.releaseWheel(e);
+    const move = (e: globalThis.PointerEvent) => {
+      if (!wheelHitRef.current?.contains(e.target as Node)) gestureRef.current.dragWheel(e);
+    };
+    const touchEnd = (e: TouchEvent) => {
+      if (e.touches.length === 0) gestureRef.current.releaseWheel();
+    };
+    window.addEventListener("pointerup", up, true);
+    window.addEventListener("pointercancel", up, true);
+    window.addEventListener("pointermove", move, { capture: true, passive: false });
+    window.addEventListener("touchend", touchEnd, true);
+    window.addEventListener("touchcancel", touchEnd, true);
+    return () => {
+      window.removeEventListener("pointerup", up, true);
+      window.removeEventListener("pointercancel", up, true);
+      window.removeEventListener("pointermove", move, true);
+      window.removeEventListener("touchend", touchEnd, true);
+      window.removeEventListener("touchcancel", touchEnd, true);
+    };
+  }, []);
   useInputReset(() => {
     touchPointer.current = null;
     wheelRect.current = null;

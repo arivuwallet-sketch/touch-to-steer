@@ -231,6 +231,11 @@ export function SettingsPanel({
               className="w-40 accent-[var(--primary)]"
             />
           </Row>
+          <Row label={`Steering tension ${Math.round((settings.steeringTension ?? 0) * 100)}%`}>
+            <input aria-label="Steering tension" type="range" min={0} max={1} step={0.05}
+              value={settings.steeringTension ?? 0} onChange={(e) => onChange({ steeringTension: Number(e.target.value) })} />
+          </Row>
+          <p className="text-xs text-muted-foreground">Software response weight: higher values soften the centre while retaining full lock. No physical resistance or added input delay. ForceAdapt uses touch travel and vibration cues.</p>
           <Row label={`Wheel rotation ${settings.wheelRotationDeg}°`}>
             <input
               type="range"

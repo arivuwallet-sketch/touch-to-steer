@@ -65,6 +65,7 @@ export const FORCEFLEX_DESCRIPTIONS: Record<JoystickTensionGf, string> = {
 
 /** Software ForceFlex response curve for the virtual stick. */
 export function applyForceFlex(v: number, tensionGf: JoystickTensionGf) {
+  if (!Number.isFinite(v)) return 0;
   const magnitude = Math.max(0, Math.min(1, Math.abs(v)));
   const exponent =
     tensionGf === 30 ? 0.82 :
@@ -103,6 +104,8 @@ export type Settings = {
   wheelRotationDeg: number;
   /** Virtual ForceFlex tension detent. Touchscreen cannot change physical spring force. */
   joystickTensionGf: JoystickTensionGf;
+  /** Software response weight, not physical torque. Zero preserves linear steering. */
+  steeringTension: number;
   /** Legacy scalar retained for saved-setting compatibility. */
   stickTension: number;
   /** Virtual mouse profile. Values are software output scaling, not physical sensor characteristics. */
@@ -144,6 +147,7 @@ export const defaultSettings: Settings = {
   invertLookY: false,
   wheelRotationDeg: 900,
   joystickTensionGf: 50,
+  steeringTension: 0,
   stickTension: 0.7,
   mouseDpi: 1600,
   mousePollingRate: 8000,
@@ -208,4 +212,19 @@ export function applyCurve(v: number, deadzone: number, linearity: number, sens:
   m = (m - deadzone) / (1 - deadzone);
   m = Math.pow(m, linearity) * sens;
   return s * Math.max(-1, Math.min(1, m));
+}
+
+/** Radial shaping preserves stick direction and a circular full-travel boundary. */
+export function applyStickResponse(x: number, y: number, settings: Settings): [number, number] {
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return [0, 0];
+  const radius = Math.hypot(x, y);
+  if (!radius) return [0, 0];
+  const shaped = applyForceFlex(applyCurve(Math.min(1, radius), settings.deadzone, settings.linearity, settings.sensitivity), settings.joystickTensionGf);
+  return [x / radius * shaped, y / radius * shaped];
+}
+
+export function applySteeringTension(value: number, tension = 0) {
+  if (!Number.isFinite(value)) return 0;
+  const weight = Number.isFinite(tension) ? Math.max(0, Math.min(1, tension)) : 0;
+  return Math.sign(value) * Math.pow(Math.min(1, Math.abs(value)), 1 + weight * 0.8);
 }

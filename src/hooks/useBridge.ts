@@ -345,17 +345,18 @@ export function useBridge(
 
           if (msg.type === "telemetry") {
             setTelemetry({
-              rpm: typeof msg.rpm === "number" ? msg.rpm : undefined,
-              rpmMax: typeof msg.rpmMax === "number" ? msg.rpmMax : undefined,
-              gear: typeof msg.gear === "number" ? msg.gear : undefined,
-              speed: typeof msg.speed === "number" ? msg.speed : undefined,
+              rpm: Number.isFinite(msg.rpm) && msg.rpm >= 0 ? msg.rpm : undefined,
+              rpmMax: Number.isFinite(msg.rpmMax) && msg.rpmMax > 0 ? msg.rpmMax : undefined,
+              gear: Number.isInteger(msg.gear) ? msg.gear : undefined,
+              speed: Number.isFinite(msg.speed) && msg.speed >= 0 ? msg.speed : undefined,
               source: typeof msg.source === "string" ? msg.source : undefined,
               ffb: typeof msg.ffb === "number" ? Math.max(-1, Math.min(1, msg.ffb)) : undefined,
             });
-            setTelemetryLive(true);
+            setTelemetryLive([msg.rpm, msg.speed, msg.gear].some((value) => typeof value === "number" && Number.isFinite(value)));
             clearTelemetryTimer();
             telemetryTimerRef.current = setTimeout(() => {
               setTelemetryLive(false);
+              setTelemetry({});
             }, 500);
             return;
           }

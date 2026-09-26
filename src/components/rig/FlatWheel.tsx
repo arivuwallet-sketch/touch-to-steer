@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent, type RefObject } from "react";
-import { applyCurve, type ControllerState, type Settings } from "@/lib/controller-types";
+import { applySteeringTension, applyCurve, type ControllerState, type Settings } from "@/lib/controller-types";
 import { playDualRumble, type DualRumbleKind } from "@/lib/haptics";
 import type { BridgeTelemetry } from "@/hooks/useBridge";
 
@@ -69,7 +69,7 @@ function TelemetryGauge({
   value,
   max,
   unit,
-  live,
+  live: telemetryAvailable,
   accent,
 }: {
   label: string;
@@ -79,7 +79,8 @@ function TelemetryGauge({
   live: boolean;
   accent: "cyan" | "red";
 }) {
-  const hasValue = live && typeof value === "number" && Number.isFinite(value);
+  const live = telemetryAvailable && typeof value === "number" && Number.isFinite(value);
+  const hasValue = live;
   const hasScale = hasValue && max > 0;
   const ratio = hasScale ? Math.max(0, Math.min(1, value / max)) : 0;
   const angle = -135 + ratio * 270;
@@ -137,7 +138,7 @@ function TelemetryGauge({
       </div>
 
       <div className="absolute inset-x-0 bottom-[12%] text-center text-[5px] font-bold uppercase tracking-[0.16em] text-slate-600">
-        {hasScale ? `0 — ${Math.round(max).toLocaleString()}` : "NO GAME DATA"}
+        {hasScale ? `0 — ${Math.round(max).toLocaleString()}` : hasValue ? "SCALE UNAVAILABLE" : "NO GAME DATA"}
       </div>
 
       <div
@@ -520,9 +521,9 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
         settings.linearity,
         1,
       );
-      set({ steer: value });
+      set({ steer: applySteeringTension(value, settings.steeringTension) });
     },
-    [set, settings.deadzone, settings.linearity],
+    [set, settings.deadzone, settings.linearity, settings.steeringTension],
   );
 
   const cancelCentre = useCallback(() => {
@@ -748,7 +749,7 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
     emitRaw(next / maxLockDeg);
     paintWheel(next);
 
-    if (settings.ffbHaptics && Math.abs(delta) > 0.012) {
+    if (settings.vibration && settings.ffbHaptics && Math.abs(delta) > 0.012) {
       const now = typeof performance !== "undefined" ? performance.now() : Date.now();
       if (now - lastHapticAt.current > 75) {
         lastHapticAt.current = now;
@@ -757,7 +758,7 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
       }
     }
 
-    if (settings.ffbHaptics) {
+    if (settings.vibration && settings.ffbHaptics) {
       const now = typeof performance !== "undefined" ? performance.now() : Date.now();
       const nearCenter = Math.abs(next) < 2.5;
       const nearLock = maxLockDeg - Math.abs(next) < 3.5;

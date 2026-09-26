@@ -417,3 +417,50 @@ test('Live detection applies both profiles, neutralizes held inputs on game chan
     assert.equal(ws.sent.at(-1).wheelBindings.nitro,'rb');assert.equal(ws.sent.at(-1).padBindings.a,'rb');
   } finally {app.unmount();}
 });
+
+test('ForceAdapt ignores synthetic touch pressure and can fully release travel while held',()=>{
+ const app=mount(FlatPad);
+ try {
+  const button=app.button('RT ForceAdapt trigger — regular');
+  pointer(button,'pointerdown');
+  const event=new MouseEvent('pointermove',{bubbles:true,cancelable:true,clientX:50,clientY:100});
+  Object.defineProperties(event,{pointerId:{value:1},pointerType:{value:'touch'},pressure:{value:0.5}});
+  act(()=>button.dispatchEvent(event));
+  assert.equal(app.state().rt,0);
+  pointer(button,'pointermove',1,{clientY:0});
+  assert.equal(app.state().rt,1);
+  pointer(button,'pointerup');
+  assert.equal(app.state().rt,0);
+ } finally {app.unmount();}
+});
+
+test('RPM without redline displays real RPM and explicitly unknown scale; stale data is hidden',()=>{
+ const app=mount(FlatWheel,{telemetry:{rpm:4321,source:'OutGauge'},telemetryLive:true});
+ try {
+  assert.match(app.host.textContent,/4,321/);
+  assert.match(app.host.textContent,/SCALE UNAVAILABLE/);
+  app.rerender({telemetryLive:false});
+  assert.doesNotMatch(app.host.textContent,/4,321/);
+ } finally {app.unmount();}
+});
+
+test('All ForceAdapt profiles reach zero and full travel with monotonic output',()=>{
+ const app=mount(FlatPad);
+ try {
+  for(const mode of ['regular','race','sniper','recoil','vibration','lock']) {
+   const button=app.button(`RT ForceAdapt trigger — ${mode}`);
+   pointer(button,'pointerdown');
+   let last=0;
+   for(let step=0;step<=20;step++) {
+    pointer(button,'pointermove',1,{clientY:100-step*5});
+    const value=app.state().rt;
+    assert.ok(value>=last && value<=1,mode);last=value;
+    if(step===0) assert.equal(value,0,mode);
+   }
+   assert.equal(last,1,mode);
+   pointer(button,'pointerup');
+   assert.equal(app.state().rt,0,mode);
+   act(()=>app.button('FORCEADAPT').click());
+  }
+ } finally {app.unmount();}
+});

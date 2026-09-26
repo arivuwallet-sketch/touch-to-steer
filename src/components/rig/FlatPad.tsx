@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
-import { applyCurve, applyForceFlex, FORCEFLEX_DESCRIPTIONS, type ControllerState, type JoystickTensionGf, type Settings } from "@/lib/controller-types";
+import { applyCurve, applyStickResponse, FORCEFLEX_DESCRIPTIONS, type ControllerState, type JoystickTensionGf, type Settings } from "@/lib/controller-types";
 import { playDualRumble, type DualRumbleKind } from "@/lib/haptics";
 
 import { useHoldControl } from "@/hooks/useHoldControl";
@@ -139,13 +139,7 @@ function Stick({
       y /= m;
     }
 
-    const forceFlexX = applyForceFlex(x, settings.joystickTensionGf);
-    const forceFlexY = applyForceFlex(-y, settings.joystickTensionGf);
-
-    onMove(
-      applyCurve(forceFlexX, settings.deadzone, settings.linearity, settings.sensitivity),
-      applyCurve(forceFlexY, settings.deadzone, settings.linearity, settings.sensitivity),
-    );
+    onMove(...applyStickResponse(x, -y, settings));
 
     const travel = 22 + (settings.joystickTensionGf / 100) * 12;
     const thumb = thumbRef.current;
@@ -277,10 +271,8 @@ function ApexFaceButtons({ settings, press, turbo }: { settings: Settings; press
 }
 
 // ---- ForceAdapt engine (Flydigi Apex 5 style adaptive triggers) ----
-// Each mode defines a real trigger profile: the usable stroke window
-// (dead travel at both ends, exactly like the Apex hall-sensor stroke
-// switch), the resistance "wall" where the game action fires, and the
-// force curve applied between them.
+// Software response profiles define the usable touch travel window
+// and vibration cues. Touchscreens do not provide motorized resistance.
 type ForceProfile = {
   stroke: [number, number]; // usable travel window of the physical stroke
   wall: number; // actuation point — haptic wall is rendered here
@@ -296,7 +288,7 @@ const FORCE_PROFILES: Record<TriggerMode, ForceProfile> = {
   // sniper: long soft pull then a hard wall right before the shot breaks
   sniper: { stroke: [0.1, 1], wall: 0.82, curve: (p) => Math.pow(p, 1.7), digital: false },
   // recoil: soft slack, then full pressure past the wall with pulse train
-  recoil: { stroke: [0.06, 0.96], wall: 0.42, curve: (p) => (p < 0.3 ? p * 0.45 : Math.min(1, 0.135 + (p - 0.3) * 1.24)), digital: false },
+  recoil: { stroke: [0.06, 0.96], wall: 0.42, curve: (p) => (p < 0.3 ? p * 0.45 : Math.min(1, 0.135 + (p - 0.3) * (0.865 / 0.7))), digital: false },
   // vibration: linear force with continuous texture feedback
   vibration: { stroke: [0.02, 0.98], wall: 0.5, curve: (p) => Math.pow(p, 0.92), digital: false },
   // lock: micro-switch mode — near-zero stroke, instant 100%
@@ -351,7 +343,7 @@ function Trigger({
       if (pulseTimer.current !== null) window.clearTimeout(pulseTimer.current);
       pulseTimer.current = window.setTimeout(() => setPulse3d(false), 90);
     },
-    [settings.vibration],
+    [settings.vibration, mode],
   );
 
   const profile = FORCE_PROFILES[mode];
@@ -390,13 +382,10 @@ function Trigger({
     const r = e.currentTarget.getBoundingClientRect();
     // Physical-style trigger travel: top = fully pulled, bottom = released.
     const travel = Math.max(0, Math.min(1, (r.bottom - e.clientY) / r.height));
-    // Real force sensing: touch/stylus digitisers report finger pressure.
-    // ForceAdapt blends actual finger force with stroke position, so pressing
-    // harder in place pulls the trigger just like the Apex hall triggers.
-    const hasForce = (e.pointerType === "touch" || e.pointerType === "pen") && e.pressure > 0 && e.pressure < 1;
-    const force = hasForce ? Math.max(0, Math.min(1, e.pressure * 1.35)) : 0;
-    const rawStroke = hasForce ? Math.max(travel, travel * 0.45 + force * 0.55) : travel;
-    const next = mapValue(rawStroke);
+    // Pointer pressure may be a constant 0.5 on non-force hardware.
+    // Use reproducible travel; do not mistake that fallback for finger force.
+    const next = mapValue(travel);
+    writeTrigger(next);
     const now = typeof performance !== "undefined" ? performance.now() : Date.now();
     const band = Math.min(5, Math.floor(next * 6));
 
@@ -433,7 +422,6 @@ function Trigger({
       }
     }
 
-    writeTrigger(next);
   };
 
 

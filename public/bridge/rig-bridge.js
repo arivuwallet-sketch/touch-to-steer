@@ -1108,7 +1108,8 @@ function parseOutGauge(packet) {
     source: car ? "OutGauge • " + car : "OutGauge",
     speed,
     rpm,
-    rpmMax: 10000,
+    // OutGauge supplies RPM but no engine redline; do not invent one.
+    rpmMax: undefined,
     gear,
   };
 }
@@ -1500,7 +1501,7 @@ wss.on("connection", (ws) => {
             outGaugePorts: OUTGAUGE_PORTS,
             wrcPort: WRC_PORT,
             wreckfest2Port: WRECKFEST2_PORT,
-            live: Boolean(latestTelemetry),
+            live: Boolean(latestTelemetry && Date.now() - latestTelemetry.receivedAt < 500),
           },
         }));
         // A late/reconnecting phone needs the current game even if it has

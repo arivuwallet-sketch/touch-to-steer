@@ -53,18 +53,12 @@ class Live {
     }
   }
 
-  /// Adds a cache-busting stamp so the web view shows the newest site content.
-  static String freshUrl(String url) {
-    if (url.isEmpty) return url;
-    final uri = Uri.parse(url);
-    final query = Map<String, String>.from(uri.queryParameters);
-    query['_v'] = DateTime.now().millisecondsSinceEpoch.toString();
-    return uri.replace(queryParameters: query).toString();
-  }
+  // Preserve signed URLs, repeated query parameters and website routing.
+  static String freshUrl(String url) => url;
 
   static String _s(String key, String fallback) {
     final value = _data[key];
-    return value is String && value.isNotEmpty ? value : fallback;
+    return value is String ? value : fallback;
   }
 
   static bool _b(String key, bool fallback) {
@@ -95,7 +89,12 @@ class Live {
     return fallback;
   }
 
-  static String get startUrl => _s('startUrl', AppConfig.startUrl);
+  static String get startUrl {
+    final value = _s('startUrl', AppConfig.startUrl);
+    final uri = Uri.tryParse(value);
+    return uri != null && uri.scheme == 'https' && uri.host.isNotEmpty
+        ? value : AppConfig.startUrl;
+  }
   static Color get themeColor => _c('themeColor', AppConfig.themeColor);
   static Color get accentColor => _c('accentColor', AppConfig.accentColor);
   static Color get splashBackground =>
@@ -123,7 +122,7 @@ class Live {
               })
           .where((item) => item['url']!.isNotEmpty)
           .toList();
-      if (items.isNotEmpty) return items;
+      return items;
     }
     return AppConfig.bottomNavItems
         .map((item) => Map<String, String>.from(item))

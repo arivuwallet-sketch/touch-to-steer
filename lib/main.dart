@@ -4,6 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
+import 'package:file_selector/file_selector.dart';
+
 import 'package:share_plus/share_plus.dart';
 import 'app_config.dart';
 import 'live_config.dart';
@@ -13,7 +16,6 @@ import 'strings.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Live.load();
-  unawaited(Live.refresh());
   if (AppConfig.orientation == 'portrait') {
     await SystemChrome.setPreferredOrientations(
       [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown],
@@ -113,20 +115,25 @@ class _WebHomeState extends State<WebHome> with WidgetsBindingObserver {
   int _navIndex = 0;
   String _locale = AppConfig.defaultLocale;
   Timer? _syncTimer;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  bool _syncing = false;
+  bool _pageError = false;
+  bool _unlocked = !AppConfig.biometricLock;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _setupLocale();
-    _setupConnectivity();
     _setupController();
+    _setupConnectivity();
     _startLiveSync();
   }
 
   @override
   void dispose() {
     _syncTimer?.cancel();
+    _connectivitySubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -134,7 +141,7 @@ class _WebHomeState extends State<WebHome> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      unawaited(_syncLive(forceWebRefresh: true));
+      unawaited(_syncLive());
     }
   }
 
@@ -146,17 +153,23 @@ class _WebHomeState extends State<WebHome> with WidgetsBindingObserver {
     _syncTimer = Timer.periodic(const Duration(seconds: 60), (_) => _syncLive());
   }
 
-  Future<void> _syncLive({bool forceWebRefresh = false}) async {
-    if (!AppConfig.liveSync) {
-      if (forceWebRefresh && mounted) {
-        _controller.loadRequest(Uri.parse(Live.freshUrl(AppConfig.startUrl)));
+  Future<void> _syncLive() async {
+    if (!AppConfig.liveSync || !_unlocked || _syncing ||
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.paused) return;
+    _syncing = true;
+    final previousUrl = Live.startUrl;
+    try {
+      final changed = await Live.refresh();
+      if (!changed || !mounted) return;
+      setState(() { _navIndex = 0; });
+      if (previousUrl != Live.startUrl) {
+        await _controller.loadRequest(Uri.parse(Live.startUrl));
+      } else {
+        _inject();
       }
-      return;
+    } finally {
+      _syncing = false;
     }
-    final changed = await Live.refresh();
-    if ((!changed && !forceWebRefresh) || !mounted) return;
-    setState(() {});
-    _controller.loadRequest(Uri.parse(Live.freshUrl(Live.startUrl)));
   }
 
 
@@ -170,13 +183,15 @@ class _WebHomeState extends State<WebHome> with WidgetsBindingObserver {
   }
 
   Future<void> _setupConnectivity() async {
-    final result = await Connectivity().checkConnectivity();
-    setState(() => _offline = result.contains(ConnectivityResult.none));
-    Connectivity().onConnectivityChanged.listen((event) {
-      final off = event.contains(ConnectivityResult.none);
-      if (mounted) setState(() => _offline = off);
-      if (!off) _controller.reload();
-    });
+    void update(List<ConnectivityResult> result) {
+      if (!mounted) return;
+      final off = result.contains(ConnectivityResult.none);
+      final reconnecting = _offline && !off;
+      setState(() => _offline = off);
+      if (reconnecting && _unlocked) _controller.reload();
+    }
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen(update);
+    update(await Connectivity().checkConnectivity());
   }
 
   void _setupController() {
@@ -191,32 +206,56 @@ class _WebHomeState extends State<WebHome> with WidgetsBindingObserver {
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (_) {
-            if (mounted) setState(() => _loading = true);
+            if (mounted) setState(() { _loading = true; _pageError = false; });
             if (AppConfig.injectTiming == 'documentStart') _inject();
           },
           onPageFinished: (_) {
             if (mounted) setState(() => _loading = false);
             if (AppConfig.injectTiming == 'documentEnd') _inject();
           },
+          onWebResourceError: (error) {
+            if (error.isForMainFrame == true && mounted) {
+              setState(() { _loading = false; _pageError = true; });
+            }
+          },
           onNavigationRequest: _handleNavigation,
         ),
       );
-    final ua = AppConfig.userAgentSuffix;
-    if (ua.isNotEmpty) {
-      _controller.setUserAgent(
-        (AppConfig.desktopMode
-                ? 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '
-                    '(KHTML, like Gecko) Chrome/122.0 Safari/537.36 '
-                : '') +
-            ua,
-      );
+    if (_controller.platform is AndroidWebViewController) {
+      final android = _controller.platform as AndroidWebViewController;
+      final cookies = WebViewCookieManager();
+      if (cookies.platform is AndroidWebViewCookieManager) {
+        (cookies.platform as AndroidWebViewCookieManager)
+            .setAcceptThirdPartyCookies(android, AppConfig.thirdPartyCookies);
+      }
+      android.setOnShowFileSelector((params) async {
+        try {
+          final files = params.mode == FileSelectorMode.openMultiple
+              ? await openFiles()
+              : [if (await openFile() case final file?) file];
+          return files.map((file) => Uri.file(file.path).toString()).toList();
+        } catch (_) {
+          return <String>[];
+        }
+      });
     }
-    _controller.loadRequest(Uri.parse(Live.freshUrl(Live.startUrl)));
+    unawaited(_configureUserAgent());
+    if (_unlocked) _controller.loadRequest(Uri.parse(Live.startUrl));
+  }
+
+  Future<void> _configureUserAgent() async {
+    final base = await _controller.getUserAgent() ?? '';
+    final ua = AppConfig.desktopMode
+        ? 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/17.0 Safari/605.1.15'
+        : base;
+    if (ua.isNotEmpty) {
+      await _controller.setUserAgent((ua + ' ' + AppConfig.userAgentSuffix).trim());
+    }
   }
 
   void _inject() {
     final script = WebOverrides.scriptFor(Live.customCss, Live.customJs);
-    if (script.isNotEmpty) {
+    if (AppConfig.javascriptEnabled && script.isNotEmpty) {
       _controller.runJavaScript(script);
     }
   }
@@ -228,7 +267,9 @@ class _WebHomeState extends State<WebHome> with WidgetsBindingObserver {
   }
 
   Future<NavigationDecision> _handleNavigation(NavigationRequest request) async {
-    final uri = Uri.parse(request.url);
+    if (!request.isMainFrame) return NavigationDecision.navigate;
+    final uri = Uri.tryParse(request.url);
+    if (uri == null) return NavigationDecision.prevent;
 
     for (final pattern in Live.blockedUrlPatterns) {
       if (pattern.isNotEmpty && request.url.contains(pattern)) {
@@ -244,11 +285,14 @@ class _WebHomeState extends State<WebHome> with WidgetsBindingObserver {
       await launchUrl(uri);
       return NavigationDecision.prevent;
     }
-    if (AppConfig.handleWhatsapp && uri.host.contains('wa.me')) {
+    if (AppConfig.handleWhatsapp && (uri.host == 'wa.me' || uri.scheme == 'whatsapp')) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
       return NavigationDecision.prevent;
     }
 
+    if (uri.scheme != 'https' && uri.scheme != 'http') {
+      return NavigationDecision.prevent;
+    }
     if (!_isInternal(uri) && AppConfig.openExternalInBrowser) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
       return NavigationDecision.prevent;
@@ -262,6 +306,7 @@ class _WebHomeState extends State<WebHome> with WidgetsBindingObserver {
       return false;
     }
     if (!AppConfig.confirmExit) return true;
+    if (!mounted) return false;
     final leave = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -288,13 +333,15 @@ class _WebHomeState extends State<WebHome> with WidgetsBindingObserver {
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
-        if (await _onWillPop() && mounted) Navigator.of(context).pop();
+        if (await _onWillPop() && mounted) await SystemNavigator.pop();
       },
       child: Scaffold(
         backgroundColor: Live.themeColor,
         body: SafeArea(
           top: !AppConfig.fullscreen,
-          child: _offline ? _offlineView() : _webView(),
+          child: !_unlocked
+              ? Center(child: const Text('App locked'))
+              : _offline || _pageError ? _offlineView() : _webView(),
         ),
         floatingActionButton: FloatingActionButton.small(
           backgroundColor: Live.accentColor,
@@ -302,7 +349,7 @@ class _WebHomeState extends State<WebHome> with WidgetsBindingObserver {
               SharePlus.instance.share(ShareParams(text: Live.startUrl)),
           child: const Icon(Icons.share),
         ),
-        bottomNavigationBar: Live.bottomNav && Live.bottomNavItems.isNotEmpty
+        bottomNavigationBar: _unlocked && Live.bottomNav && Live.bottomNavItems.length >= 2
             ? BottomNavigationBar(
                 currentIndex: _navIndex,
                 type: BottomNavigationBarType.fixed,
@@ -335,15 +382,17 @@ class _WebHomeState extends State<WebHome> with WidgetsBindingObserver {
       ],
     );
     if (!AppConfig.pullToRefresh) return view;
-    return RefreshIndicator(
-      onRefresh: () async => _controller.reload(),
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: [
-          SizedBox(height: MediaQuery.of(context).size.height - 24, child: view),
-        ],
+    return Stack(children: [
+      Positioned.fill(child: view),
+      Positioned(
+        right: 12, top: 8,
+        child: IconButton.filledTonal(
+          tooltip: 'Refresh website',
+          onPressed: () => _controller.reload(),
+          icon: const Icon(Icons.refresh),
+        ),
       ),
-    );
+    ]);
   }
 
   Widget _offlineView() {
@@ -367,7 +416,10 @@ class _WebHomeState extends State<WebHome> with WidgetsBindingObserver {
             ),
             const SizedBox(height: 20),
             FilledButton(
-              onPressed: () => _controller.reload(),
+              onPressed: () {
+                setState(() { _offline = false; _pageError = false; });
+                _controller.reload();
+              },
               child: Text(AppStrings.t(_locale, 'retry')),
             ),
           ],

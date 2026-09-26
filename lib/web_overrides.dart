@@ -1,4 +1,6 @@
 // GENERATED FILE - website overrides injected into the web view.
+import 'dart:convert';
+
 class WebOverrides {
   static const String css = '';
   static const String js = 'document.querySelectorAll(\'a[target=\\"_blank\\"]\').forEach(function(a){a.removeAttribute(\'target\');});';
@@ -9,12 +11,10 @@ class WebOverrides {
   /// pass the freshly downloaded values here.
   static String scriptFor(String cssIn, String jsIn) {
     final buffer = StringBuffer();
-    if (cssIn.isNotEmpty) {
-      final safe = cssIn.replaceAll('"', '\\"').replaceAll('\n', ' ');
-      buffer.writeln("(function(){var s=document.createElement('style');"
-          "s.type='text/css';s.appendChild(document.createTextNode(\"" +
-          safe +
-          "\"));document.head.appendChild(s);})();");
+    {
+      buffer.writeln("(function(){var s=document.getElementById('nativeforge-style');"
+          "if(!s){s=document.createElement('style');s.id='nativeforge-style';document.head.appendChild(s);}"
+          "s.textContent=" + jsonEncode(cssIn) + ";})();");
     }
     if (jsIn.isNotEmpty) {
       buffer.writeln(jsIn);

@@ -9,6 +9,7 @@ bash tool/bootstrap.sh android
 flutter pub get
 dart run flutter_launcher_icons
 dart run flutter_native_splash:create
+bash tool/check_signing.sh  # configure CM_KEYSTORE_* and CM_KEY_* first
 flutter build apk --release
 # output: build/app/outputs/flutter-apk/app-release.apk
 ```
@@ -24,15 +25,15 @@ flutter build appbundle --release
 ```bash
 bash tool/bootstrap.sh ios
 flutter pub get
-cd ios && pod install && cd ..
+if [ -f ios/Podfile ]; then (cd ios && pod install); fi
 flutter build ios --release --no-codesign
 open ios/Runner.xcworkspace   # sign with your Apple team, then Archive
 ```
 
 ## One-click cloud builds
 
-- `codemagic.yaml` — push this repo to Codemagic and both platforms build automatically.
-- `.github/workflows/build.yml` — GitHub Actions builds the APK on every push and uploads it as an artifact.
+- `codemagic.yaml` — select android-debug for a test APK. For android-release, upload your existing keystore with reference nativeforge_upload. For ios-release, upload a matching App Store distribution certificate and provisioning profile.
+- `.github/workflows/build.yml` — GitHub Actions builds a test APK and unsigned iOS app. Store distribution requires signed release artifacts.
 
 ## Where settings live
 
@@ -45,4 +46,11 @@ open ios/Runner.xcworkspace   # sign with your Apple team, then Archive
 | iOS permissions & deep links | `ios/Runner/Info.plist` |
 | Environment values | `.env.example`, `assets/config/app_config.json` |
 
-Regenerate this project any time from the web console after changing settings.
+The website is loaded live from its HTTPS URL. Newly deployed pages appear on reload;
+already-open pages need website realtime support or a manual refresh. Live console
+settings poll every 60 seconds and on foreground without resetting navigation.
+Native permissions, signing, icons and plugins require regeneration and rebuilding.
+Never embed private keys: secret-marked environment values are omitted from exports.
+
+Regenerate this project from the web console to receive generator fixes. Bootstrap
+preserves native customizations; use a fresh export when changing the package ID.

@@ -1,6 +1,24 @@
 workflows:
+  android-debug:
+    name: Test APK (not for Google Play)
+    instance_type: linux_x2
+    environment:
+      flutter: 3.47.3
+      java: 17
+    scripts:
+      - script: |
+          set -euo pipefail
+          bash tool/bootstrap.sh android
+          flutter pub get
+          dart run flutter_launcher_icons
+          dart run flutter_native_splash:create
+          flutter analyze --no-fatal-infos
+          flutter test
+          flutter build apk --debug
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
   android-release:
-    name: touchtosteer Android
+    name: "touchtosteer Android"
     working_directory: .
     instance_type: linux_x2
     max_build_duration: 60
@@ -8,30 +26,35 @@ workflows:
       flutter: 3.47.3
       java: 17
       ndk: 28.2.13676358
+      # Upload your existing Play upload key with reference nativeforge_upload.
+      android_signing:
+        - nativeforge_upload
     scripts:
       - name: Prepare current Flutter Android project
         script: |
+          set -euo pipefail
           test -f pubspec.yaml
           bash tool/bootstrap.sh android
           flutter doctor -v
           flutter pub get
           dart run flutter_launcher_icons
           dart run flutter_native_splash:create
-          flutter analyze
+          flutter analyze --no-fatal-infos
+          flutter test
       - name: Build Android release files
         script: |
+          set -euo pipefail
+          bash tool/check_signing.sh
           flutter build apk --release
           flutter build appbundle --release
     artifacts:
       - build/**/outputs/**/*.apk
       - build/**/outputs/**/*.aab
   ios-release:
-    name: touchtosteer iOS
+    name: "touchtosteer iOS"
     working_directory: .
     instance_type: mac_mini_m2
     max_build_duration: 90
-    integrations:
-      app_store_connect: codemagic
     environment:
       flutter: 3.47.3
       xcode: latest
@@ -42,22 +65,23 @@ workflows:
     scripts:
       - name: Prepare current Flutter iOS project
         script: |
+          set -euo pipefail
           test -f pubspec.yaml
           bash tool/bootstrap.sh ios
           flutter doctor -v
           flutter pub get
           dart run flutter_launcher_icons
           dart run flutter_native_splash:create
-          flutter analyze
+          flutter analyze --no-fatal-infos
+          flutter test
       - name: Set up signing
         script: |
-          keychain initialize
-          app-store-connect fetch-signing-files "app.lovable.touchtosteer" --type IOS_APP_STORE --create
-          keychain add-certificates
+          set -euo pipefail
           xcode-project use-profiles
       - name: Install iOS dependencies and build
         script: |
-          cd ios && pod install && cd ..
+          set -euo pipefail
+          if [ -f ios/Podfile ]; then (cd ios && pod install); fi
           flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
     artifacts:
       - build/ios/ipa/*.ipa

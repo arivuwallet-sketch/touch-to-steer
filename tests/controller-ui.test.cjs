@@ -379,3 +379,41 @@ test('Wheel capture failure still moves outside the wheel, releases and cancels 
     act(()=>t.mock.timers.tick(125));assert.equal(app.state().steer,0);
   } finally {app.unmount();}
 });
+
+test('Live detection applies both profiles, neutralizes held inputs on game change, and restores saved overrides',()=> {
+  const {useBridge}=loadTS('src/hooks/useBridge.ts');
+  class Socket {
+    static OPEN=1;static instances=[];
+    constructor(){this.readyState=0;this.bufferedAmount=0;this.sent=[];Socket.instances.push(this);}
+    send(data){this.sent.push(JSON.parse(data));}
+    close(){this.readyState=3;this.onclose?.();}
+    open(){this.readyState=1;this.onopen();}
+    receive(msg){this.onmessage({data:JSON.stringify(msg)});}
+  }
+  globalThis.WebSocket=Socket;
+  const ref={current:emptyState()};let api;
+  function Harness({options=defaultSettings}) {api=useBridge(ref,333,'xinput',false,defaultSettings.wheelBindings,options);return null;}
+  const app=mount(Harness);
+  try {
+    act(()=>api.connect('ws://localhost:8787'));
+    const ws=Socket.instances.at(-1);act(()=>ws.open());
+    act(()=>ws.receive({type:'ready',profileMappingVersion:1,controller:{connected:true}}));
+    assert.equal(api.profileMappingsSupported,true);
+    ref.current={...emptyState(),nitro:1,rt:1};api.sendControllerEdge();
+    act(()=>ws.receive({type:'game',name:'Asphalt Legends',process:'Asphalt9_Steam_x64_rtl'}));
+    assert.equal(api.gameProfile.id,'asphalt-auto');
+    const neutral=ws.sent.at(-1);
+    assert.equal(neutral.priority,'edge');assert.equal(neutral.nitro,0);assert.equal(neutral.rt,0);
+    assert.equal(neutral.wheelBindings.nitro,'a');assert.equal(neutral.wheelBindings.throttle,'none');assert.equal(neutral.padBindings.rt,'none');
+    ref.current={...emptyState(),buttons:{a:true}};api.sendControllerEdge();
+    const count=ws.sent.length;
+    act(()=>ws.receive({type:'game',name:'Race loading',process:'Asphalt9_Steam_x64_rtl'}));
+    assert.equal(ws.sent.length,count,'same game title updates do not release held inputs');
+    act(()=>ws.receive({type:'game',name:'Other Game',process:'othergame'}));
+    assert.equal(api.gameProfile.id,'standard');assert.deepEqual(ws.sent.at(-1).buttons,{});
+    assert.equal(ws.sent.at(-1).wheelBindings.throttle,'rt');assert.equal(ws.sent.at(-1).padBindings.rt,undefined);
+    app.rerender({options:{...defaultSettings,gameProfiles:{'asphalt-legends':{wheelBindings:{nitro:'rb'},padBindings:{a:'rb'}}}}});
+    act(()=>ws.receive({type:'game',name:'Asphalt Legends',process:'Asphalt9'}));
+    assert.equal(ws.sent.at(-1).wheelBindings.nitro,'rb');assert.equal(ws.sent.at(-1).padBindings.a,'rb');
+  } finally {app.unmount();}
+});

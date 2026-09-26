@@ -1,3 +1,4 @@
+import type { PadBindings, SavedGameProfile } from "./game-profiles";
 export type WheelOutput = "rt" | "lt" | "a" | "b" | "x" | "y" | "lb" | "rb" | "l3" | "r3" | "none";
 export const defaultWheelBindings = {
   throttle: "rt", brake: "lt", handbrake: "a", nitro: "lb", clutch: "x",
@@ -75,6 +76,10 @@ export function applyForceFlex(v: number, tensionGf: JoystickTensionGf) {
 
 export type Settings = {
   wheelBindings: WheelBindings;
+  padBindings: PadBindings;
+  autoGameProfiles: boolean;
+  asphaltAcceleration: "auto" | "manual";
+  gameProfiles: Record<string, SavedGameProfile>;
   bridgeUrl: string;
   /** Virtual PC controller output. Universal creates synchronized XInput + DirectInput/HID-compatible targets for broad legacy/modern coverage. */
   outputMode: "xinput" | "ds4" | "universal";
@@ -131,6 +136,10 @@ export const defaultSettings: Settings = {
   ffbHaptics: true,
   sendRateHz: 333,
   wheelBindings: { ...defaultWheelBindings },
+  padBindings: {},
+  autoGameProfiles: true,
+  asphaltAcceleration: "auto",
+  gameProfiles: {},
   invertTilt: false,
   invertLookY: false,
   wheelRotationDeg: 900,

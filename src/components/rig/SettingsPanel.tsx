@@ -1,3 +1,4 @@
+import { PAD_CONTROLS, type ResolvedGameProfile, type PadControl } from "@/lib/game-profiles";
 import { useState } from "react";
 import { defaultWheelBindings, type WheelBindings, type WheelOutput, type Settings } from "@/lib/controller-types";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,8 @@ import { CircleStop, Link2, X, SlidersHorizontal, RadioTower, ChevronRight } fro
 
 type Props = {
   settings: Settings;
+  gameProfile?: ResolvedGameProfile;
+  profileMappingsSupported?: boolean;
   onChange: (patch: Partial<Settings>) => void;
   onClose: () => void;
   status: "idle" | "connecting" | "connected" | "error";
@@ -25,6 +28,8 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 export function SettingsPanel({
   settings,
+  gameProfile,
+  profileMappingsSupported,
   onChange,
   onClose,
   status,
@@ -145,9 +150,26 @@ export function SettingsPanel({
             on each phone when the game expects Xbox controllers; the bridge assigns each phone
             its own virtual player, up to 4 simultaneous players.
           </div>
+          {connected && !profileMappingsSupported && <p role="alert" className="mt-2 text-xs text-amber-300">Update the Windows bridge to apply automatic profiles in both modes. This bridge does not report profile support.</p>}
+          <Row label="Automatic game profiles">
+            <input type="checkbox" checked={settings.autoGameProfiles !== false} onChange={(e) => onChange({ autoGameProfiles: e.target.checked })} />
+          </Row>
+          <p className="mt-2 text-xs text-muted-foreground">{gameProfile?.name ?? "Standard controller"} — {gameProfile?.note}</p>
+          {gameProfile?.gameKey === "asphalt-legends" && <Row label="Asphalt acceleration">
+            <select aria-label="Asphalt acceleration" value={settings.asphaltAcceleration ?? "auto"}
+              onChange={(e) => onChange({ asphaltAcceleration: e.target.value as "auto" | "manual" })}
+              className="rounded-lg border border-input bg-background px-2 py-1.5 text-xs">
+              <option value="auto">Auto (GAS inactive)</option><option value="manual">Manual (enable in-game)</option>
+            </select>
+          </Row>}
+          {settings.autoGameProfiles && gameProfile?.gameKey && <button type="button" className="mt-2 text-xs underline" onClick={() => {
+            const profiles = { ...settings.gameProfiles }; delete profiles[gameProfile.gameKey!];
+            onChange({ gameProfiles: profiles });
+          }}>Restore detected game's profile</button>}
           <details className="mt-3 rounded-lg border border-input p-3">
             <summary className="cursor-pointer text-xs">Wheel action bindings</summary>
-            <p className="my-2 text-xs text-muted-foreground">Match these outputs to your game's controller settings. Requires the updated PC bridge. Gamepad buttons keep their normal assignments.</p>
+            <p className="my-2 text-xs text-muted-foreground">{settings.autoGameProfiles && gameProfile?.gameKey ? "Changes are saved for this game and restored automatically." : "Changes apply to global manual bindings."}</p>
+            <p className="my-2 text-xs text-muted-foreground">Match these outputs to your game's controller settings. Requires the updated PC bridge. Gamepad assignments are configured separately below.</p>
             {(Object.keys(defaultWheelBindings) as (keyof WheelBindings)[]).map((action) => (
               <Row key={action} label={{ throttle: "GAS", brake: "BRAKE / reverse", handbrake: "HANDBRAKE", nitro: "NITRO", clutch: "CLUTCH", gearUp: "GEAR UP", gearDown: "GEAR DOWN", horn: "HORN" }[action]}>
                 <select aria-label={`Wheel ${action} output`}
@@ -158,7 +180,24 @@ export function SettingsPanel({
                 </select>
               </Row>
             ))}
-            <button type="button" className="mt-2 text-xs underline" onClick={() => onChange({ wheelBindings: { ...defaultWheelBindings } })}>Reset wheel bindings</button>
+            <button type="button" className="mt-2 text-xs underline" onClick={() => {
+              const key = settings.autoGameProfiles ? gameProfile?.gameKey : null;
+              if (key) {
+                const entry = { ...settings.gameProfiles?.[key] }; delete entry.wheelBindings;
+                onChange({ gameProfiles: { ...settings.gameProfiles, [key]: entry } });
+              } else onChange({ wheelBindings: { ...defaultWheelBindings } });
+            }}>Reset wheel bindings</button>
+          </details>
+          <details className="mt-3 rounded-lg border border-input p-3">
+            <summary className="cursor-pointer text-xs">Gamepad bindings</summary>
+            <p className="my-2 text-xs text-muted-foreground">These use the same detected game as the wheel. A/X keep Asphalt's native nitro/drift actions; RT is inactive with auto acceleration.</p>
+            {PAD_CONTROLS.map((id: PadControl) => <Row key={id} label={id.toUpperCase()}>
+              <select aria-label={`Gamepad ${id} output`} value={settings.padBindings?.[id] ?? id}
+                onChange={(e) => onChange({ padBindings: { ...settings.padBindings, [id]: e.target.value as WheelOutput } })}
+                className="rounded-lg border border-input bg-background px-2 py-1.5 text-xs">
+                {Object.entries({rt:"RT / R2",lt:"LT / L2",a:"A / Cross",b:"B / Circle",x:"X / Square",y:"Y / Triangle",lb:"LB / L1",rb:"RB / R1",l3:"L3",r3:"R3",none:"Disabled"}).map(([value,label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            </Row>)}
           </details>
           <Row label="Steering input">
             <select

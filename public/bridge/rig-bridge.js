@@ -1467,6 +1467,7 @@ wss.on("connection", (ws) => {
       try {
         ws.send(JSON.stringify({
           type: "ready",
+          profileMappingVersion: 1,
           t: msg.t ?? Date.now(),
           seq: msg.seq ?? 0,
           output: session.mode,

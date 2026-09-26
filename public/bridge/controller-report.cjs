@@ -63,7 +63,29 @@ function wheelBindings(s) {
     [action, WHEEL_OUTPUTS.has(s.wheelBindings?.[action]) ? s.wheelBindings[action] : fallback]));
 }
 
+const PAD_CONTROLS = ["lt", "rt", "a", "b", "x", "y", "lb", "rb", "l3", "r3"];
+function padBindings(s) {
+  return Object.fromEntries(PAD_CONTROLS.map(id => [id,
+    WHEEL_OUTPUTS.has(s.padBindings?.[id]) ? s.padBindings[id] : id]));
+}
+function remapPad(s) {
+  const bindings = padBindings(s);
+  const buttons = { ...s.buttons };
+  for (const id of PAD_CONTROLS) delete buttons[id];
+  const mapped = { ...s, lt:0, rt:0, buttons };
+  // Map from the original snapshot once (no chained swaps, no interference
+  // with synthetic wheel actions). Multiple sources OR/max into one output.
+  for (const id of PAD_CONTROLS) {
+    const value = id === "lt" || id === "rt" ? clamp(s[id], 0, 1) : s.buttons?.[id] ? 1 : 0;
+    const output = bindings[id];
+    if (output === "lt" || output === "rt") mapped[output] = Math.max(mapped[output], value);
+    else if (output !== "none" && value > 0.5) mapped.buttons[output] = true;
+  }
+  return mapped;
+}
+
 function applyToTarget(target, s, buttonMap) {
+  s = remapPad(s);
   if (!target) return;
 
   const buttons = s.buttons || {};
@@ -146,6 +168,7 @@ function stateSignature(s) {
     Number(s.gear) || 0,
     Number(s.dial) || 0,
     Object.values(wheelBindings(s)).join(","),
+    Object.values(padBindings(s)).join(","),
     Object.keys(buttons).filter((id) => buttons[id]).sort().join(","),
   ].join("|");
 }

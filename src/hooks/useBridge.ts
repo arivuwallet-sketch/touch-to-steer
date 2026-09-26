@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { resolveGameProfile, type ProfileOptions } from "@/lib/game-profiles";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { defaultWheelBindings, type WheelBindings, type ControllerState } from "@/lib/controller-types";
 import { RELEASE_INPUTS } from "./useInputReset";
 import { playDualRumble } from "@/lib/haptics";
@@ -31,7 +32,9 @@ export function useBridge(
   outputMode: "xinput" | "ds4" | "universal" = "xinput",
   vibrationEnabled = true,
   wheelBindings: WheelBindings = defaultWheelBindings,
+  profileOptions: ProfileOptions = {},
 ) {
+  const [profileMappingsSupported, setProfileMappingsSupported] = useState(false);
   const [status, setStatus] = useState<BridgeStatus>("idle");
   const [latency, setLatency] = useState<number | null>(null);
   const [packets, setPackets] = useState(0);
@@ -56,9 +59,13 @@ export function useBridge(
     rateHzRef.current = rateHz;
   }, [rateHz]);
 
-  const bindingsRef = useRef(wheelBindings);
-  bindingsRef.current = wheelBindings;
-  const stateSignature = useCallback(() => JSON.stringify([stateRef.current, bindingsRef.current]), [stateRef]);
+  const gameProfile = useMemo(() => resolveGameProfile(activeGame, activeGameProcess, profileOptions, wheelBindings),
+    [activeGame, activeGameProcess, profileOptions.autoGameProfiles, profileOptions.asphaltAcceleration, profileOptions.gameProfiles, profileOptions.padBindings, wheelBindings]);
+  const bindingsRef = useRef(gameProfile.wheelBindings);
+  bindingsRef.current = gameProfile.wheelBindings;
+  const padBindingsRef = useRef(gameProfile.padBindings);
+  padBindingsRef.current = gameProfile.padBindings;
+  const stateSignature = useCallback(() => JSON.stringify([stateRef.current, bindingsRef.current, padBindingsRef.current]), [stateRef]);
 
   const clearLoop = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -133,6 +140,7 @@ export function useBridge(
       }
     }
     setStatus("idle");
+    setProfileMappingsSupported(false);
     setActiveGame("Disconnected");
     setActiveGameProcess(null);
     setLatency(null);
@@ -205,7 +213,8 @@ export function useBridge(
                 t: Date.now(),
                 seq: ++packetCounterRef.current,
                 ...stateRef.current,
-                wheelBindings: bindingsRef.current,
+          wheelBindings: bindingsRef.current,
+          padBindings: padBindingsRef.current,
               }));
               lastSentStateRef.current = signature;
               lastHeartbeatRef.current = currentTime;
@@ -245,6 +254,7 @@ export function useBridge(
           const msg = JSON.parse(String(ev.data));
 
           if (msg.type === "ready") {
+            setProfileMappingsSupported(Number(msg.profileMappingVersion) >= 1);
             if (msg.controller?.connected) {
               setStatus("connected");
               lastSentStateRef.current = "";
@@ -438,7 +448,8 @@ export function useBridge(
           t: Date.now(),
           seq: ++packetCounterRef.current,
           ...stateRef.current,
-                wheelBindings: bindingsRef.current,
+          wheelBindings: bindingsRef.current,
+          padBindings: padBindingsRef.current,
         }),
       );
       lastSentStateRef.current = stateSignature();
@@ -466,7 +477,8 @@ export function useBridge(
           t: Date.now(),
           seq: ++packetCounterRef.current,
           ...stateRef.current,
-                wheelBindings: bindingsRef.current,
+          wheelBindings: bindingsRef.current,
+          padBindings: padBindingsRef.current,
         }),
       );
       lastSentStateRef.current = stateSignature();
@@ -540,7 +552,22 @@ export function useBridge(
     [flushMove],
   );
 
+  // Cancel held gestures before changing mappings, so an old boost/brake
+  // cannot turn into a different held action when the foreground game changes.
+  const profileSignature = JSON.stringify([gameProfile.gameKey, gameProfile.id, gameProfile.wheelBindings, gameProfile.padBindings]);
+  const previousProfileRef = useRef(profileSignature);
+  useEffect(() => {
+    if (previousProfileRef.current === profileSignature) return;
+    previousProfileRef.current = profileSignature;
+    window.dispatchEvent(new Event(RELEASE_INPUTS));
+    stateRef.current = { ...stateRef.current, steer:0, throttle:0, brake:0, clutch:0,
+      handbrake:0, nitro:0, lx:0, ly:0, rx:0, ry:0, lt:0, rt:0, gear:0, dial:0, buttons:{} };
+    sendControllerEdge();
+  }, [profileSignature, sendControllerEdge, stateRef]);
+
   return {
+    gameProfile,
+    profileMappingsSupported,
     status,
     latency,
     packets,

@@ -1,3 +1,4 @@
+import { updateGameOverride } from "@/lib/game-profiles";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Gamepad2, Gauge, Mouse, Settings as SettingsIcon } from "lucide-react";
@@ -58,12 +59,14 @@ function Rig() {
     telemetry,
     telemetryLive,
     activeGame,
+    gameProfile,
+    profileMappingsSupported,
     connect,
     disconnect,
     sendMouse,
     sendControllerStateNow,
     sendControllerEdge,
-  } = useBridge(stateRef, settings.sendRateHz, settings.outputMode, settings.vibration, settings.wheelBindings);
+  } = useBridge(stateRef, settings.sendRateHz, settings.outputMode, settings.vibration, settings.wheelBindings, settings);
 
   useEffect(() => {
     const migrationKey = "mobile-rig-universal-migration-v3";
@@ -122,10 +125,19 @@ function Rig() {
   const patch = useCallback((p: Partial<Settings>) => {
     setSettings((s) => {
       const next = { ...s, ...p };
+      if (s.autoGameProfiles && gameProfile.gameKey && (p.wheelBindings || p.padBindings)) {
+        const key = gameProfile.gameKey;
+        next.gameProfiles = { ...s.gameProfiles, [key]: updateGameOverride(s.gameProfiles?.[key], gameProfile, {
+          ...(p.wheelBindings ? { wheelBindings: p.wheelBindings } : {}),
+          ...(p.padBindings ? { padBindings: p.padBindings } : {}),
+        }) };
+        next.wheelBindings = s.wheelBindings;
+        next.padBindings = s.padBindings;
+      }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       return next;
     });
-  }, []);
+  }, [gameProfile]);
 
   useEffect(() => {
     const updateMobileLayout = () => {
@@ -287,7 +299,7 @@ function Rig() {
       {/* ---------- rig fills the screen ---------- */}
       <div className="absolute inset-0">
         {mode === "pad" ? (
-          <FlatPad settings={settings} set={set} press={press} onSettingsChange={patch} gameName={activeGame} />
+          <FlatPad settings={settings} set={set} press={press} onSettingsChange={patch} gameName={activeGame} profileName={gameProfile.name} />
         ) : mode === "wheel" ? (
           <FlatWheel settings={settings} set={set} press={press} telemetry={telemetry} telemetryLive={telemetryLive} onSettingsChange={patch} gameName={activeGame} />
         ) : (
@@ -340,7 +352,9 @@ function Rig() {
 
       {showSettings && (
         <SettingsPanel
-          settings={settings}
+          settings={{ ...settings, wheelBindings: gameProfile.wheelBindings, padBindings: gameProfile.padBindings }}
+          gameProfile={gameProfile}
+          profileMappingsSupported={profileMappingsSupported}
           onChange={patch}
           onClose={() => setShowSettings(false)}
           status={status}

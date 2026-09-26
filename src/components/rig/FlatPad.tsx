@@ -11,6 +11,7 @@ type Props = {
   press: (id: string, down: boolean) => void;
   onSettingsChange: (patch: Partial<Settings>) => void;
   gameName?: string;
+  profileName?: string | undefined;
 };
 
 type TriggerMode = "regular" | "race" | "sniper" | "recoil" | "vibration" | "lock";
@@ -511,12 +512,14 @@ function MiniScreen({
   motion,
   turbo,
   gameName,
+  profileName,
 }: {
   profile: number;
   triggerMode: TriggerMode;
   motion: boolean;
   turbo: boolean;
   gameName?: string;
+  profileName?: string | undefined;
 }) {
   const safeGameName = typeof gameName === "string" ? gameName : "Desktop";
   const normalizedGameName = safeGameName.trim();
@@ -536,7 +539,7 @@ function MiniScreen({
         {displayGame}
       </span>
       <span className="mt-1 max-w-full overflow-hidden text-center text-[4.5px] font-black leading-none tracking-[0.07em] text-cyan-300/65 whitespace-nowrap">
-        {triggerMode.toUpperCase()} • {motion ? "GYRO" : turbo ? "TURBO" : "READY"}
+        {profileName ?? triggerMode.toUpperCase()} • {motion ? "GYRO" : turbo ? "TURBO" : "READY"}
       </span>
     </div>
   );
@@ -586,7 +589,7 @@ function GyroControl({
   );
 }
 
-export function FlatPad({ settings, set, press, onSettingsChange, gameName = "Desktop" }: Props) {
+export function FlatPad({ settings, set, press, onSettingsChange, gameName = "Desktop", profileName }: Props) {
   const [turbo, setTurbo] = useState(false);
   const [profile, setProfile] = useState(1);
   const [triggerMode, setTriggerMode] = useState<TriggerMode>("regular");
@@ -699,7 +702,7 @@ export function FlatPad({ settings, set, press, onSettingsChange, gameName = "De
         <div className="flat-pad-center-box relative w-[clamp(14rem,27vw,20rem)] rounded-[2rem] bg-[linear-gradient(145deg,#39434f,#171d24)] px-5 py-4 shadow-[inset_0_2px_2px_rgba(255,255,255,.09),0_12px_24px_rgba(0,0,0,.48)]">
           <div className="flex items-center justify-center gap-3">
             <SurfaceButton label="VIEW" id="back" settings={settings} press={press} className="flat-pad-nav-button h-[clamp(1.9rem,4.8svh,2.2rem)] min-w-[clamp(3.4rem,5vw,4rem)] rounded-lg px-2 text-[8px] text-slate-300" />
-            <MiniScreen profile={profile} triggerMode={triggerMode} motion={gyroEnabled} turbo={turbo} gameName={gameName} />
+            <MiniScreen profile={profile} triggerMode={triggerMode} motion={gyroEnabled} turbo={turbo} gameName={gameName} profileName={profileName} />
             <SurfaceButton label="MENU" id="start" settings={settings} press={press} className="flat-pad-nav-button h-[clamp(1.9rem,4.8svh,2.2rem)] min-w-[clamp(3.4rem,5vw,4rem)] rounded-lg px-2 text-[8px] text-slate-300" />
           </div>
           <div className="mt-2 flex items-center justify-center gap-2">

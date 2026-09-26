@@ -1,3 +1,11 @@
+import type { PadBindings, SavedGameProfile } from "./game-profiles";
+export type WheelOutput = "rt" | "lt" | "a" | "b" | "x" | "y" | "lb" | "rb" | "l3" | "r3" | "none";
+export const defaultWheelBindings = {
+  throttle: "rt", brake: "lt", handbrake: "a", nitro: "lb", clutch: "x",
+  gearUp: "rb", gearDown: "lb", horn: "l3",
+} satisfies Record<string, WheelOutput>;
+export type WheelBindings = Record<keyof typeof defaultWheelBindings, WheelOutput>;
+
 export type ControllerState = {
   /** -1 (full left) .. 1 (full right) */
   steer: number;
@@ -44,7 +52,35 @@ export const emptyState = (): ControllerState => ({
   buttons: {},
 });
 
+export type JoystickTensionGf = 30 | 50 | 80 | 100;
+
+export const FORCEFLEX_TENSIONS: JoystickTensionGf[] = [30, 50, 80, 100];
+
+export const FORCEFLEX_DESCRIPTIONS: Record<JoystickTensionGf, string> = {
+  30: "FEATHER • OPEN WORLD / RPG",
+  50: "BALANCED • MARKET TENSION",
+  80: "FIRM • PRECISION CONTROL",
+  100: "HEAVY • FPS / COMPETITIVE",
+};
+
+/** Software ForceFlex response curve for the virtual stick. */
+export function applyForceFlex(v: number, tensionGf: JoystickTensionGf) {
+  if (!Number.isFinite(v)) return 0;
+  const magnitude = Math.max(0, Math.min(1, Math.abs(v)));
+  const exponent =
+    tensionGf === 30 ? 0.82 :
+    tensionGf === 50 ? 0.94 :
+    tensionGf === 80 ? 1.12 :
+    1.26;
+  return Math.sign(v) * Math.pow(magnitude, exponent);
+}
+
 export type Settings = {
+  wheelBindings: WheelBindings;
+  padBindings: PadBindings;
+  autoGameProfiles: boolean;
+  asphaltAcceleration: "auto" | "manual";
+  gameProfiles: Record<string, SavedGameProfile>;
   bridgeUrl: string;
   /** Virtual PC controller output. Universal creates synchronized XInput + DirectInput/HID-compatible targets for broad legacy/modern coverage. */
   outputMode: "xinput" | "ds4" | "universal";
@@ -60,13 +96,17 @@ export type Settings = {
   vibration: boolean;
   /** Phone-side haptic approximation of wheel force feedback. */
   ffbHaptics: boolean;
-  /** Controller packet target. 240 Hz is the low-latency ceiling; actual delivery depends on device/browser/network. */
-  sendRateHz: number;
+  /** Controller transport target. The bridge currently supports 60–333 Hz (333 selects a 3 ms target). */
+  sendRateHz: 60 | 120 | 144 | 180 | 240 | 333;
   invertTilt: boolean;
   invertLookY: boolean;
   /** visual wheel lock, matching a G29 at 900 degrees lock-to-lock */
   wheelRotationDeg: number;
-  /** simulated stick tension for thumb travel */
+  /** Virtual ForceFlex tension detent. Touchscreen cannot change physical spring force. */
+  joystickTensionGf: JoystickTensionGf;
+  /** Software response weight, not physical torque. Zero preserves linear steering. */
+  steeringTension: number;
+  /** Legacy scalar retained for saved-setting compatibility. */
   stickTension: number;
   /** Virtual mouse profile. Values are software output scaling, not physical sensor characteristics. */
   mouseDpi: number;
@@ -97,10 +137,17 @@ export const defaultSettings: Settings = {
   autoCentre: true,
   vibration: true,
   ffbHaptics: true,
-  sendRateHz: 240,
+  sendRateHz: 333,
+  wheelBindings: { ...defaultWheelBindings },
+  padBindings: {},
+  autoGameProfiles: true,
+  asphaltAcceleration: "auto",
+  gameProfiles: {},
   invertTilt: false,
   invertLookY: false,
   wheelRotationDeg: 900,
+  joystickTensionGf: 50,
+  steeringTension: 0,
   stickTension: 0.7,
   mouseDpi: 1600,
   mousePollingRate: 8000,
@@ -165,4 +212,19 @@ export function applyCurve(v: number, deadzone: number, linearity: number, sens:
   m = (m - deadzone) / (1 - deadzone);
   m = Math.pow(m, linearity) * sens;
   return s * Math.max(-1, Math.min(1, m));
+}
+
+/** Radial shaping preserves stick direction and a circular full-travel boundary. */
+export function applyStickResponse(x: number, y: number, settings: Settings): [number, number] {
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return [0, 0];
+  const radius = Math.hypot(x, y);
+  if (!radius) return [0, 0];
+  const shaped = applyForceFlex(applyCurve(Math.min(1, radius), settings.deadzone, settings.linearity, settings.sensitivity), settings.joystickTensionGf);
+  return [x / radius * shaped, y / radius * shaped];
+}
+
+export function applySteeringTension(value: number, tension = 0) {
+  if (!Number.isFinite(value)) return 0;
+  const weight = Number.isFinite(tension) ? Math.max(0, Math.min(1, tension)) : 0;
+  return Math.sign(value) * Math.pow(Math.min(1, Math.abs(value)), 1 + weight * 0.8);
 }

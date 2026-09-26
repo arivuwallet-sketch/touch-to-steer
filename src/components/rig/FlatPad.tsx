@@ -1,26 +1,63 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
-import { applyCurve, type ControllerState, type Settings } from "@/lib/controller-types";
+import { applyCurve, applyStickResponse, FORCEFLEX_DESCRIPTIONS, type ControllerState, type JoystickTensionGf, type Settings } from "@/lib/controller-types";
+import { playDualRumble, type DualRumbleKind } from "@/lib/haptics";
+
+import { useHoldControl } from "@/hooks/useHoldControl";
+import { useInputReset } from "@/hooks/useInputReset";
 
 type Props = {
   settings: Settings;
   set: (p: Partial<ControllerState>) => void;
   press: (id: string, down: boolean) => void;
+  onSettingsChange: (patch: Partial<Settings>) => void;
+  gameName?: string;
+  profileName?: string | undefined;
 };
 
 type TriggerMode = "regular" | "race" | "sniper" | "recoil" | "vibration" | "lock";
 
 // Haptics are deferred off the input task so a vibration call can never delay
 // the controller packet leaving the phone.
-const buzz = (enabled: boolean, pattern: number | number[] = 10) => {
-  if (!enabled || typeof navigator === "undefined" || !("vibrate" in navigator)) return;
-  setTimeout(() => {
-    try {
-      navigator.vibrate(pattern);
-    } catch {
-      /* ignore */
-    }
-  }, 0);
+const buzz = (enabled: boolean, pattern: number | number[] = 10, kind: DualRumbleKind = "ui") => {
+  if (!enabled || typeof window === "undefined") return;
+
+  const values = Array.isArray(pattern) ? pattern : [pattern];
+  const strongest = Math.max(...values, 0);
+  const intensity = Math.max(0.08, Math.min(1, strongest / 18 + values.length * 0.035));
+  const resolvedKind =
+    kind !== "ui"
+      ? kind
+      : strongest >= 15
+        ? "heavy"
+        : values.length >= 4
+          ? "heartbeat"
+          : intensity > 0.5
+            ? "light"
+            : "ui";
+
+  playDualRumble(resolvedKind, {
+    strongMagnitude:
+      resolvedKind === "heavy"
+        ? Math.max(0.72, intensity)
+        : resolvedKind === "ui"
+          ? 0
+          : Math.max(0.08, intensity * 0.55),
+    weakMagnitude:
+      resolvedKind === "heavy"
+        ? Math.max(0.6, intensity * 0.82)
+        : resolvedKind === "ui"
+          ? Math.max(0.2, intensity)
+          : Math.max(0.12, intensity * 0.8),
+    duration:
+      resolvedKind === "heavy"
+        ? Math.min(500, Math.max(300, strongest * 22))
+        : resolvedKind === "ui"
+          ? Math.min(50, Math.max(30, strongest + 28))
+          : Math.min(180, Math.max(45, strongest * 7)),
+  });
 };
+
+
 
 const feelBuzz = (enabled: boolean, intensity: number) => {
   if (!enabled) return;
@@ -47,45 +84,16 @@ function SurfaceButton({
   turbo?: boolean;
   onClick?: () => void;
 }) {
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const lastHapticAt = useRef(0);
-
-  const stopTurbo = useCallback(() => {
-    if (timer.current) clearInterval(timer.current);
-    timer.current = null;
-    press(id, false);
-  }, [id, press]);
-
-  const down = (e: PointerEvent<HTMLButtonElement>) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
-    e.stopPropagation();
-    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-    if (now - lastHapticAt.current > 50) {
-      lastHapticAt.current = now;
-      feelBuzz(settings.vibration, 0.35);
-    }
-    press(id, true);
-
-    if (turbo) {
-      timer.current = setInterval(() => {
-        press(id, false);
-        feelBuzz(settings.vibration, 0.6);
-        window.setTimeout(() => press(id, true), 18);
-      }, 92);
-    }
-  };
-
-  useEffect(() => () => {
-    if (timer.current) clearInterval(timer.current);
-  }, []);
+  const held = useHoldControl((down) => {
+    press(id, down);
+    if (down) feelBuzz(settings.vibration, 0.35);
+  }, turbo);
 
   return (
     <button
       type="button"
       aria-label={typeof label === "string" ? label : id}
-      onPointerDown={down}
-      onPointerUp={stopTurbo}
-      onPointerCancel={stopTurbo}
+      {...held}
       onClick={onClick}
       className={`grid touch-none select-none place-items-center rounded-xl border border-white/10 bg-[linear-gradient(145deg,#3a4551,#151b22)] font-black text-slate-100 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),inset_0_-5px_9px_rgba(0,0,0,.62),0_5px_0_#06090d,0_9px_14px_rgba(0,0,0,.5)] transition-transform active:translate-y-[3px] active:shadow-[inset_0_2px_6px_rgba(0,0,0,.65),0_2px_0_#06090d] ${className}`}
       style={style}
@@ -112,6 +120,7 @@ function Stick({
   const rect = useRef<DOMRect | null>(null);
   const lastHapticMagnitude = useRef(0);
   const pointMagnitude = useRef(0);
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Zero-lag path: no React state on pointer move. Geometry is measured once
   // per grab (no per-sample layout read) and the thumb is written straight to
@@ -130,12 +139,9 @@ function Stick({
       y /= m;
     }
 
-    onMove(
-      applyCurve(x, settings.deadzone, settings.linearity, settings.sensitivity),
-      applyCurve(-y, settings.deadzone, settings.linearity, settings.sensitivity),
-    );
+    onMove(...applyStickResponse(x, -y, settings));
 
-    const travel = 22 + settings.stickTension * 12;
+    const travel = 22 + (settings.joystickTensionGf / 100) * 12;
     const thumb = thumbRef.current;
     if (thumb) {
       thumb.style.transform = `translate3d(calc(-50% + ${x * travel}px), calc(-50% + ${y * travel}px), 0)`;
@@ -165,7 +171,8 @@ function Stick({
     apply(latest.clientX, latest.clientY);
   };
 
-  const release = () => {
+  const release = (e?: PointerEvent<HTMLElement>) => {
+    if (pointer.current === null || (e && pointer.current !== e.pointerId)) return;
     pointer.current = null;
     pointMagnitude.current = 0;
     rect.current = null;
@@ -173,6 +180,15 @@ function Stick({
     if (thumb) thumb.style.transform = "translate3d(-50%,-50%,0)";
     onMove(0, 0);
   };
+
+  useInputReset(() => {
+    release();
+    if (clickTimer.current !== null) {
+      clearTimeout(clickTimer.current);
+      clickTimer.current = null;
+      onClick3(false);
+    }
+  });
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -184,6 +200,7 @@ function Stick({
         aria-valuemax={1}
         aria-valuenow={0}
         onPointerDown={(e) => {
+          if (pointer.current !== null) return;
           e.preventDefault();
           e.currentTarget.setPointerCapture(e.pointerId);
           pointer.current = e.pointerId;
@@ -197,7 +214,8 @@ function Stick({
         onLostPointerCapture={release}
         onDoubleClick={() => {
           onClick3(true);
-          window.setTimeout(() => onClick3(false), 90);
+          if (clickTimer.current !== null) clearTimeout(clickTimer.current);
+          clickTimer.current = setTimeout(() => { clickTimer.current = null; onClick3(false); }, 90);
         }}
         className="flat-pad-stick relative size-[clamp(5.25rem,23svh,10.5rem)] touch-none rounded-full border border-white/10 bg-[#0c1117] shadow-[inset_0_0_22px_rgba(0,0,0,.95),0_8px_20px_rgba(0,0,0,.45)]"
       >
@@ -211,7 +229,7 @@ function Stick({
         <div className="pointer-events-none absolute left-1/2 top-[11%] h-[8%] w-[28%] -translate-x-1/2 rounded-full bg-[#0a0e13]" />
       </div>
       <span className="text-[8px] font-black tracking-[0.18em] text-slate-500">
-        {side === "left" ? "L-STICK" : "R-STICK"}
+        {side === "left" ? "L-STICK" : "R-STICK"} • {settings.joystickTensionGf}GF
       </span>
     </div>
   );
@@ -231,7 +249,7 @@ function ApexDPad({ settings, press, turbo }: { settings: Settings; press: Props
   );
 
   return (
-    <div className="flat-pad-dpad relative size-[clamp(6.75rem,22svh,10rem)]">
+    <div className="flat-pad-dpad relative size-[clamp(7.1rem,23svh,10.35rem)]">
       <div className="absolute left-1/2 top-1/2 size-12 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#11171e] shadow-inner" />
       {cell("up", "↑", "left-1/2 top-0 -translate-x-1/2")}
       {cell("left", "←", "left-0 top-1/2 -translate-y-1/2")}
@@ -243,7 +261,7 @@ function ApexDPad({ settings, press, turbo }: { settings: Settings; press: Props
 
 function ApexFaceButtons({ settings, press, turbo }: { settings: Settings; press: Props["press"]; turbo: boolean }) {
   return (
-    <div className="flat-pad-face relative size-[clamp(7.5rem,24svh,11rem)]">
+    <div className="flat-pad-face relative size-[clamp(7.9rem,25svh,11.4rem)]">
       <SurfaceButton label="Y" id="y" settings={settings} press={press} turbo={turbo} className="absolute left-1/2 top-0 size-[clamp(2.75rem,8svh,3.5rem)] -translate-x-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#ffd43b]" />
       <SurfaceButton label="X" id="x" settings={settings} press={press} turbo={turbo} className="absolute left-0 top-1/2 size-[clamp(2.75rem,8svh,3.5rem)] -translate-y-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#58b9ff]" />
       <SurfaceButton label="B" id="b" settings={settings} press={press} turbo={turbo} className="absolute right-0 top-1/2 size-[clamp(2.75rem,8svh,3.5rem)] -translate-y-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#ff5b57]" />
@@ -253,10 +271,8 @@ function ApexFaceButtons({ settings, press, turbo }: { settings: Settings; press
 }
 
 // ---- ForceAdapt engine (Flydigi Apex 5 style adaptive triggers) ----
-// Each mode defines a real trigger profile: the usable stroke window
-// (dead travel at both ends, exactly like the Apex hall-sensor stroke
-// switch), the resistance "wall" where the game action fires, and the
-// force curve applied between them.
+// Software response profiles define the usable touch travel window
+// and vibration cues. Touchscreens do not provide motorized resistance.
 type ForceProfile = {
   stroke: [number, number]; // usable travel window of the physical stroke
   wall: number; // actuation point — haptic wall is rendered here
@@ -272,7 +288,7 @@ const FORCE_PROFILES: Record<TriggerMode, ForceProfile> = {
   // sniper: long soft pull then a hard wall right before the shot breaks
   sniper: { stroke: [0.1, 1], wall: 0.82, curve: (p) => Math.pow(p, 1.7), digital: false },
   // recoil: soft slack, then full pressure past the wall with pulse train
-  recoil: { stroke: [0.06, 0.96], wall: 0.42, curve: (p) => (p < 0.3 ? p * 0.45 : Math.min(1, 0.135 + (p - 0.3) * 1.24)), digital: false },
+  recoil: { stroke: [0.06, 0.96], wall: 0.42, curve: (p) => (p < 0.3 ? p * 0.45 : Math.min(1, 0.135 + (p - 0.3) * (0.865 / 0.7))), digital: false },
   // vibration: linear force with continuous texture feedback
   vibration: { stroke: [0.02, 0.98], wall: 0.5, curve: (p) => Math.pow(p, 0.92), digital: false },
   // lock: micro-switch mode — near-zero stroke, instant 100%
@@ -316,12 +332,18 @@ function Trigger({
   const pulseFeedback = useCallback(
     (pattern: number | number[]) => {
       if (!settings.vibration) return;
-      buzz(true, pattern);
+      const kind =
+        mode === "recoil"
+          ? "gunfire"
+          : mode === "vibration"
+            ? "engine"
+            : "heavy";
+      buzz(true, pattern, kind);
       setPulse3d(true);
       if (pulseTimer.current !== null) window.clearTimeout(pulseTimer.current);
       pulseTimer.current = window.setTimeout(() => setPulse3d(false), 90);
     },
-    [settings.vibration],
+    [settings.vibration, mode],
   );
 
   const profile = FORCE_PROFILES[mode];
@@ -343,9 +365,8 @@ function Trigger({
       // reaches the PC in the same input task with no render in between.
       valueRef.current = clamped;
       set({ [id]: clamped } as Partial<ControllerState>);
-      // Also expose a digital trigger alias so games/bindings that treat LT/RT
-      // as buttons still receive a clean press while the analog value is sent.
-      press(id === "lt" ? "l2" : "r2", clamped > 0.02);
+      // The bridge derives DS4 digital trigger bits from this same report.
+      // A separate l2/r2=true packet would force partial travel back to 100%.
 
       const plate = plateRef.current;
       if (plate) {
@@ -361,13 +382,10 @@ function Trigger({
     const r = e.currentTarget.getBoundingClientRect();
     // Physical-style trigger travel: top = fully pulled, bottom = released.
     const travel = Math.max(0, Math.min(1, (r.bottom - e.clientY) / r.height));
-    // Real force sensing: touch/stylus digitisers report finger pressure.
-    // ForceAdapt blends actual finger force with stroke position, so pressing
-    // harder in place pulls the trigger just like the Apex hall triggers.
-    const hasForce = (e.pointerType === "touch" || e.pointerType === "pen") && e.pressure > 0 && e.pressure < 1;
-    const force = hasForce ? Math.max(0, Math.min(1, e.pressure * 1.35)) : 0;
-    const rawStroke = hasForce ? Math.max(travel, travel * 0.45 + force * 0.55) : travel;
-    const next = mapValue(rawStroke);
+    // Pointer pressure may be a constant 0.5 on non-force hardware.
+    // Use reproducible travel; do not mistake that fallback for finger force.
+    const next = mapValue(travel);
+    writeTrigger(next);
     const now = typeof performance !== "undefined" ? performance.now() : Date.now();
     const band = Math.min(5, Math.floor(next * 6));
 
@@ -404,11 +422,11 @@ function Trigger({
       }
     }
 
-    writeTrigger(next);
   };
 
 
   const pressToFull = (e: PointerEvent<HTMLButtonElement>) => {
+    if (pointer.current !== null) return;
     e.preventDefault();
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -420,6 +438,7 @@ function Trigger({
   };
 
   const release = (e?: PointerEvent<HTMLButtonElement>) => {
+    if (pointer.current === null || (e && pointer.current !== e.pointerId)) return;
     e?.preventDefault();
     e?.stopPropagation();
     pointer.current = null;
@@ -430,6 +449,8 @@ function Trigger({
   };
 
 
+  useInputReset(() => release());
+
   return (
     <button
       type="button"
@@ -438,6 +459,7 @@ function Trigger({
       onPointerMove={(e) => pointer.current === e.pointerId && (e.preventDefault(), move(e))}
       onPointerUp={release}
       onPointerCancel={release}
+      onLostPointerCapture={release}
       className="flat-pad-trigger group relative grid h-[clamp(2.75rem,7.8svh,3.5rem)] w-[clamp(4.5rem,8vw,6rem)] touch-none select-none place-items-center overflow-hidden rounded-[1rem] border border-white/10 bg-[linear-gradient(180deg,#394754,#11171e)] text-[10px] font-black tracking-[0.25em] text-cyan-200 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),inset_0_-7px_14px_rgba(0,0,0,.72),0_7px_0_#05080b,0_11px_18px_rgba(0,0,0,.58)]"
       style={{ perspective: "700px" }}
     >
@@ -477,23 +499,35 @@ function MiniScreen({
   triggerMode,
   motion,
   turbo,
+  gameName,
+  profileName,
 }: {
   profile: number;
   triggerMode: TriggerMode;
   motion: boolean;
   turbo: boolean;
+  gameName?: string;
+  profileName?: string | undefined;
 }) {
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    const id = window.setInterval(() => setTick((v) => (v + 1) % 4), 1100);
-    return () => window.clearInterval(id);
-  }, []);
+  const safeGameName = typeof gameName === "string" ? gameName : "Desktop";
+  const normalizedGameName = safeGameName.trim();
+  const displayGame = normalizedGameName
+    ? normalizedGameName.replace(/\s+/g, " ").slice(0, 18).toUpperCase()
+    : "DESKTOP";
 
   return (
     <div className="flat-pad-screen flex h-[clamp(2.75rem,7.8svh,3.5rem)] w-[clamp(5rem,7vw,7rem)] flex-col items-center justify-center rounded-lg border border-cyan-300/25 bg-[#071018] shadow-[inset_0_0_14px_rgba(34,211,238,.12),0_0_12px_rgba(34,211,238,.1)]">
-      <span className="text-[7px] font-black tracking-[0.25em] text-cyan-400/70">APEX 5 • FORCEADAPT</span>
-      <span className="mt-1 text-[10px] font-mono font-bold text-cyan-200">
-        {tick === 0 ? `P${profile}` : tick === 1 ? triggerMode.toUpperCase() : tick === 2 ? (motion ? "GYRO ON" : "GYRO OFF") : (turbo ? "TURBO ON" : "READY")}
+      <span className="max-w-full overflow-hidden text-center text-[4px] font-black leading-none tracking-[0.07em] text-cyan-400/70 whitespace-nowrap">
+        TOUCHTOSTEER • P{profile}
+      </span>
+      <span
+        className="mt-1 max-w-[94%] overflow-hidden text-center text-[8px] font-mono font-bold leading-none text-cyan-200 whitespace-nowrap"
+        title={safeGameName}
+      >
+        {displayGame}
+      </span>
+      <span className="mt-1 max-w-full overflow-hidden text-center text-[4.5px] font-black leading-none tracking-[0.07em] text-cyan-300/65 whitespace-nowrap">
+        {profileName ?? triggerMode.toUpperCase()} • {motion ? "GYRO" : turbo ? "TURBO" : "READY"}
       </span>
     </div>
   );
@@ -543,13 +577,28 @@ function GyroControl({
   );
 }
 
-export function FlatPad({ settings, set, press }: Props) {
+export function FlatPad({ settings, set, press, onSettingsChange, gameName = "Desktop", profileName }: Props) {
   const [turbo, setTurbo] = useState(false);
-  const [rgb, setRgb] = useState(true);
   const [profile, setProfile] = useState(1);
   const [triggerMode, setTriggerMode] = useState<TriggerMode>("regular");
   const [gyroEnabled, setGyroEnabled] = useState(false);
   const [gyroDenied, setGyroDenied] = useState(false);
+
+  const cycleJoystickTension = useCallback(() => {
+    const values: JoystickTensionGf[] = [30, 50, 80, 100];
+    const index = values.indexOf(settings.joystickTensionGf);
+    const next = values[(index >= 0 ? index + 1 : 0) % values.length] ?? 50;
+    onSettingsChange({ joystickTensionGf: next });
+    buzz(settings.vibration, 8);
+  }, [onSettingsChange, settings.joystickTensionGf, settings.vibration]);
+
+  const cycleSendRate = useCallback(() => {
+    const values: Settings["sendRateHz"][] = [60, 120, 144, 180, 240, 333];
+    const index = values.indexOf(settings.sendRateHz);
+    const next = values[(index >= 0 ? index + 1 : 0) % values.length] ?? 333;
+    onSettingsChange({ sendRateHz: next });
+    buzz(settings.vibration, 8);
+  }, [onSettingsChange, settings.sendRateHz, settings.vibration]);
 
   const requestGyro = useCallback(async () => {
     try {
@@ -585,6 +634,7 @@ export function FlatPad({ settings, set, press }: Props) {
     if (!gyroEnabled) return;
 
     const handler = (e: DeviceOrientationEvent) => {
+      if (document.visibilityState !== "visible" || !document.hasFocus()) return;
       const gamma = e.gamma ?? 0;
       const beta = e.beta ?? 0;
       const angle = window.screen.orientation?.angle ?? 0;
@@ -614,18 +664,17 @@ export function FlatPad({ settings, set, press }: Props) {
   return (
     <div
       className="flat-pad-root absolute inset-0 overflow-hidden bg-[#05080d] text-slate-100"
-      style={{ filter: rgb ? undefined : "saturate(.65)" }}
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(100%_75%_at_50%_8%,#172333_0%,#04070b_68%)]" />
-      <div className={`pointer-events-none absolute inset-2 rounded-[1.8rem] border ${rgb ? "border-cyan-300/20" : "border-white/15"} shadow-[0_0_40px_rgba(34,211,238,.08)]`} />
+      <div className="pointer-events-none absolute inset-2 rounded-[1.8rem] border border-white/15 shadow-[0_0_40px_rgba(34,211,238,.08)]" />
 
       <div className="flat-pad-top absolute inset-x-0 top-3 flex items-start justify-between px-[max(1rem,env(safe-area-inset-left))]">
         <div className="flex items-center gap-3">
           <Trigger label="LT" id="lt" settings={settings} set={set} press={press} mode={triggerMode} />
-          <ExtraButton label="LM" id="lm" settings={settings} press={press} />
+          <ExtraButton label="LB" id="lb" settings={settings} press={press} />
         </div>
         <div className="flex items-center gap-3">
-          <ExtraButton label="RM" id="rm" settings={settings} press={press} />
+          <ExtraButton label="RB" id="rb" settings={settings} press={press} />
           <Trigger label="RT" id="rt" settings={settings} set={set} press={press} mode={triggerMode} />
         </div>
       </div>
@@ -640,26 +689,22 @@ export function FlatPad({ settings, set, press }: Props) {
       <div className="flat-pad-center absolute left-1/2 top-[27%] flex -translate-x-1/2 flex-col items-center gap-2">
         <div className="flat-pad-center-box relative w-[clamp(14rem,27vw,20rem)] rounded-[2rem] bg-[linear-gradient(145deg,#39434f,#171d24)] px-5 py-4 shadow-[inset_0_2px_2px_rgba(255,255,255,.09),0_12px_24px_rgba(0,0,0,.48)]">
           <div className="flex items-center justify-center gap-3">
-            <SurfaceButton label="VIEW" id="back" settings={settings} press={press} className="h-[clamp(2rem,5.6svh,2.5rem)] min-w-[clamp(3.5rem,5vw,4rem)] rounded-lg text-[8px] text-slate-300" />
-            <MiniScreen profile={profile} triggerMode={triggerMode} motion={gyroEnabled} turbo={turbo} />
-            <SurfaceButton label="MENU" id="start" settings={settings} press={press} className="h-10 min-w-16 rounded-lg text-[8px] text-slate-300" />
+            <SurfaceButton label="VIEW" id="back" settings={settings} press={press} className="flat-pad-nav-button h-[clamp(1.9rem,4.8svh,2.2rem)] min-w-[clamp(3.4rem,5vw,4rem)] rounded-lg px-2 text-[8px] text-slate-300" />
+            <MiniScreen profile={profile} triggerMode={triggerMode} motion={gyroEnabled} turbo={turbo} gameName={gameName} profileName={profileName} />
+            <SurfaceButton label="MENU" id="start" settings={settings} press={press} className="flat-pad-nav-button h-[clamp(1.9rem,4.8svh,2.2rem)] min-w-[clamp(3.4rem,5vw,4rem)] rounded-lg px-2 text-[8px] text-slate-300" />
           </div>
           <div className="mt-2 flex items-center justify-center gap-2">
-            <SurfaceButton label="PROFILE −" id="minus" settings={settings} press={press} onClick={() => cycleProfile(-1)} className="h-[clamp(2rem,5.4svh,2.25rem)] min-w-[clamp(4rem,5vw,5rem)] rounded-md text-[7px]" />
             <SurfaceButton label="HOME" id="home" settings={settings} press={press} className="h-9 min-w-20 rounded-md text-[7px]" />
-            <SurfaceButton label="PROFILE +" id="plus" settings={settings} press={press} onClick={() => cycleProfile(1)} className="h-9 min-w-20 rounded-md text-[7px]" />
           </div>
           <div className="mt-2 grid grid-cols-3 gap-2">
-            <SurfaceButton label="FN" id="fn" settings={settings} press={press} className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg text-[7px] text-slate-300" />
-            <SurfaceButton label="LOGO" id="logo" settings={settings} press={press} className="h-8 min-w-0 w-full rounded-lg text-[7px] text-slate-300" />
             <button type="button" onClick={() => setTurbo((v) => !v)} className={`h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border px-2 text-[7px] font-black uppercase tracking-[0.14em] ${turbo ? "border-orange-300/50 bg-orange-300/10 text-orange-200" : "border-white/10 bg-black/20 text-slate-400"}`}>TURBO</button>
             <GyroControl enabled={gyroEnabled} denied={gyroDenied} onToggle={requestGyro} />
+            <button type="button" onClick={cycleJoystickTension} className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border border-violet-300/20 bg-violet-300/5 px-2 text-[7px] font-black uppercase tracking-[0.14em] text-violet-200" aria-label={`ForceFlex joystick tension ${settings.joystickTensionGf} gf. Tap to change.`} title={FORCEFLEX_DESCRIPTIONS[settings.joystickTensionGf]}>FORCEFLEX {settings.joystickTensionGf}GF</button>
+            <button type="button" onClick={cycleSendRate} className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border border-cyan-300/20 bg-cyan-300/5 px-2 text-[7px] font-black uppercase tracking-[0.14em] text-cyan-200" aria-label={`Controller polling rate ${settings.sendRateHz} Hz. Tap to change.`} title="Change controller polling rate">RATE {settings.sendRateHz} HZ</button>
             <button type="button" onClick={nextTriggerMode} className="h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border border-white/10 bg-black/20 px-2 text-[7px] font-black uppercase tracking-[0.14em] text-slate-400">FORCEADAPT</button>
-            <button type="button" onClick={() => setRgb((v) => !v)} className={`h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border px-2 text-[7px] font-black uppercase tracking-[0.14em] ${rgb ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-200" : "border-white/10 bg-black/20 text-slate-400"}`}>RGB</button>
           </div>
         </div>
       </div>
-
       <div className="flat-pad-right absolute bottom-[17%] right-[7%] flex items-center gap-[clamp(1rem,3vw,2.5rem)]">
         <ApexFaceButtons settings={settings} press={press} turbo={turbo} />
         <Stick side="right" settings={settings} onMove={(x, y) => set({ rx: x, ry: settings.invertLookY ? y : -y })} onClick3={(d) => press("r3", d)} />
@@ -672,9 +717,6 @@ export function FlatPad({ settings, set, press }: Props) {
         <ExtraButton label="M4" id="m4" settings={settings} press={press} />
       </div>
 
-      <div className="pointer-events-none absolute left-1/2 bottom-1 -translate-x-1/2 text-[6px] font-bold uppercase tracking-[0.14em] text-slate-600">
-        FORCEFLEX TENSION • FORCEADAPT MODES • 6 EXTRA • GYRO • RGB • TURBO
-      </div>
     </div>
   );
 }

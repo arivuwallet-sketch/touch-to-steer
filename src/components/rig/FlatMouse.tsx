@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PointerEvent, WheelEvent } from "react";
-import { Crosshair, Gauge, RotateCcw, ScrollText } from "lucide-react";
+import { Crosshair, Gauge, RotateCcw, ScrollText, Zap } from "lucide-react";
 import type { Settings } from "@/lib/controller-types";
 
 type MouseButton = "left" | "right" | "middle" | "back" | "forward";
@@ -191,10 +191,60 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
   const [gyroPermission, setGyroPermission] = useState<"unknown" | "granted" | "denied">("unknown");
   const [pressed, setPressed] = useState<MouseButton | null>(null);
   const [dpiFlash, setDpiFlash] = useState(false);
+  const [pollingFlash, setPollingFlash] = useState(false);
+  const pendingMoveRef = useRef({ dx: 0, dy: 0 });
+  const moveTimerRef = useRef<number | null>(null);
+  const lastMoveSentAtRef = useRef(0);
 
   useEffect(() => {
     setGyroOn(settings.mouseGyroEnabled);
   }, [settings.mouseGyroEnabled]);
+
+  const flushMoveQueue = useCallback(() => {
+    moveTimerRef.current = null;
+    const pending = pendingMoveRef.current;
+    if (!pending.dx && !pending.dy) return;
+
+    pendingMoveRef.current = { dx: 0, dy: 0 };
+    lastMoveSentAtRef.current = performance.now();
+
+    sendMouse({
+      action: "move",
+      dx: Math.round(clamp(pending.dx, -32767, 32767)),
+      dy: Math.round(clamp(pending.dy, -32767, 32767)),
+    });
+  }, [sendMouse]);
+
+  const queueMouseMove = useCallback(
+    (dx: number, dy: number) => {
+      if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
+      if (!dx && !dy) return;
+
+      const pending = pendingMoveRef.current;
+      pending.dx += dx;
+      pending.dy += dy;
+
+      // 1000 Hz and above means no application-side throttling: browser
+      // pointer/sensor event frequency is the only remaining limiter.
+      if (settings.mousePollingRate >= 1000) {
+        if (moveTimerRef.current !== null) {
+          window.clearTimeout(moveTimerRef.current);
+          moveTimerRef.current = null;
+        }
+        flushMoveQueue();
+        return;
+      }
+
+      const periodMs = 1000 / settings.mousePollingRate;
+      const elapsed = performance.now() - lastMoveSentAtRef.current;
+      const delayMs = Math.max(0, periodMs - elapsed);
+
+      if (moveTimerRef.current === null) {
+        moveTimerRef.current = window.setTimeout(flushMoveQueue, delayMs);
+      }
+    },
+    [flushMoveQueue, settings.mousePollingRate],
+  );
 
   const transmitMove = useCallback(
     (dx: number, dy: number) => {
@@ -207,11 +257,10 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
 
       if (Math.abs(x) < 0.01 && Math.abs(y) < 0.01) return;
 
-      sendMouse({
-        action: "move",
-        dx: Math.round(clamp(x, -32767, 32767)),
-        dy: Math.round(clamp(y, -32767, 32767)),
-      });
+      queueMouseMove(
+        Math.round(clamp(x, -32767, 32767)),
+        Math.round(clamp(y, -32767, 32767)),
+      );
     },
     [
       sendMouse,
@@ -222,6 +271,7 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
       settings.mouseInvertY,
       settings.mouseRotationDeg,
       settings.mouseSensitivity,
+      settings.mousePollingRate,
     ],
   );
 
@@ -355,6 +405,16 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
     window.setTimeout(() => setDpiFlash(false), 180);
   }, [onSettingsChange, settings.mouseDpi]);
 
+  const cyclePollingRate = useCallback(() => {
+    const values: Settings["mousePollingRate"][] = [125, 250, 500, 1000, 2000, 4000, 8000];
+    const index = values.indexOf(settings.mousePollingRate);
+    const next = values[(index >= 0 ? index + 1 : 0) % values.length] ?? 1000;
+    onSettingsChange({ mousePollingRate: next });
+    setPollingFlash(true);
+    phoneFeedback();
+    window.setTimeout(() => setPollingFlash(false), 180);
+  }, [onSettingsChange, settings.mousePollingRate]);
+
   const requestGyro = useCallback(async () => {
     try {
       const orientationApi = window.DeviceOrientationEvent as
@@ -473,8 +533,15 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
   }, [gyroOn, settings.mouseGyroSensitivity, transmitMove]);
 
   useEffect(() => {
-    return () => releaseButtons();
-  }, [releaseButtons]);
+    return () => {
+      if (moveTimerRef.current !== null) {
+        window.clearTimeout(moveTimerRef.current);
+        moveTimerRef.current = null;
+      }
+      flushMoveQueue();
+      releaseButtons();
+    };
+  }, [flushMoveQueue, releaseButtons]);
 
   useEffect(() => {
     const onBlur = () => releaseButtons();
@@ -493,6 +560,7 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
       <div className="flat-mouse-topbar absolute left-1/2 top-[max(10px,env(safe-area-inset-top))] z-30 -translate-x-1/2">
         <span>VIPER V4 PRO</span>
         <b>{settings.mouseDpi.toLocaleString()} DPI</b>
+        <b>{settings.mousePollingRate.toLocaleString()} HZ</b>
         <i>{gyroOn ? "GYRO" : "TOUCH"}</i>
       </div>
 
@@ -554,6 +622,18 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
             <Gauge />
             <strong>{settings.mouseDpi.toLocaleString()}</strong>
             <small>DPI</small>
+          </button>
+
+          <button
+            type="button"
+            className={`flat-mouse-control ${pollingFlash ? "is-flash" : ""}`}
+            onClick={cyclePollingRate}
+            aria-label={`Mouse polling rate ${settings.mousePollingRate} Hz. Tap to change.`}
+            title="Change mouse polling rate"
+          >
+            <Zap />
+            <strong>{settings.mousePollingRate >= 1000 ? `${settings.mousePollingRate / 1000}K` : settings.mousePollingRate}</strong>
+            <small>POLLING</small>
           </button>
 
           <button

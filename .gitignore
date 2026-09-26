@@ -4,3 +4,11 @@ build/
 .flutter-plugins
 .flutter-plugins-dependencies
 ios/Pods/
+
+node_modules/
+.output/
+.wrangler/
+.tanstack/
+dist/
+# npm is used locally; Bun remains the canonical app lockfile.
+package-lock.json

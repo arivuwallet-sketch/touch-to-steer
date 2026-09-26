@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { ControllerState } from "@/lib/controller-types";
+import { resolveGameProfile, type ProfileOptions } from "@/lib/game-profiles";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { defaultWheelBindings, type WheelBindings, type ControllerState } from "@/lib/controller-types";
+import { RELEASE_INPUTS } from "./useInputReset";
+import { playDualRumble } from "@/lib/haptics";
 
 export type BridgeStatus = "idle" | "connecting" | "connected" | "error";
 
@@ -13,12 +16,12 @@ export type BridgeTelemetry = {
   ffb?: number | undefined;
 };
 
-const clampRate = (hz: number) => Math.max(60, Math.min(240, Math.round(hz)));
+const clampRate = (hz: number) => Math.max(60, Math.min(333, Math.round(hz)));
 const nowMs = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
 
 /**
  * Low-latency state transport:
- * - target rate is capped at 240 Hz (~4.17 ms cadence)
+ * - target rate is selectable up to 333 Hz (3 ms scheduling target; browser timing is best-effort)
  * - self-scheduling avoids interval drift
  * - only the newest controller state is sent
  * - browser/transport buffering is bounded so stale input is not accumulated
@@ -27,28 +30,49 @@ export function useBridge(
   stateRef: React.MutableRefObject<ControllerState>,
   rateHz: number,
   outputMode: "xinput" | "ds4" | "universal" = "xinput",
+  vibrationEnabled = true,
+  wheelBindings: WheelBindings = defaultWheelBindings,
+  profileOptions: ProfileOptions = {},
 ) {
+  const [profileMappingsSupported, setProfileMappingsSupported] = useState(false);
   const [status, setStatus] = useState<BridgeStatus>("idle");
   const [latency, setLatency] = useState<number | null>(null);
   const [packets, setPackets] = useState(0);
   const [telemetry, setTelemetry] = useState<BridgeTelemetry>({});
   const [telemetryLive, setTelemetryLive] = useState(false);
+  const [activeGame, setActiveGame] = useState<string>("Desktop");
+  const [activeGameProcess, setActiveGameProcess] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const moveAccumRef = useRef({ dx: 0, dy: 0 });
   const moveFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const telemetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pumpChannelRef = useRef<MessageChannel | null>(null);
   const packetCounterRef = useRef(0);
   const lastStatsPaintRef = useRef(0);
   const lastLatencyPaintRef = useRef(0);
   const lastSentStateRef = useRef("");
   const lastHeartbeatRef = useRef(0);
+  const rateHzRef = useRef(rateHz);
 
-  const stateSignature = useCallback(() => JSON.stringify(stateRef.current), [stateRef]);
+  useEffect(() => {
+    rateHzRef.current = rateHz;
+  }, [rateHz]);
+
+  const gameProfile = useMemo(() => resolveGameProfile(activeGame, activeGameProcess, profileOptions, wheelBindings),
+    [activeGame, activeGameProcess, profileOptions.autoGameProfiles, profileOptions.asphaltAcceleration, profileOptions.gameProfiles, profileOptions.padBindings, wheelBindings]);
+  const bindingsRef = useRef(gameProfile.wheelBindings);
+  bindingsRef.current = gameProfile.wheelBindings;
+  const padBindingsRef = useRef(gameProfile.padBindings);
+  padBindingsRef.current = gameProfile.padBindings;
+  const stateSignature = useCallback(() => JSON.stringify([stateRef.current, bindingsRef.current, padBindingsRef.current]), [stateRef]);
 
   const clearLoop = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = null;
+    pumpChannelRef.current?.port1.close();
+    pumpChannelRef.current?.port2.close();
+    pumpChannelRef.current = null;
   }, []);
 
   const clearTelemetryTimer = useCallback(() => {
@@ -103,6 +127,7 @@ export function useBridge(
   }, []);
 
   const disconnect = useCallback(() => {
+    if (typeof window !== "undefined") window.dispatchEvent(new Event(RELEASE_INPUTS));
     clearLoop();
     clearMoveFlush();
     const ws = wsRef.current;
@@ -115,6 +140,9 @@ export function useBridge(
       }
     }
     setStatus("idle");
+    setProfileMappingsSupported(false);
+    setActiveGame("Disconnected");
+    setActiveGameProcess(null);
     setLatency(null);
     setTelemetry({});
     setTelemetryLive(false);
@@ -139,7 +167,7 @@ export function useBridge(
       setStatus("connecting");
 
       ws.onopen = () => {
-        setStatus("connected");
+        if (wsRef.current !== ws) { ws.close(); return; }
         lastSentStateRef.current = "";
         lastHeartbeatRef.current = 0;
         try {
@@ -149,13 +177,20 @@ export function useBridge(
               client: "mobile-rig",
               version: 3,
               transport: "websocket",
-              rateHz: clampRate(rateHz),
+              rateHz: clampRate(rateHzRef.current),
               output: outputMode,
             }),
           );
         } catch {
           /* socket may close immediately */
         }
+
+        // Connection cue also proves the asynchronous game-haptic lane is alive.
+        if (vibrationEnabled) playDualRumble("ui", {
+          strongMagnitude: 0,
+          weakMagnitude: 0.2,
+          duration: 40,
+        });
 
         let nextDue = nowMs();
 
@@ -171,13 +206,15 @@ export function useBridge(
           // interested in the newest state, not hundreds of identical refreshes.
           // Input events take the immediate hot/edge lane; this loop is only a
           // change detector and 4 Hz recovery heartbeat.
-          if ((changed || heartbeatDue) && ws.bufferedAmount < 8_192) {
+          if ((changed || heartbeatDue) && ws.bufferedAmount < 2_048) {
             try {
               ws.send(JSON.stringify({
                 type: "state",
                 t: Date.now(),
                 seq: ++packetCounterRef.current,
                 ...stateRef.current,
+          wheelBindings: bindingsRef.current,
+          padBindings: padBindingsRef.current,
               }));
               lastSentStateRef.current = signature;
               lastHeartbeatRef.current = currentTime;
@@ -190,18 +227,43 @@ export function useBridge(
             }
           }
 
-          const period = 1000 / clampRate(rateHz);
+          const rate = clampRate(rateHzRef.current);
+          const period = rate === 333 ? 3 : 1000 / rate;
           nextDue += period;
           if (nextDue < currentTime - period * 2) nextDue = currentTime + period;
-          timerRef.current = setTimeout(pump, Math.max(0, nextDue - currentTime));
+          timerRef.current = setTimeout(() => {
+            // A message task breaks nested timer clamping (normally 4 ms).
+            // No busy loop: every sample still waits for its scheduled timer.
+            const channel = pumpChannelRef.current;
+            if (rate === 333 && channel) channel.port2.postMessage(null);
+            else pump();
+          }, Math.max(0, nextDue - nowMs()));
         };
 
+        if (typeof MessageChannel !== "undefined") {
+          const channel = new MessageChannel();
+          channel.port1.onmessage = pump;
+          pumpChannelRef.current = channel;
+        }
         pump();
       };
 
       ws.onmessage = (ev) => {
+        if (wsRef.current !== ws) return;
         try {
           const msg = JSON.parse(String(ev.data));
+
+          if (msg.type === "ready") {
+            setProfileMappingsSupported(Number(msg.profileMappingVersion) >= 1);
+            if (msg.controller?.connected) {
+              setStatus("connected");
+              lastSentStateRef.current = "";
+            } else {
+              clearLoop();
+              setStatus("error");
+            }
+            return;
+          }
 
           if (msg.type === "ack" && typeof msg.t === "number") {
             const value = Math.max(0, Math.round(Date.now() - msg.t));
@@ -213,44 +275,130 @@ export function useBridge(
             return;
           }
 
+          if (msg.type === "haptic") {
+            if (!vibrationEnabled) return;
+
+            const strong = Math.max(
+              0,
+              Math.min(1, Number(msg.strongMagnitude ?? msg.large ?? 0)),
+            );
+            const weak = Math.max(
+              0,
+              Math.min(1, Number(msg.weakMagnitude ?? msg.small ?? 0)),
+            );
+            const duration = Math.max(
+              20,
+              Math.min(500, Number(msg.duration) || 70),
+            );
+            const kind =
+              msg.kind === "heavy" ||
+              msg.kind === "heartbeat" ||
+              msg.kind === "engine" ||
+              msg.kind === "gunfire" ||
+              msg.kind === "ui" ||
+              msg.kind === "light"
+                ? msg.kind
+                : strong >= 0.78 && weak >= 0.58
+                  ? "heavy"
+                  : strong <= 0.12 && weak >= 0.68
+                    ? "gunfire"
+                    : strong >= 0.28 && weak <= 0.08
+                      ? "heartbeat"
+                      : strong <= 0.34 && weak <= 0.24
+                        ? "engine"
+                        : "light";
+
+            playDualRumble(kind, {
+              strongMagnitude: strong,
+              weakMagnitude: weak,
+              duration,
+            });
+
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(
+                new CustomEvent("touch-to-steer:game-haptic", {
+                  detail: {
+                    kind,
+                    strongMagnitude: strong,
+                    weakMagnitude: weak,
+                    duration,
+                  },
+                }),
+              );
+            }
+            return;
+          }
+
+          if (msg.type === "game") {
+            const name =
+              typeof msg.name === "string" && msg.name.trim()
+                ? msg.name.trim()
+                : "Desktop";
+            setActiveGame(name);
+            setActiveGameProcess(
+              typeof msg.process === "string" && msg.process.trim()
+                ? msg.process.trim()
+                : null,
+            );
+            return;
+          }
+
           if (msg.type === "telemetry") {
             setTelemetry({
-              rpm: typeof msg.rpm === "number" ? msg.rpm : undefined,
-              rpmMax: typeof msg.rpmMax === "number" ? msg.rpmMax : undefined,
-              gear: typeof msg.gear === "number" ? msg.gear : undefined,
-              speed: typeof msg.speed === "number" ? msg.speed : undefined,
+              rpm: Number.isFinite(msg.rpm) && msg.rpm >= 0 ? msg.rpm : undefined,
+              rpmMax: Number.isFinite(msg.rpmMax) && msg.rpmMax > 0 ? msg.rpmMax : undefined,
+              gear: Number.isInteger(msg.gear) ? msg.gear : undefined,
+              speed: Number.isFinite(msg.speed) && msg.speed >= 0 ? msg.speed : undefined,
               source: typeof msg.source === "string" ? msg.source : undefined,
               ffb: typeof msg.ffb === "number" ? Math.max(-1, Math.min(1, msg.ffb)) : undefined,
             });
-            setTelemetryLive(true);
+            setTelemetryLive([msg.rpm, msg.speed, msg.gear].some((value) => typeof value === "number" && Number.isFinite(value)));
             clearTelemetryTimer();
             telemetryTimerRef.current = setTimeout(() => {
               setTelemetryLive(false);
+              setTelemetry({});
             }, 500);
             return;
           }
 
           if (msg.type === "ffb" && typeof msg.value === "number") {
+            const force = Math.max(-1, Math.min(1, msg.value));
             setTelemetry((prev) => ({
               ...prev,
-              ffb: Math.max(-1, Math.min(1, msg.value)),
+              ffb: force,
             }));
+
+            // Mirror PC force-feedback into the real dual-rumble path.
+            // Strong force drives the heavy motor; softer force drives the
+            // high-frequency motor while remaining rate-safe.
+            if (vibrationEnabled && Math.abs(force) > 0.04) {
+              const magnitude = Math.abs(force);
+              playDualRumble(magnitude >= 0.68 ? "heavy" : "engine", {
+                strongMagnitude: Math.min(1, 0.12 + magnitude * 0.88),
+                weakMagnitude: Math.min(1, 0.08 + magnitude * 0.72),
+                duration: magnitude >= 0.68 ? 180 : 70,
+              });
+            }
           }
         } catch {
           /* ignore malformed frames */
         }
       };
 
-      ws.onerror = () => setStatus("error");
+      ws.onerror = () => { if (wsRef.current === ws) setStatus("error"); };
       ws.onclose = () => {
         if (wsRef.current === ws) {
+          window.dispatchEvent(new Event(RELEASE_INPUTS));
           wsRef.current = null;
+          setActiveGame("Disconnected");
+          setActiveGameProcess(null);
           clearLoop();
+          clearMoveFlush();
           setStatus((s) => (s === "error" ? "error" : "idle"));
         }
       };
     },
-    [clearLoop, clearTelemetryTimer, disconnect, outputMode, rateHz, stateRef, stateSignature],
+    [clearLoop, clearTelemetryTimer, disconnect, outputMode, rateHz, stateRef, stateSignature, vibrationEnabled],
   );
 
   useEffect(
@@ -289,9 +437,9 @@ export function useBridge(
     if (!ws || ws.readyState !== WebSocket.OPEN) return false;
 
     // Live analog controls use a dedicated hot lane. The bridge applies these
-    // snapshots immediately; the 240 Hz pump remains as a safety/refresh lane.
+    // snapshots immediately; the selected-rate pump remains as a safety/refresh lane.
     // This matters most for steering, accelerator, brake and other pedal axes.
-    if (ws.bufferedAmount >= 32_768) return false;
+    if (ws.bufferedAmount >= 2_048) return false;
 
     try {
       ws.send(
@@ -301,6 +449,8 @@ export function useBridge(
           t: Date.now(),
           seq: ++packetCounterRef.current,
           ...stateRef.current,
+          wheelBindings: bindingsRef.current,
+          padBindings: padBindingsRef.current,
         }),
       );
       lastSentStateRef.current = stateSignature();
@@ -315,7 +465,7 @@ export function useBridge(
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return false;
 
-    // Digital button transitions must not wait for the 240 Hz state sampler.
+    // Digital button transitions must not wait for the background state sampler.
     // A lightning-fast tap can otherwise happen entirely between two pump
     // ticks and never reach the bridge at all. Send the complete current
     // controller snapshot immediately; the bridge applies edge snapshots
@@ -328,6 +478,8 @@ export function useBridge(
           t: Date.now(),
           seq: ++packetCounterRef.current,
           ...stateRef.current,
+          wheelBindings: bindingsRef.current,
+          padBindings: padBindingsRef.current,
         }),
       );
       lastSentStateRef.current = stateSignature();
@@ -401,12 +553,29 @@ export function useBridge(
     [flushMove],
   );
 
+  // Cancel held gestures before changing mappings, so an old boost/brake
+  // cannot turn into a different held action when the foreground game changes.
+  const profileSignature = JSON.stringify([gameProfile.gameKey, gameProfile.id, gameProfile.wheelBindings, gameProfile.padBindings]);
+  const previousProfileRef = useRef(profileSignature);
+  useEffect(() => {
+    if (previousProfileRef.current === profileSignature) return;
+    previousProfileRef.current = profileSignature;
+    window.dispatchEvent(new Event(RELEASE_INPUTS));
+    stateRef.current = { ...stateRef.current, steer:0, throttle:0, brake:0, clutch:0,
+      handbrake:0, nitro:0, lx:0, ly:0, rx:0, ry:0, lt:0, rt:0, gear:0, dial:0, buttons:{} };
+    sendControllerEdge();
+  }, [profileSignature, sendControllerEdge, stateRef]);
+
   return {
+    gameProfile,
+    profileMappingsSupported,
     status,
     latency,
     packets,
     telemetry,
     telemetryLive,
+    activeGame,
+    activeGameProcess,
     connect,
     disconnect,
     sendMouse,

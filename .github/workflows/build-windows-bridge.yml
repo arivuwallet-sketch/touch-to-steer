@@ -47,20 +47,62 @@ jobs:
         shell: pwsh
         run: |
           cmake -S public/bridge/native -B public/bridge/native/build -G "Visual Studio 17 2022" -A x64
-          cmake --build public/bridge/native/build --config Release
-          Copy-Item "public/bridge/native/build/Release/mouse-injector.exe" "public/bridge/native/mouse-injector.exe"
+          cmake --build public/bridge/native/build --config Release --target mouse-injector
+          if ($LASTEXITCODE -ne 0) {
+            throw "CMake mouse-injector target failed with exit code $LASTEXITCODE."
+          }
 
-      - name: Verify native mouse injector
+          cmake --build public/bridge/native/build --config Release --target game-audio-haptics --verbose
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "CMake audio-haptics target failed. Native build directory:"
+            Get-ChildItem "public/bridge/native/build" -Force -Recurse |
+              Select-Object FullName, Length |
+              Format-Table -AutoSize |
+              Out-String |
+              Write-Host
+            throw "CMake game-audio-haptics target failed with exit code $LASTEXITCODE."
+          }
+
+          $mouseExe = Get-ChildItem "public/bridge/native/build" -Filter "mouse-injector.exe" -File -Recurse | Select-Object -First 1
+          $audioExe = Get-ChildItem "public/bridge/native/build" -Filter "game-audio-haptics.exe" -File -Recurse | Select-Object -First 1
+
+          if (-not $mouseExe) {
+            throw "mouse-injector.exe was not produced by the CMake target."
+          }
+          if (-not $audioExe) {
+            Write-Host "CMake build tree:"
+            Get-ChildItem "public/bridge/native/build" -Force -Recurse |
+              Select-Object FullName, Length |
+              Format-Table -AutoSize |
+              Out-String |
+              Write-Host
+            throw "game-audio-haptics.exe was not produced by the CMake target."
+          }
+
+          Copy-Item $mouseExe.FullName "public/bridge/native/mouse-injector.exe" -Force
+          Copy-Item $audioExe.FullName "public/bridge/native/game-audio-haptics.exe" -Force
+
+      - name: Verify native haptic helpers
         shell: pwsh
         run: |
           if (-not (Test-Path "public/bridge/native/mouse-injector.exe")) {
             throw "mouse-injector.exe was not created."
+          }
+          if (-not (Test-Path "public/bridge/native/game-audio-haptics.exe")) {
+            throw "game-audio-haptics.exe was not created."
           }
 
       - name: Validate bridge JavaScript
         shell: pwsh
         run: |
           node --check public/bridge/rig-bridge.js
+
+      - name: Verify controller reports and asynchronous foreground detection
+        run: node --test tests/controller-report.test.cjs tests/foreground-game.test.cjs
+
+      - name: Verify Windows XInput diagnostic interop
+        shell: pwsh
+        run: ./public/bridge/windows/Test-Controller.ps1 -ListOnly
 
       - name: Package bridge as a Windows executable
         working-directory: public/bridge
@@ -129,15 +171,64 @@ jobs:
           New-Item -ItemType Directory -Force -Path release | Out-Null
           Copy-Item "public/bridge/dist/TouchToSteer-Bridge.exe" "release/TouchToSteer-Bridge.exe"
           Copy-Item "public/bridge/windows/README.md" "release/README.md"
-          Compress-Archive -Path "release/TouchToSteer-Bridge.exe", "release/README.md" -DestinationPath "public/bridge/dist/TouchToSteer-Bridge-Windows.zip" -Force
+          Copy-Item "public/bridge/windows/INPUT-CHECK.md" "release/INPUT-CHECK.md"
+          Copy-Item "public/bridge/windows/Test-Controller.ps1" "release/Test-Controller.ps1"
+          Compress-Archive -Path "release/TouchToSteer-Bridge.exe", "release/README.md", "release/INPUT-CHECK.md", "release/Test-Controller.ps1" -DestinationPath "public/bridge/dist/TouchToSteer-Bridge-Windows.zip" -Force
+
+      - name: Build TouchToSteer Windows desktop package
+        shell: pwsh
+        run: |
+          if (Test-Path "desktop-release") {
+            Remove-Item "desktop-release" -Recurse -Force
+          }
+          New-Item -ItemType Directory -Force -Path "desktop-release" | Out-Null
+
+          # Nativefier's CLI takes the destination as a positional argument
+          # after the target URL. Keep the destination explicit so the package
+          # is created inside desktop-release on Windows runners.
+          npx --yes nativefier@52.0.0 --name "TouchToSteer — Spectral Control System" --platform windows --arch x64 --electron-version 25.7.0 --width 1280 --height 800 --icon "public/favicon.ico" --overwrite "https://touch-to-steer.lovable.app/" "desktop-release"
+
+          Write-Host "Nativefier output:"
+          Get-ChildItem "desktop-release" -Force | Format-Table -AutoSize | Out-String | Write-Host
+
+          $app = Get-ChildItem "desktop-release" -Directory -Recurse |
+            Where-Object { $_.Name -like "*-win32-x64" } |
+            Select-Object -First 1
+
+          if (-not $app) {
+            Write-Host "Recursive desktop-release contents:"
+            Get-ChildItem "desktop-release" -Force -Recurse |
+              Select-Object FullName, Length |
+              Format-Table -AutoSize |
+              Out-String |
+              Write-Host
+            throw "Nativefier Windows package directory was not created."
+          }
+
+          Write-Host "Nativefier package directory: $($app.FullName)"
+
+          $zipPath = "desktop-release/TouchToSteer — Spectral Control System-win32-x64.zip"
+          Compress-Archive -Path "$($app.FullName)/*" -DestinationPath $zipPath -Force
+
+          if (-not (Test-Path $zipPath)) {
+            throw "Windows desktop zip was not created."
+          }
+
+          $zipSize = (Get-Item $zipPath).Length
+          if ($zipSize -lt 10000000) {
+            throw "Windows desktop zip is unexpectedly small: $zipSize bytes."
+          }
+
+          Write-Host "Windows desktop package: $zipSize bytes"
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TouchToSteer-Bridge-Windows
+          name: TouchToSteer-Windows
           path: |
             public/bridge/dist/TouchToSteer-Bridge.exe
             public/bridge/dist/TouchToSteer-Bridge-Windows.zip
+            desktop-release/TouchToSteer — Spectral Control System-win32-x64.zip
           retention-days: 90
 
       - name: Publish stable latest release
@@ -149,6 +240,7 @@ jobs:
           gh release create bridge-latest \
             "public/bridge/dist/TouchToSteer-Bridge-Windows.zip" \
             "public/bridge/dist/TouchToSteer-Bridge.exe" \
+            "desktop-release/TouchToSteer — Spectral Control System-win32-x64.zip" \
             --repo "${GITHUB_REPOSITORY}" \
             --target "${GITHUB_SHA}" \
             --title "TouchToSteer Windows Bridge (latest)" \

@@ -347,7 +347,7 @@ function installBundledDriverAndRestart() {
 }
 
 let client = null;
-const DEFAULT_OUTPUT = OUTPUT === "ds4" ? "ds4" : "universal";
+const DEFAULT_OUTPUT = OUTPUT === "ds4" ? "ds4" : OUTPUT === "xinput" ? "xinput" : "universal";
 const MAX_CONTROLLER_SESSIONS = 4;
 const ackState = new WeakMap();
 const socketState = new WeakMap();
@@ -480,6 +480,151 @@ function disconnectTarget(target) {
   }
 }
 
+const targetSession = new WeakMap();
+const HAPTIC_KEEPALIVE_MS = 120;
+
+function clampHaptic(value) {
+  return Math.max(0, Math.min(1, (Number(value) || 0) / 255));
+}
+
+function classifyGameRumble(strong, weak) {
+  if (strong >= 0.78 && weak >= 0.58) return "heavy";
+  if (strong <= 0.12 && weak >= 0.68) return "gunfire";
+  if (strong >= 0.28 && weak <= 0.08) return "heartbeat";
+  if (strong <= 0.08 && weak <= 0.26) return "ui";
+  if (strong <= 0.34 && weak <= 0.24) return "engine";
+  return "light";
+}
+
+function sendGameRumble(session, strong, weak, source = "game") {
+  if (!session?.ws || session.ws.readyState !== 1) return;
+
+  const now = Date.now();
+  session.lastGameRumbleAt = now;
+  const kind = classifyGameRumble(strong, weak);
+  const duration =
+    kind === "heavy"
+      ? 380
+      : kind === "gunfire"
+        ? 55
+        : kind === "heartbeat"
+          ? 105
+          : kind === "engine"
+            ? 120
+            : kind === "ui"
+              ? 40
+              : 70;
+
+  try {
+    session.ws.send(
+      JSON.stringify({
+        type: "haptic",
+        source,
+        kind,
+        strongMagnitude: strong,
+        weakMagnitude: weak,
+        duration,
+        t: now,
+      }),
+    );
+  } catch {
+    return;
+  }
+
+  if (strong > 0.015 || weak > 0.015) {
+    session.currentRumble = {
+      strongMagnitude: strong,
+      weakMagnitude: weak,
+      kind,
+      duration,
+      lastChangeAt: now,
+    };
+  } else {
+    session.currentRumble = null;
+  }
+}
+
+function registerTargetHaptics(target) {
+  if (!target?.on) return;
+
+  // ViGEmClient exposes combined and per-motor notifications. Keep the most
+  // recent pair and forward only actual changes to avoid duplicate pulses when
+  // the same driver callback is surfaced through multiple node events.
+  const motors = { large: 0, small: 0 };
+  let lastSignature = '';
+
+  const emit = () => {
+    const signature = motors.large.toFixed(3) + '|' + motors.small.toFixed(3);
+    if (signature === lastSignature) return;
+    lastSignature = signature;
+
+    const session = targetSession.get(target);
+    if (!session) return;
+    sendGameRumble(session, motors.large, motors.small);
+  };
+
+  target.on('vibration', (data) => {
+    motors.large = clampHaptic(data?.large);
+    motors.small = clampHaptic(data?.small);
+    emit();
+  });
+
+  target.on('large motor', (value) => {
+    motors.large = clampHaptic(value);
+    emit();
+  });
+
+  target.on('small motor', (value) => {
+    motors.small = clampHaptic(value);
+    emit();
+  });
+
+  target.on('notification', (data) => {
+    motors.large = clampHaptic(data?.LargeMotor ?? data?.large);
+    motors.small = clampHaptic(data?.SmallMotor ?? data?.small);
+    emit();
+  });
+}
+
+function startHapticKeepalive(session) {
+  if (!session || session.hapticTimer) return;
+
+  session.hapticTimer = setInterval(() => {
+    if (!session.currentRumble || !session.ws || session.ws.readyState !== 1) return;
+
+    const elapsed = Date.now() - session.currentRumble.lastChangeAt;
+    if (elapsed > 650) {
+      session.currentRumble = null;
+      return;
+    }
+
+    const rumble = session.currentRumble;
+    if (rumble.kind === "ui" || rumble.kind === "gunfire" || rumble.kind === "heartbeat") return;
+    try {
+      session.ws.send(
+        JSON.stringify({
+          type: "haptic",
+          source: "game-keepalive",
+          kind: rumble.kind,
+          strongMagnitude: rumble.strongMagnitude,
+          weakMagnitude: rumble.weakMagnitude,
+          duration: Math.min(HAPTIC_KEEPALIVE_MS, rumble.duration),
+          t: Date.now(),
+        }),
+      );
+    } catch {
+      /* ignore racing socket close */
+    }
+  }, HAPTIC_KEEPALIVE_MS);
+}
+
+function stopHapticKeepalive(session) {
+  if (!session?.hapticTimer) return;
+  clearInterval(session.hapticTimer);
+  session.hapticTimer = null;
+  session.currentRumble = null;
+}
+
 function createTarget(type) {
   if (!client) return null;
 
@@ -489,6 +634,7 @@ function createTarget(type) {
         ? client.createDS4Controller()
         : client.createX360Controller();
 
+    registerTargetHaptics(target);
     target.updateMode = "manual";
 
     const connectError = target.connect();
@@ -598,6 +744,223 @@ try {
 console.log("");
 console.log("TouchToSteer Bridge ready.");
 appendBridgeLog("TouchToSteer Bridge ready.");
+
+let lastForegroundGameKey = "";
+let currentForegroundGame = {
+  title: "Detecting game…",
+  process: "",
+  path: "",
+};
+
+const NON_GAME_PROCESSES = new Set([
+  "explorer",
+  "dwm",
+  "sihost",
+  "searchhost",
+  "startmenuexperiencehost",
+  "shellexperiencehost",
+  "applicationframehost",
+  "runtimebroker",
+  "textinputhost",
+  "lockapp",
+  "searchapp",
+  "taskmgr",
+  "steam",
+  "steamwebhelper",
+  "epicgameslauncher",
+  "epicwebhelper",
+  "goggalaxy",
+  "goggalaxycommunication",
+  "discord",
+  "chrome",
+  "msedge",
+  "firefox",
+  "brave",
+  "opera",
+]);
+
+function foregroundCanDriveAdaptiveHaptics() {
+  const processName = String(currentForegroundGame.process || '')
+    .toLowerCase()
+    .replace('.exe', '');
+  const title = String(currentForegroundGame.title || '').trim();
+
+  // Some games expose a blank/protected window title. The process name is
+  // enough to keep adaptive haptics active for non-shell processes.
+  if (!processName || NON_GAME_PROCESSES.has(processName)) return false;
+  return Boolean(title || processName);
+}
+
+const readForegroundGame = require("./foreground-game.cjs").createForegroundReader();
+process.on("exit", () => readForegroundGame.stop?.());
+function foregroundPayload() {
+  return { type: "game", name: currentForegroundGame.title || currentForegroundGame.process || "Desktop",
+    process: currentForegroundGame.process || null, title: currentForegroundGame.title || null, t: Date.now() };
+}
+let foregroundPollBusy = false;
+const foregroundGameTimer = setInterval(async () => {
+  if (foregroundPollBusy) return;
+  foregroundPollBusy = true;
+  try {
+    const raw = await readForegroundGame();
+    const info = raw ? JSON.parse(raw) : { title: "Game detection unavailable", process: "" };
+    const title = String(info?.title || "").trim();
+    const processName = String(info?.process || "").trim();
+    const processPath = String(info?.path || "").trim();
+
+    currentForegroundGame = {
+      title: title,
+      process: processName,
+      path: processPath,
+    };
+
+    const key = processName + "|" + title;
+    if (key === lastForegroundGameKey) return;
+    lastForegroundGameKey = key;
+
+    const payload = foregroundPayload();
+
+    // Window-title/process transitions are a useful generic compatibility
+    // signal for menus, loading screens and game-session changes when a title
+    // emits no controller-rumble packet.
+    if (foregroundCanDriveAdaptiveHaptics()) {
+      dispatchAdaptiveHaptic("ui", 0, 0.2, 40);
+    }
+
+    for (const ws of wss.clients) {
+      if (ws.readyState === 1 && ws.bufferedAmount < 8192) {
+        try { ws.send(JSON.stringify(payload)); } catch {}
+      }
+    }
+  } catch {
+    /* game detection must never interrupt controller transport */
+  } finally {
+    foregroundPollBusy = false;
+  }
+}, 250);
+foregroundGameTimer.unref();
+
+const ADAPTIVE_HAPTICS_ENABLED =
+  !/^(0|false|off|no)$/i.test(String(process.env.TTS_ADAPTIVE_HAPTICS || "1"));
+
+function findGameAudioHaptics() {
+  const packaged = path.join(__dirname, "native", "game-audio-haptics.exe");
+  if (isPackagedBridge()) return packaged;
+  return fs.existsSync(packaged) ? packaged : null;
+}
+
+function preparePackagedGameAudioHaptics() {
+  const source = findGameAudioHaptics();
+  if (!source) return null;
+  if (!isPackagedBridge()) return source;
+
+  const outDir = path.join(os.tmpdir(), "TouchToSteer");
+  const outFile = path.join(outDir, "game-audio-haptics.exe");
+
+  try {
+    fs.mkdirSync(outDir, { recursive: true });
+    if (!fs.existsSync(outFile)) {
+      fs.writeFileSync(outFile, fs.readFileSync(source));
+    }
+    return outFile;
+  } catch (error) {
+    appendBridgeLog("Could not unpack adaptive haptic analyzer: " + (error?.message || error));
+    return null;
+  }
+}
+
+let gameAudioProcess = null;
+let gameAudioStdoutBuffer = "";
+
+function dispatchAdaptiveHaptic(kind, strongMagnitude, weakMagnitude, duration) {
+  if (!ADAPTIVE_HAPTICS_ENABLED || !foregroundCanDriveAdaptiveHaptics()) return;
+
+  const now = Date.now();
+  for (const session of controllerSessions) {
+    if (!session?.ws || session.ws.readyState !== 1) continue;
+
+    // Prefer the game's actual ViGEm rumble packet whenever it exists. The
+    // audio classifier is only the compatibility path for titles that emit
+    // no controller rumble at all.
+    if (now - Number(session.lastGameRumbleAt || 0) < 260) continue;
+
+    try {
+      session.ws.send(JSON.stringify({
+        type: "haptic",
+        source: "windows-audio-adaptive",
+        kind,
+        strongMagnitude,
+        weakMagnitude,
+        duration,
+        game: currentForegroundGame.title || currentForegroundGame.process || "Desktop",
+        process: currentForegroundGame.process || null,
+        t: now,
+      }));
+    } catch {
+      /* ignore racing socket close */
+    }
+  }
+}
+
+function startGameAudioHaptics() {
+  if (!ADAPTIVE_HAPTICS_ENABLED || process.platform !== "win32" || gameAudioProcess) return;
+
+  const executable = preparePackagedGameAudioHaptics();
+  if (!executable) {
+    appendBridgeLog("Adaptive Windows audio haptics unavailable: analyzer executable not found.");
+    return;
+  }
+
+  try {
+    gameAudioProcess = spawn(executable, [], {
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+    });
+
+    gameAudioProcess.stdout?.on("data", (chunk) => {
+      gameAudioStdoutBuffer += String(chunk);
+      const lines = gameAudioStdoutBuffer.split(/\r?\n/);
+      gameAudioStdoutBuffer = lines.pop() || "";
+
+      for (const line of lines) {
+        const match = /^HAPTIC\s+(ui|light|heavy|heartbeat|engine|gunfire)\s+([0-9.]+)\s+([0-9.]+)\s+(\d+)$/.exec(line.trim());
+        if (!match) continue;
+
+        dispatchAdaptiveHaptic(
+          match[1],
+          Math.max(0, Math.min(1, Number(match[2]))),
+          Math.max(0, Math.min(1, Number(match[3]))),
+          Math.max(20, Math.min(500, Number(match[4]))),
+        );
+      }
+    });
+
+    gameAudioProcess.stderr?.on("data", (chunk) => {
+      const message = String(chunk).trim();
+      if (message) appendBridgeLog("Adaptive haptic analyzer: " + message);
+    });
+
+    gameAudioProcess.on("error", (error) => {
+      appendBridgeLog("Adaptive haptic analyzer error: " + (error?.message || error));
+      gameAudioProcess = null;
+    });
+
+    gameAudioProcess.on("close", (code) => {
+      appendBridgeLog("Adaptive haptic analyzer exited with code " + String(code));
+      gameAudioProcess = null;
+      gameAudioStdoutBuffer = "";
+    });
+
+    appendBridgeLog("Adaptive Windows audio haptics started.");
+  } catch (error) {
+    appendBridgeLog("Could not start adaptive Windows audio haptics: " + (error?.message || error));
+    gameAudioProcess = null;
+  }
+}
+
+startGameAudioHaptics();
+
+
 const addresses = localIpv4Addresses();
 if (addresses.length) {
   console.log("Phone WebSocket address(es):");
@@ -611,184 +974,13 @@ console.log(
 console.log(
   `Virtual controller sessions: up to ${MAX_CONTROLLER_SESSIONS} independent players`,
 );
+console.log(
+  `Adaptive Windows audio haptics: ${ADAPTIVE_HAPTICS_ENABLED ? "enabled" : "disabled"}`,
+);
 console.log(`Driver package source: ${isPackagedBridge() ? "bundled with this executable" : DRIVER_URL}`);
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, Number(v) || 0));
-
-const XBTN = {
-  a: "A", b: "B", x: "X", y: "Y",
-  cross: "A", circle: "B", square: "X", triangle: "Y",
-  l1: "LEFT_SHOULDER", r1: "RIGHT_SHOULDER",
-  l3: "LEFT_THUMB", r3: "RIGHT_THUMB",
-  share: "BACK", options: "START", ps: "GUIDE",
-  enter: "A", plus: "START", minus: "BACK", dial_press: "A",
-  start: "START", back: "BACK", home: "GUIDE",
-  lb: "LEFT_SHOULDER", rb: "RIGHT_SHOULDER",
-  select: "BACK", m1: "LEFT_SHOULDER", m2: "RIGHT_SHOULDER",
-  m3: "LEFT_THUMB", m4: "RIGHT_THUMB", m5: "BACK", m6: "START",
-  __horn: "LEFT_THUMB", __look: "RIGHT_THUMB", __reset: "Y",
-  __handbrake: "A", __nitro: "LEFT_SHOULDER",
-  __gearUp: "RIGHT_SHOULDER", __gearDown: "LEFT_SHOULDER",
-};
-
-const DSBTN = {
-  cross: "CROSS", circle: "CIRCLE", square: "SQUARE", triangle: "TRIANGLE",
-  l1: "SHOULDER_LEFT", r1: "SHOULDER_RIGHT",
-  l3: "THUMB_LEFT", r3: "THUMB_RIGHT",
-  share: "SHARE", options: "OPTIONS", ps: "SPECIAL_PS",
-  dial_press: "SPECIAL_TOUCHPAD",
-  a: "CROSS", b: "CIRCLE", x: "SQUARE", y: "TRIANGLE",
-  lb: "SHOULDER_LEFT", rb: "SHOULDER_RIGHT",
-  start: "OPTIONS", back: "SHARE", home: "SPECIAL_PS", select: "SHARE",
-  m1: "SHOULDER_LEFT", m2: "SHOULDER_RIGHT",
-  m3: "THUMB_LEFT", m4: "THUMB_RIGHT", m5: "SHARE", m6: "OPTIONS",
-  __horn: "THUMB_LEFT", __look: "THUMB_RIGHT", __reset: "TRIANGLE",
-  __handbrake: "CROSS", __nitro: "SHOULDER_LEFT",
-  __legacyBrake: "SQUARE", __legacyThrottle: "CROSS",
-  __legacyHandbrake: "SHOULDER_RIGHT", __legacyNitro: "CIRCLE",
-  // DS4 exposes trigger buttons in addition to its analog trigger axes.
-  // Setting both lets legacy DirectInput games that bind LT/RT as buttons
-  // recognize the steering pedals while games that read the analog axis still
-  // receive the full pedal position.
-  __brakeTrigger: "TRIGGER_LEFT", __throttleTrigger: "TRIGGER_RIGHT",
-  __gearUp: "SHOULDER_RIGHT", __gearDown: "SHOULDER_LEFT",
-};
-
-function setDpad(target, s) {
-  if (!target) return;
-
-  const buttons = s.buttons || {};
-  let h = 0;
-  let v = 0;
-  if (buttons.dpad_left) h -= 1;
-  if (buttons.dpad_right) h += 1;
-  if (buttons.dpad_up) v += 1;
-  if (buttons.dpad_down) v -= 1;
-
-  target.axis.dpadHorz.setValue(h);
-  target.axis.dpadVert.setValue(v);
-}
-
-function applyToTarget(target, s, buttonMap) {
-  if (!target) return;
-
-  const buttons = s.buttons || {};
-  const held = {};
-  const mark = (name) => {
-    if (target.button[name]) held[name] = true;
-  };
-
-  const steer = clamp(s.steer, -1, 1);
-  target.axis.leftX.setValue(
-    Math.abs(steer) > 0.0005 ? steer : clamp(s.lx, -1, 1),
-  );
-  target.axis.leftY.setValue(-clamp(s.ly, -1, 1));
-  target.axis.rightX.setValue(clamp(s.rx, -1, 1));
-  target.axis.rightY.setValue(-clamp(s.ry, -1, 1));
-
-  const brake = clamp(s.brake, 0, 1);
-  const throttle = clamp(s.throttle, 0, 1);
-  const clutch = clamp(s.clutch, 0, 1);
-  const lt = clamp(s.lt, 0, 1);
-  const rt = clamp(s.rt, 0, 1);
-
-  // Steering pedals are delivered through the canonical trigger axes:
-  // accelerator -> Right Trigger (RT), brake -> Left Trigger (LT).
-  // The same analog values are mirrored to DS4 trigger buttons for legacy
-  // HID titles that bind LT/RT as digital controls. The native ViGEm binding
-  // exposes both trigger axes on X360 and DS4 targets.
-  //
-  target.axis.leftTrigger.setValue(
-    Math.max(brake, clutch * 0.6, lt, buttons.l2 ? 1 : 0),
-  );
-  target.axis.rightTrigger.setValue(
-    Math.max(throttle, rt, buttons.r2 ? 1 : 0),
-  );
-
-  for (const [id, name] of Object.entries(buttonMap)) {
-    if (buttons[id]) mark(name);
-  }
-
-  setDpad(target, s);
-
-  if (buttons.horn) mark(buttonMap.__horn);
-  if (buttons.look) mark(buttonMap.__look);
-  if (buttons.reset) mark(buttonMap.__reset);
-  if (clamp(s.handbrake, 0, 1) > 0.5) mark(buttonMap.__handbrake);
-  if (clamp(s.nitro, 0, 1) > 0.5) mark(buttonMap.__nitro);
-  if (buttonMap.__brakeTrigger && brake > 0.02) mark(buttonMap.__brakeTrigger);
-  if (buttonMap.__throttleTrigger && throttle > 0.02) mark(buttonMap.__throttleTrigger);
-
-  // Legacy DirectInput-style games sometimes expose the DS4 HID trigger
-  // inputs as ordinary numbered buttons rather than trigger axes. Mirror the
-  // driving controls to the common PlayStation-style vehicle bindings on the
-  // DS4 compatibility target: Cross=accelerate, Square=brake, R1=handbrake,
-  // Circle=nitro. The XInput target remains unchanged (RT/LT/A/LB mappings).
-  if (buttonMap === DSBTN) {
-    if (throttle > 0.02) mark(buttonMap.__legacyThrottle);
-    if (brake > 0.02) mark(buttonMap.__legacyBrake);
-    if (clamp(s.handbrake, 0, 1) > 0.5) mark(buttonMap.__legacyHandbrake);
-    if (clamp(s.nitro, 0, 1) > 0.5) mark(buttonMap.__legacyNitro);
-  }
-
-  if (s.gear === 1) mark(buttonMap.__gearUp);
-  if (s.gear === -1) mark(buttonMap.__gearDown);
-
-  for (const name of Object.keys(target.button)) {
-    target.button[name].setValue(!!held[name]);
-  }
-
-  target.update();
-}
-
-function stateSignature(s) {
-  const buttons = s.buttons || {};
-  return [
-    clamp(s.steer, -1, 1),
-    clamp(s.lx, -1, 1),
-    clamp(s.ly, -1, 1),
-    clamp(s.rx, -1, 1),
-    clamp(s.ry, -1, 1),
-    clamp(s.brake, 0, 1),
-    clamp(s.clutch, 0, 1),
-    clamp(s.lt, 0, 1),
-    clamp(s.throttle, 0, 1),
-    clamp(s.rt, 0, 1),
-    clamp(s.handbrake, 0, 1),
-    clamp(s.nitro, 0, 1),
-    Number(s.gear) || 0,
-    Number(s.dial) || 0,
-    Object.keys(buttons).filter((id) => buttons[id]).sort().join(","),
-  ].join("|");
-}
-
-function applySessionState(session, s) {
-  if (!session || !session.targets.length) return;
-
-  const seq = Number(s?.seq);
-  if (Number.isFinite(seq) && seq > 0 && seq <= session.lastAppliedSeq) {
-    // A continuous state that was already superseded by a newer edge is stale.
-    // Drop it rather than letting it resurrect an old button/pedal position.
-    return;
-  }
-
-  const signature = stateSignature(s);
-  if (signature === session.lastAppliedSignature) {
-    if (Number.isFinite(seq) && seq > session.lastAppliedSeq) {
-      session.lastAppliedSeq = seq;
-    }
-    return;
-  }
-
-  for (const entry of session.targets) {
-    applyToTarget(entry.target, s, entry.map);
-  }
-
-  session.lastAppliedSignature = signature;
-  if (Number.isFinite(seq) && seq > 0) {
-    session.lastAppliedSeq = seq;
-  }
-}
+const { XBTN, DSBTN, applySessionState } = require("./controller-report.cjs");
 const wss = new WebSocketServer({
   port: PORT,
   perMessageDeflate: false,
@@ -916,7 +1108,8 @@ function parseOutGauge(packet) {
     source: car ? "OutGauge • " + car : "OutGauge",
     speed,
     rpm,
-    rpmMax: 10000,
+    // OutGauge supplies RPM but no engine redline; do not invent one.
+    rpmMax: undefined,
     gear,
   };
 }
@@ -1063,9 +1256,27 @@ wss.on("connection", (ws) => {
     applyScheduled: false,
     lastAppliedSignature: "",
     lastAppliedSeq: 0,
+    currentRumble: null,
+    hapticTimer: null,
+    activeGame: null,
+    lastInputAt: 0,
+    inputTimedOut: false,
+    lastGameRumbleAt: 0,
   };
 
   socketState.set(ws, session);
+  const inputWatchdog = setInterval(() => {
+    if (!session.lastInputAt || session.inputTimedOut || !session.targets.length) return;
+    if (performance.now() - session.lastInputAt < 1500) return;
+    session.latestState = null;
+    try {
+      applySessionState(session, {});
+      session.inputTimedOut = true;
+    } catch (error) {
+      console.warn("Could not release inactive controller:", error?.message || error);
+    }
+  }, 250);
+  inputWatchdog.unref();
 
   function scheduleApply() {
     if (session.applyScheduled) return;
@@ -1095,7 +1306,9 @@ wss.on("connection", (ws) => {
   }
 
   function disconnectSessionTargets() {
+    stopHapticKeepalive(session);
     for (const entry of session.targets) {
+      targetSession.delete(entry.target);
       disconnectTarget(entry.target);
     }
     session.targets = [];
@@ -1105,7 +1318,6 @@ wss.on("connection", (ws) => {
     session.lastAppliedSeq = 0;
     controllerSessions.delete(session);
   }
-
   function createSessionTargets(requestedMode) {
     if (session.targets.length && session.mode === requestedMode) {
       return true;
@@ -1185,6 +1397,10 @@ wss.on("connection", (ws) => {
 
     session.mode = requestedMode;
     session.targets = created;
+    for (const entry of created) {
+      targetSession.set(entry.target, session);
+    }
+    startHapticKeepalive(session);
     session.lastAppliedSignature = "";
     session.lastAppliedSeq = 0;
     controllerSessions.add(session);
@@ -1252,10 +1468,11 @@ wss.on("connection", (ws) => {
       try {
         ws.send(JSON.stringify({
           type: "ready",
+          profileMappingVersion: 1,
           t: msg.t ?? Date.now(),
           seq: msg.seq ?? 0,
           output: session.mode,
-          rateHz: Number(msg.rateHz) || 240,
+          rateHz: Math.max(60, Math.min(333, Number(msg.rateHz) || 333)),
           mouse: {
             supported: process.platform === "win32",
             injectorAvailable: Boolean(startMouseInjector()),
@@ -1284,9 +1501,12 @@ wss.on("connection", (ws) => {
             outGaugePorts: OUTGAUGE_PORTS,
             wrcPort: WRC_PORT,
             wreckfest2Port: WRECKFEST2_PORT,
-            live: Boolean(latestTelemetry),
+            live: Boolean(latestTelemetry && Date.now() - latestTelemetry.receivedAt < 500),
           },
         }));
+        // A late/reconnecting phone needs the current game even if it has
+        // not changed since the last foreground broadcast.
+        ws.send(JSON.stringify(foregroundPayload()));
       } catch {
         /* ignore a racing socket close */
       }
@@ -1312,12 +1532,14 @@ wss.on("connection", (ws) => {
 
     if (msg.type === "state") {
       if (!session.targets.length) return;
+      session.lastInputAt = performance.now();
+      session.inputTimedOut = false;
 
       if (msg.priority === "edge" || msg.priority === "hot") {
         try {
           // Edge buttons AND live touch/analog events bypass the background
           // mailbox. Pedals, steering and sticks therefore reach ViGEm in the
-          // same browser event rather than waiting for the 240 Hz safety pump.
+          // same browser event rather than waiting for the background safety pump.
           // The mailbox remains intact for the continuous watchdog lane, so
           // Claude's stale-state protection is preserved.
           applySessionState(session, msg);
@@ -1359,6 +1581,7 @@ wss.on("connection", (ws) => {
   });
 
   ws.on("close", () => {
+    clearInterval(inputWatchdog);
     ackState.delete(ws);
     session.latestState = null;
     disconnectSessionTargets();

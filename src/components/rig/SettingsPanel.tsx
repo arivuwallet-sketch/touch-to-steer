@@ -1,11 +1,14 @@
+import { PAD_CONTROLS, type ResolvedGameProfile, type PadControl } from "@/lib/game-profiles";
 import { useState } from "react";
-import type { Settings } from "@/lib/controller-types";
+import { defaultWheelBindings, type WheelBindings, type WheelOutput, type Settings } from "@/lib/controller-types";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
-import { CircleStop, Link2, X } from "lucide-react";
+import { CircleStop, Link2, X, SlidersHorizontal, RadioTower, ChevronRight } from "lucide-react";
 
 type Props = {
   settings: Settings;
+  gameProfile?: ResolvedGameProfile;
+  profileMappingsSupported?: boolean;
   onChange: (patch: Partial<Settings>) => void;
   onClose: () => void;
   status: "idle" | "connecting" | "connected" | "error";
@@ -25,6 +28,8 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 export function SettingsPanel({
   settings,
+  gameProfile,
+  profileMappingsSupported,
   onChange,
   onClose,
   status,
@@ -76,22 +81,27 @@ export function SettingsPanel({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-background/70 backdrop-blur-sm">
-      <div className="panel h-full w-full max-w-sm overflow-y-auto rounded-none p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
-          <h2 className="min-w-0 truncate text-lg font-bold">Rig setup</h2>
-          <Button onClick={onClose} variant="ghost" size="icon" aria-label="Close settings">
+    <div className="spectral-settings-overlay fixed inset-0 z-50 flex justify-end" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) onClose();
+    }}>
+      <div className="spectral-settings-panel rig-settings-panel panel h-full w-full max-w-sm overflow-y-auto rounded-none pb-[max(1.25rem,env(safe-area-inset-bottom))]" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="spectral-settings-header">
+          <div className="spectral-settings-heading">
+            <div className="spectral-settings-kicker"><SlidersHorizontal size={13} /> SYSTEM CONFIG / LIVE</div>
+            <h2>Rig setup</h2>
+            <p>Shape the control surface, bridge output and motion response.</p>
+          </div>
+          <Button onClick={onClose} variant="ghost" size="icon" className="spectral-settings-close" aria-label="Close settings">
             <X />
           </Button>
         </div>
 
-        <div className="mt-5 rounded-lg border border-border bg-secondary/60 p-3">
+        <div className="spectral-settings-connection">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-bold uppercase">PC connection</p>
-              <p
-                className={`text-xs ${connected ? "text-success" : status === "error" ? "text-destructive" : "text-muted-foreground"}`}
-              >
+            <div className="spectral-settings-section-title">
+              <span><RadioTower size={13} /> PC CONNECTION</span>
+              <p>Local WebSocket receiver</p>
+              <p className={"spectral-settings-status " + (connected ? "is-online" : status === "error" ? "is-error" : "")}>
                 {status === "idle" ? "disconnected" : status}
                 {latency !== null ? ` · ${latency} ms` : ""}
               </p>
@@ -100,6 +110,7 @@ export function SettingsPanel({
               onClick={connected ? onDisconnect : onConnect}
               variant={connected ? "outline" : "default"}
               size="sm"
+              className="spectral-settings-connect"
             >
               {connected ? <CircleStop /> : <Link2 />}
               {connected ? "Disconnect" : status === "connecting" ? "Connecting" : "Connect"}
@@ -111,11 +122,12 @@ export function SettingsPanel({
             onChange={(e) => onChange({ bridgeUrl: e.target.value })}
             maxLength={120}
             spellCheck={false}
-            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            className="spectral-settings-input h-10 w-full rounded-md px-3 text-sm"
           />
         </div>
 
-        <div className="mt-4 divide-y divide-border">
+        <div className="spectral-settings-body">
+          <div className="spectral-settings-block-label"><span>01</span><div><strong>OUTPUT + RESPONSE</strong><small>Virtual device and steering behavior</small></div><ChevronRight size={13} /></div>
           <Row label="PC controller output">
             <select
               value={settings.outputMode}
@@ -131,13 +143,62 @@ export function SettingsPanel({
             <strong className="text-emerald-200">Universal compatibility</strong> keeps one
             synchronized Xbox 360/XInput target for modern games and one DualShock/HID target
             for legacy DirectInput-style games. Steering accelerator/brake are sent on RT/LT
-            analog axes and mirrored to legacy HID trigger/button paths; handbrake and nitro also
-            have legacy vehicle-button mappings. Windows may therefore show both devices in
+            analog axes with matching DS4 trigger bits. Games can bind these controls differently;
+            choose one output device if the game responds to both. Windows may therefore show both devices in
             <code className="mx-1 text-slate-300">joy.cpl</code>.
             For local co-op and split-screen, use <strong className="text-slate-200">XInput-only</strong>
             on each phone when the game expects Xbox controllers; the bridge assigns each phone
             its own virtual player, up to 4 simultaneous players.
           </div>
+          {connected && !profileMappingsSupported && <p role="alert" className="mt-2 text-xs text-amber-300">Update the Windows bridge to apply automatic profiles in both modes. This bridge does not report profile support.</p>}
+          <Row label="Automatic game profiles">
+            <input type="checkbox" checked={settings.autoGameProfiles !== false} onChange={(e) => onChange({ autoGameProfiles: e.target.checked })} />
+          </Row>
+          <p className="mt-2 text-xs text-muted-foreground">{gameProfile?.name ?? "Standard controller"} — {gameProfile?.note}</p>
+          {gameProfile?.gameKey === "asphalt-legends" && <Row label="Asphalt acceleration">
+            <select aria-label="Asphalt acceleration" value={settings.asphaltAcceleration ?? "auto"}
+              onChange={(e) => onChange({ asphaltAcceleration: e.target.value as "auto" | "manual" })}
+              className="rounded-lg border border-input bg-background px-2 py-1.5 text-xs">
+              <option value="auto">Auto (GAS inactive)</option><option value="manual">Manual (enable in-game)</option>
+            </select>
+          </Row>}
+          {settings.autoGameProfiles && gameProfile?.gameKey && <button type="button" className="mt-2 text-xs underline" onClick={() => {
+            const profiles = { ...settings.gameProfiles }; delete profiles[gameProfile.gameKey!];
+            onChange({ gameProfiles: profiles });
+          }}>Restore detected game's profile</button>}
+          <details className="mt-3 rounded-lg border border-input p-3">
+            <summary className="cursor-pointer text-xs">Wheel action bindings</summary>
+            <p className="my-2 text-xs text-muted-foreground">{settings.autoGameProfiles && gameProfile?.gameKey ? "Changes are saved for this game and restored automatically." : "Changes apply to global manual bindings."}</p>
+            <p className="my-2 text-xs text-muted-foreground">Match these outputs to your game's controller settings. Requires the updated PC bridge. Gamepad assignments are configured separately below.</p>
+            {(Object.keys(defaultWheelBindings) as (keyof WheelBindings)[]).map((action) => (
+              <Row key={action} label={{ throttle: "GAS", brake: "BRAKE / reverse", handbrake: "HANDBRAKE", nitro: "NITRO", clutch: "CLUTCH", gearUp: "GEAR UP", gearDown: "GEAR DOWN", horn: "HORN" }[action]}>
+                <select aria-label={`Wheel ${action} output`}
+                  value={settings.wheelBindings?.[action] ?? defaultWheelBindings[action]}
+                  onChange={(e) => onChange({ wheelBindings: { ...defaultWheelBindings, ...settings.wheelBindings, [action]: e.target.value as WheelOutput } })}
+                  className="rounded-lg border border-input bg-background px-2 py-1.5 text-xs">
+                  {Object.entries({rt:"RT / R2",lt:"LT / L2",a:"A / Cross",b:"B / Circle",x:"X / Square",y:"Y / Triangle",lb:"LB / L1",rb:"RB / R1",l3:"L3",r3:"R3",none:"Disabled"}).map(([value,label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </Row>
+            ))}
+            <button type="button" className="mt-2 text-xs underline" onClick={() => {
+              const key = settings.autoGameProfiles ? gameProfile?.gameKey : null;
+              if (key) {
+                const entry = { ...settings.gameProfiles?.[key] }; delete entry.wheelBindings;
+                onChange({ gameProfiles: { ...settings.gameProfiles, [key]: entry } });
+              } else onChange({ wheelBindings: { ...defaultWheelBindings } });
+            }}>Reset wheel bindings</button>
+          </details>
+          <details className="mt-3 rounded-lg border border-input p-3">
+            <summary className="cursor-pointer text-xs">Gamepad bindings</summary>
+            <p className="my-2 text-xs text-muted-foreground">These use the same detected game as the wheel. A/X keep Asphalt's native nitro/drift actions; RT is inactive with auto acceleration.</p>
+            {PAD_CONTROLS.map((id: PadControl) => <Row key={id} label={id.toUpperCase()}>
+              <select aria-label={`Gamepad ${id} output`} value={settings.padBindings?.[id] ?? id}
+                onChange={(e) => onChange({ padBindings: { ...settings.padBindings, [id]: e.target.value as WheelOutput } })}
+                className="rounded-lg border border-input bg-background px-2 py-1.5 text-xs">
+                {Object.entries({rt:"RT / R2",lt:"LT / L2",a:"A / Cross",b:"B / Circle",x:"X / Square",y:"Y / Triangle",lb:"LB / L1",rb:"RB / R1",l3:"L3",r3:"R3",none:"Disabled"}).map(([value,label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            </Row>)}
+          </details>
           <Row label="Steering input">
             <select
               value={settings.steerMode}
@@ -159,17 +220,22 @@ export function SettingsPanel({
               className="w-40 accent-[var(--primary)]"
             />
           </Row>
-          <Row label={`Steering sensitivity ${settings.steerSensitivity.toFixed(2)}`}>
+          <Row label={`Steering sensitivity ${settings.steerSensitivity.toFixed(2)}×`}>
             <input
               type="range"
               min={0.5}
-              max={2}
+              max={3}
               step={0.05}
               value={settings.steerSensitivity}
               onChange={(e) => onChange({ steerSensitivity: Number(e.target.value) })}
               className="w-40 accent-[var(--primary)]"
             />
           </Row>
+          <Row label={`Steering tension ${Math.round((settings.steeringTension ?? 0) * 100)}%`}>
+            <input aria-label="Steering tension" type="range" min={0} max={1} step={0.05}
+              value={settings.steeringTension ?? 0} onChange={(e) => onChange({ steeringTension: Number(e.target.value) })} />
+          </Row>
+          <p className="text-xs text-muted-foreground">Software response weight: higher values soften the centre while retaining full lock. No physical resistance or added input delay. ForceAdapt uses touch travel and vibration cues.</p>
           <Row label={`Wheel rotation ${settings.wheelRotationDeg}°`}>
             <input
               type="range"
@@ -181,17 +247,26 @@ export function SettingsPanel({
               className="w-40 accent-[var(--primary)]"
             />
           </Row>
-          <Row label={`Stick tension ${(settings.stickTension * 100).toFixed(0)}%`}>
-            <input
-              type="range"
-              min={0.3}
-              max={1}
-              step={0.05}
-              value={settings.stickTension}
-              onChange={(e) => onChange({ stickTension: Number(e.target.value) })}
-              className="w-40 accent-[var(--primary)]"
-            />
+          <Row label={`FORCEFLEX joystick tension ${settings.joystickTensionGf}gf`}>
+            <select
+              value={settings.joystickTensionGf}
+              onChange={(e) =>
+                onChange({
+                  joystickTensionGf: Number(e.target.value) as Settings["joystickTensionGf"],
+                })
+              }
+              className="rounded-lg border border-input bg-background px-2 py-1.5 text-xs"
+            >
+              <option value={30}>30 gf · Feather / Open world</option>
+              <option value={50}>50 gf · Balanced</option>
+              <option value={80}>80 gf · Firm / Precision</option>
+              <option value={100}>100 gf · Heavy / FPS</option>
+            </select>
           </Row>
+          <div className="rounded-lg border border-violet-300/15 bg-violet-300/5 p-3 text-[11px] leading-relaxed text-muted-foreground">
+            <strong className="text-violet-200">FORCEFLEX response</strong> changes the virtual Hall-stick response curve using the selected 30/50/80/100 gf profile.
+            The touchscreen cannot physically change spring force, so this is the software equivalent of lighter or heavier stick resistance.
+          </div>
           <Row label="Invert aim Y">
             <input
               type="checkbox"
@@ -233,10 +308,23 @@ export function SettingsPanel({
               className="w-40 accent-[var(--primary)]"
             />
           </Row>
-          <Row label="Controller update">
-            <span className="rounded-lg border border-cyan-300/20 bg-cyan-300/5 px-2 py-1.5 text-xs font-black text-cyan-200">
-              240 Hz
-            </span>
+          <Row label="Controller polling rate">
+            <select
+              value={settings.sendRateHz}
+              onChange={(e) =>
+                onChange({
+                  sendRateHz: Number(e.target.value) as Settings["sendRateHz"],
+                })
+              }
+              className="rounded-lg border border-input bg-background px-2 py-1.5 text-xs"
+            >
+              <option value={60}>60 Hz</option>
+              <option value={120}>120 Hz</option>
+              <option value={144}>144 Hz</option>
+              <option value={180}>180 Hz</option>
+              <option value={240}>240 Hz</option>
+              <option value={333}>333 Hz · 3 ms target</option>
+            </select>
           </Row>
           <Row label="Invert tilt">
             <input
@@ -259,6 +347,7 @@ export function SettingsPanel({
               className="size-5 accent-[var(--primary)]"
             />
           </Row>
+          <div className="spectral-settings-block-label"><span>02</span><div><strong>FEEDBACK + HAPTICS</strong><small>Phone vibration and force response</small></div><ChevronRight size={13} /></div>
           <Row label="G29 FFB haptic assist">
             <input
               type="checkbox"
@@ -269,7 +358,8 @@ export function SettingsPanel({
           </Row>
         </div>
 
-        <div className="mt-5 border-t border-border pt-4">
+        <div className="spectral-settings-block-label spectral-settings-block-label-mouse"><span>03</span><div><strong>MOUSE CONTROL SURFACE</strong><small>Viper profile, DPI, gyro and tracking</small></div><ChevronRight size={13} /></div>
+        <div className="spectral-settings-mouse-block">
           <div className="mb-2">
             <p className="text-xs font-black uppercase tracking-[0.16em] text-lime-300">
               Mouse Mode • Viper V4 Pro profile
@@ -467,9 +557,9 @@ export function SettingsPanel({
           </Row>
         </div>
 
-        <div className="mt-4 rounded-lg border border-cyan-300/15 bg-cyan-300/5 p-3 text-[11px] leading-relaxed text-muted-foreground">
-          <strong className="text-slate-200">Ultra-low-latency mode</strong> targets 240 Hz output
-          (about 4.17 ms between packets). Actual end-to-end latency depends on the phone, browser,
+        <div className="spectral-settings-note mt-4 rounded-lg p-3 text-[11px] leading-relaxed">
+          <strong className="text-slate-200">Controller polling</strong> is selectable from 60 to 333 Hz.
+          333 Hz selects a 3 ms scheduling target; input changes transmit immediately. Browser scheduling can take longer. Actual end-to-end latency depends on the phone, browser,
           Wi-Fi/LAN path, PC load, and game input polling.
         </div>
 

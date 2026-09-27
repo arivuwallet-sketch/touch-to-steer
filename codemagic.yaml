@@ -44,7 +44,7 @@ workflows:
       - name: Build Android release files
         script: |
           set -euo pipefail
-          bash tool/check_signing.sh
+          source tool/check_signing.sh
           flutter build apk --release
           flutter build appbundle --release
     artifacts:

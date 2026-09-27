@@ -9,7 +9,7 @@ bash tool/bootstrap.sh android
 flutter pub get
 dart run flutter_launcher_icons
 dart run flutter_native_splash:create
-bash tool/check_signing.sh  # configure CM_KEYSTORE_* and CM_KEY_* first
+source tool/check_signing.sh  # configure CM_KEYSTORE_* and CM_KEY_* first
 flutter build apk --release
 # output: build/app/outputs/flutter-apk/app-release.apk
 ```

@@ -280,7 +280,6 @@ type ForceProfile = {
   wall: number;
   curve: (t: number) => number;
   digital?: boolean;
-  pulseEvery?: number;
 };
 
 const FORCE_PROFILES: Record<TriggerMode, ForceProfile> = {
@@ -293,7 +292,6 @@ const FORCE_PROFILES: Record<TriggerMode, ForceProfile> = {
     stroke: [0.02, 0.82],
     wall: 0.34,
     curve: (t) => Math.pow(t, 0.78),
-    pulseEvery: 0.17,
   },
   sniper: {
     stroke: [0.04, 1],
@@ -302,26 +300,22 @@ const FORCE_PROFILES: Record<TriggerMode, ForceProfile> = {
       const soft = Math.pow(t, 1.55);
       return Math.min(1, soft * 0.92 + t * 0.08);
     },
-    pulseEvery: 0.16,
   },
   recoil: {
     stroke: [0.015, 0.96],
     wall: 0.43,
     curve: (t) => (t < 0.32 ? t * 0.48 : 0.1536 + (t - 0.32) * 1.245),
-    pulseEvery: 0.11,
   },
   vibration: {
     stroke: [0.01, 0.98],
     wall: 0.5,
     curve: (t) => Math.pow(t, 0.9),
-    pulseEvery: 0.13,
   },
   lock: {
     stroke: [0, 0.2],
     wall: 0.09,
     curve: (t) => (t >= 0.5 ? 1 : 0),
     digital: true,
-    pulseEvery: 0.2,
   },
 };
 

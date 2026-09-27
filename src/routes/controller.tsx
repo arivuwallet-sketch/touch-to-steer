@@ -18,6 +18,11 @@ import {
 } from "@/lib/controller-types";
 
 export const Route = createFileRoute("/controller")({
+  // The controller surface depends on browser-only APIs (localStorage, WebSocket,
+  // touch/pointer events, device orientation and haptics). Rendering it on the
+  // TanStack Start server can throw before hydration and surface the generic
+  // "This page didn't load" boundary. Keep the route client-rendered.
+  ssr: false,
   head: () => ({
     meta: [
       { title: "TouchToSteer Virtual Controller" },

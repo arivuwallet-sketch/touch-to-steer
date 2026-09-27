@@ -2,7 +2,7 @@ import { resolveGameProfile, type ProfileOptions } from "@/lib/game-profiles";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { defaultWheelBindings, type WheelBindings, type ControllerState } from "@/lib/controller-types";
 import { RELEASE_INPUTS } from "./useInputReset";
-import { playDualRumble } from "@/lib/haptics";
+import { playDualRumble, stopHaptics, setHapticsEnabled } from "@/lib/haptics";
 
 export type BridgeStatus = "idle" | "connecting" | "connected" | "error";
 
@@ -34,6 +34,18 @@ export function useBridge(
   wheelBindings: WheelBindings = defaultWheelBindings,
   profileOptions: ProfileOptions = {},
 ) {
+  useEffect(() => {
+    setHapticsEnabled(vibrationEnabled);
+    const stop = () => stopHaptics();
+    const visibility = () => { if (document.visibilityState !== "visible") stop(); };
+    window.addEventListener("blur", stop);
+    document.addEventListener("visibilitychange", visibility);
+    return () => {
+      stopHaptics();
+      window.removeEventListener("blur", stop);
+      document.removeEventListener("visibilitychange", visibility);
+    };
+  }, [vibrationEnabled]);
   const [profileMappingsSupported, setProfileMappingsSupported] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [status, setStatus] = useState<BridgeStatus>("idle");
@@ -128,6 +140,7 @@ export function useBridge(
   }, []);
 
   const disconnect = useCallback(() => {
+    stopHaptics();
     if (typeof window !== "undefined") window.dispatchEvent(new Event(RELEASE_INPUTS));
     clearLoop();
     clearMoveFlush();
@@ -317,6 +330,7 @@ export function useBridge(
                         ? "engine"
                         : "light";
 
+            if (!Number.isFinite(strong) || !Number.isFinite(weak)) return;
             playDualRumble(kind, {
               strongMagnitude: strong,
               weakMagnitude: weak,
@@ -371,7 +385,8 @@ export function useBridge(
           }
 
           if (msg.type === "ffb" && typeof msg.value === "number") {
-            const force = Math.max(-1, Math.min(1, msg.value));
+            const force = Number.isFinite(msg.value) ? Math.max(-1, Math.min(1, msg.value)) : 0;
+            if (Math.abs(force) <= 0.04) stopHaptics();
             setTelemetry((prev) => ({
               ...prev,
               ffb: force,
@@ -397,6 +412,7 @@ export function useBridge(
       ws.onerror = () => { if (wsRef.current === ws) { setConnectionError("Connection failed. Check the host address, pairing key, tunnel and host capacity."); setStatus("error"); } };
       ws.onclose = () => {
         if (wsRef.current === ws) {
+          stopHaptics();
           window.dispatchEvent(new Event(RELEASE_INPUTS));
           wsRef.current = null;
           setActiveGame("Disconnected");

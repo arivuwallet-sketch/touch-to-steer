@@ -518,3 +518,15 @@ test('ForceFlex presets change both held stick outputs and visuals immediately w
   }
  } finally {app.unmount();}
 });
+
+test('Game rumble animates both trigger plates and stop removes both effects',()=>{
+ const app=mount(FlatPad,{settings:{...settings,vibration:true}});
+ try {
+  const event=new Event('touch-to-steer:game-haptic');
+  Object.defineProperty(event,'detail',{value:{strongMagnitude:.8,weakMagnitude:.2,duration:100}});
+  act(()=>window.dispatchEvent(event));
+  assert.equal(app.host.querySelectorAll('.trigger-3d-rattle').length,2);
+  act(()=>window.dispatchEvent(new Event('touch-to-steer:haptics-stop')));
+  assert.equal(app.host.querySelectorAll('.trigger-3d-rattle').length,0);
+ } finally {app.unmount();}
+});

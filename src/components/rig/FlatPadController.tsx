@@ -422,6 +422,7 @@ function Trigger({
 
     if (plateRef.current) {
       plateRef.current.style.transform = "translate3d(0,0,0)";
+      plateRef.current.style.setProperty("--trigger-base-transform", "translate3d(0,0,0)");
     }
     if (barRef.current) barRef.current.style.width = "12%";
   }, [mode, id, set]);
@@ -431,10 +432,11 @@ function Trigger({
       pattern: number | number[],
       kind: DualRumbleKind = "light",
       strength = 0.5,
+      playSound = true,
     ) => {
       if (!settings.vibration) return;
 
-      buzz(true, pattern, kind);
+      if (playSound) buzz(true, pattern, kind);
 
       const ms = Math.max(
         45,
@@ -447,14 +449,36 @@ function Trigger({
       const plate = plateRef.current;
       if (plate) {
         plate.style.setProperty("--trigger-rattle-strength", String(strength));
-        plate.classList.remove("trigger-3d-rattle");
-        void plate.offsetWidth;
+        if (pulseTimer.current !== null) window.clearTimeout(pulseTimer.current);
         plate.classList.add("trigger-3d-rattle");
-        window.setTimeout(() => plate.classList.remove("trigger-3d-rattle"), ms);
+        pulseTimer.current = window.setTimeout(() => { plate.classList.remove("trigger-3d-rattle"); pulseTimer.current = null; }, ms);
       }
     },
     [settings.vibration],
   );
+
+  useEffect(() => {
+    const stop = () => {
+      if (pulseTimer.current !== null) window.clearTimeout(pulseTimer.current);
+      pulseTimer.current = null;
+      plateRef.current?.classList.remove("trigger-3d-rattle");
+    };
+    const feedback = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (!detail || !settings.vibration) return;
+      const strength = Math.max(detail.strongMagnitude || 0, detail.weakMagnitude || 0);
+      if (!Number.isFinite(strength) || strength <= 0) { stop(); return; }
+      pulseFeedback(Math.min(40, (detail.duration || 70) / 3), "light", Math.min(1, strength), false);
+    };
+    if (!settings.vibration) stop();
+    window.addEventListener("touch-to-steer:game-haptic", feedback);
+    window.addEventListener("touch-to-steer:haptics-stop", stop);
+    return () => {
+      stop();
+      window.removeEventListener("touch-to-steer:game-haptic", feedback);
+      window.removeEventListener("touch-to-steer:haptics-stop", stop);
+    };
+  }, [pulseFeedback, settings.vibration]);
 
   const writeTrigger = useCallback(
     (next: number) => {
@@ -471,6 +495,7 @@ function Trigger({
           "px, 0) rotateX(" +
           clamped * 4.5 +
           "deg)";
+        plate.style.setProperty("--trigger-base-transform", plate.style.transform);
       }
 
       const bar = barRef.current;

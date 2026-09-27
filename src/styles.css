@@ -774,18 +774,13 @@
 /* Phone-side 3D trigger feedback: layered vibration plus a short mechanical-looking
    plate rattle. This is a visual simulation of ForceAdapt, not physical motorized force. */
 @keyframes trigger-3d-rattle {
-  0% {
-    transform: translateY(0) rotateX(0deg) translateZ(0);
-  }
-  35% {
-    transform: translateY(2px) rotateX(-1.8deg) translateZ(8px) rotateZ(-0.7deg);
-  }
-  65% {
-    transform: translateY(-1px) rotateX(1.2deg) translateZ(3px) rotateZ(0.5deg);
-  }
-  100% {
-    transform: translateY(0) rotateX(0deg) translateZ(0);
-  }
+  0%, 100% { transform: var(--trigger-base-transform, translateY(0)); }
+  35% { transform: var(--trigger-base-transform, translateY(0)) translateY(calc(2px * var(--trigger-rattle-strength, 1))) rotateX(calc(-1.8deg * var(--trigger-rattle-strength, 1))) translateZ(calc(8px * var(--trigger-rattle-strength, 1))); }
+  65% { transform: var(--trigger-base-transform, translateY(0)) translateY(calc(-1px * var(--trigger-rattle-strength, 1))) rotateX(calc(1.2deg * var(--trigger-rattle-strength, 1))); }
+}
+
+.trigger-3d-rattle {
+  animation: trigger-3d-rattle 90ms linear infinite;
 }
 
 .flat-pad-trigger {

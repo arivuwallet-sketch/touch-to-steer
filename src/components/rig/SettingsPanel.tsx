@@ -1,3 +1,4 @@
+import { DocumentationLinks } from '@/components/docs/DocumentationLinks';
 import { PAD_CONTROLS, type ResolvedGameProfile, type PadControl } from "@/lib/game-profiles";
 import { useState } from "react";
 import { defaultWheelBindings, type WheelBindings, type WheelOutput, type Settings } from "@/lib/controller-types";
@@ -581,6 +582,7 @@ export function SettingsPanel({
           Wi-Fi/LAN path, PC load, and game input polling.
         </div>
 
+        <DocumentationLinks newTab />
         <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
           Settings are saved on this phone. Need the PC side? Open{" "}
           <Link to="/setup" className="font-semibold text-primary underline">

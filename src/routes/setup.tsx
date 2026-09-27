@@ -1,3 +1,4 @@
+import { DocumentationLinks } from '@/components/docs/DocumentationLinks';
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowDownLeft, ArrowUpRight, Check, Download, Gamepad2, Gauge, Mouse, RadioTower, ShieldCheck, Wifi } from "lucide-react";
 
@@ -201,11 +202,12 @@ function Setup() {
           <div className="spectral-setup-utility-metrics">
             <span><Wifi size={13} /> SAME LAN</span>
             <span><RadioTower size={13} /> WEBSOCKET</span>
-            <span>3 MS POLLING TARGET</span>
+            <span>1 MS SCHEDULING TARGET</span>
           </div>
         </div>
       </section>
 
+      <DocumentationLinks />
       <footer className="spectral-setup-footer">
         <span>TOUCHTOSTEER / SPECTRAL CONTROL SYSTEM</span>
         <span>FOUNDER / SOORAJ</span>

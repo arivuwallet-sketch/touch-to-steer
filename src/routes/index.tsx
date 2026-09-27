@@ -1,3 +1,4 @@
+import { DocumentationLinks } from '@/components/docs/DocumentationLinks';
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowDown,
@@ -783,6 +784,7 @@ function LandingPage() {
           </div>
         </section>
 
+      <DocumentationLinks />
         <footer className="spectral-footer">
           <span>TOUCHTOSTEER / SPECTRAL CONTROL SYSTEM</span>
           <span>GAMEPAD • STEERING • MOUSE</span>

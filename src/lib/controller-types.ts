@@ -123,8 +123,8 @@ export type Settings = {
   vibration: boolean;
   /** Phone-side haptic approximation of wheel force feedback. */
   ffbHaptics: boolean;
-  /** Controller transport target. The bridge currently supports 60–333 Hz (333 selects a 3 ms target). */
-  sendRateHz: 60 | 120 | 144 | 180 | 240 | 333;
+  /** Controller transport target. The bridge currently supports 60–1000 Hz (1000 selects a 1 ms target). */
+  sendRateHz: 60 | 120 | 144 | 180 | 240 | 333 | 1000;
   invertTilt: boolean;
   invertLookY: boolean;
   /** visual wheel lock, matching a G29 at 900 degrees lock-to-lock */
@@ -164,7 +164,7 @@ export const defaultSettings: Settings = {
   autoCentre: true,
   vibration: true,
   ffbHaptics: true,
-  sendRateHz: 333,
+  sendRateHz: 1000,
   wheelBindings: { ...defaultWheelBindings },
   padBindings: {},
   autoGameProfiles: true,

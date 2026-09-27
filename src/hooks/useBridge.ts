@@ -16,12 +16,12 @@ export type BridgeTelemetry = {
   ffb?: number | undefined;
 };
 
-const clampRate = (hz: number) => Math.max(60, Math.min(333, Math.round(hz)));
+const clampRate = (hz: number) => Math.max(60, Math.min(1000, Math.round(Number.isFinite(hz) ? hz : 1000)));
 const nowMs = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
 
 /**
  * Low-latency state transport:
- * - target rate is selectable up to 333 Hz (3 ms scheduling target; browser timing is best-effort)
+ * - target rate is selectable up to 1000 Hz (1 ms scheduling target; browser timing is best-effort)
  * - self-scheduling avoids interval drift
  * - only the newest controller state is sent
  * - browser/transport buffering is bounded so stale input is not accumulated
@@ -256,7 +256,7 @@ export function useBridge(
             // A message task breaks nested timer clamping (normally 4 ms).
             // No busy loop: every sample still waits for its scheduled timer.
             const channel = pumpChannelRef.current;
-            if (rate === 333 && channel) channel.port2.postMessage(null);
+            if (rate > 250 && channel) channel.port2.postMessage(null);
             else pump();
           }, Math.max(0, nextDue - nowMs()));
         };

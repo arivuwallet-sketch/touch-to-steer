@@ -8,6 +8,6 @@ Update the app and Windows bridge together.
 - ForceAdapt uses the same touch-position curve on press and drag (top is full, bottom is zero). All six travel profiles reach zero and full output. Browser pressure is not used: non-pressure touch hardware can report a constant 0.5. Vibration cues do not create physical trigger resistance.
 - Steering tension in Settings is a static response curve. Zero preserves the previous curve; higher values soften response near the centre while retaining full lock. It does not add smoothing, delayed reports or countersteering. The existing 120 ms return and fallback release remain. Local wheel vibration respects the master vibration switch.
 
-These effects operate within touchscreen/browser capabilities. Physical wheel torque or motorized trigger resistance requires suitable hardware and its driver. The existing 3 ms scheduler is retained; it is not a measured end-to-end latency guarantee.
+These effects operate within touchscreen/browser capabilities. Physical wheel torque or motorized trigger resistance requires suitable hardware and its driver. The existing 1 ms scheduler is retained; it is not a measured end-to-end latency guarantee.
 
 Reference: https://www.w3.org/TR/pointerevents/#dom-pointerevent-pressure

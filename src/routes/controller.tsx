@@ -76,7 +76,7 @@ function Rig() {
 
   useEffect(() => {
     const migrationKey = "mobile-rig-universal-migration-v3";
-    const timingMigrationKey = "mobile-rig-3ms-v1";
+    const timingMigrationKey = "mobile-rig-1000hz-v1";
     const centreMigrationKey = "mobile-rig-autocentre-v1";
     const migrated = localStorage.getItem(migrationKey) === "1";
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -95,7 +95,7 @@ function Rig() {
         const saved = { ...defaultSettings, ...parsed } as Settings;
         // Apply the new timing target once without altering other saved controls.
         if (localStorage.getItem(timingMigrationKey) !== "1") {
-          saved.sendRateHz = 333;
+          saved.sendRateHz = 1000;
           localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
           localStorage.setItem(timingMigrationKey, "1");
         }

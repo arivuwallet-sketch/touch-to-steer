@@ -334,6 +334,7 @@ export function SettingsPanel({
               <option value={180}>180 Hz</option>
               <option value={240}>240 Hz</option>
               <option value={333}>333 Hz · 3 ms target</option>
+              <option value={1000}>1000 Hz · 1 ms target</option>
             </select>
           </Row>
           <Row label="Invert tilt">
@@ -568,8 +569,8 @@ export function SettingsPanel({
         </div>
 
         <div className="spectral-settings-note mt-4 rounded-lg p-3 text-[11px] leading-relaxed">
-          <strong className="text-slate-200">Controller polling</strong> is selectable from 60 to 333 Hz.
-          333 Hz selects a 3 ms scheduling target; input changes transmit immediately. Browser scheduling can take longer. Actual end-to-end latency depends on the phone, browser,
+          <strong className="text-slate-200">Controller polling</strong> is selectable from 60 to 1000 Hz.
+          1000 Hz selects a 1 ms scheduling target; input changes transmit immediately. Browser scheduling can take longer. Actual end-to-end latency depends on the phone, browser,
           Wi-Fi/LAN path, PC load, and game input polling.
         </div>
 

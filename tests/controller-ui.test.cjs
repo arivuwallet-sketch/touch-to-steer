@@ -199,7 +199,7 @@ test('All keyboard bindings and mixed touch/keyboard ownership preserve held inp
   assert.equal(wheel.buttons.horn,true);assert.equal(wheel.buttons.reset,true);
 });
 
-for (const rate of [240,333]) test(`Transport at ${rate} Hz sends every press/release immediately, bounds backlog, and checks readiness`, t => {
+for (const rate of [240,333,1000]) test(`Transport at ${rate} Hz sends every press/release immediately, bounds backlog, and checks readiness`, t => {
   const originalChannel=globalThis.MessageChannel;
   let posts=0,closed=0;
   globalThis.MessageChannel=class {
@@ -248,7 +248,7 @@ for (const rate of [240,333]) test(`Transport at ${rate} Hz sends every press/re
     ws.bufferedAmount=0;
     act(()=>t.mock.timers.tick(5));
     assert.equal(ws.sent.at(-1).lx,0.9);
-    assert.equal(posts>0,rate===333);
+    assert.equal(posts>0,rate>250);
     act(()=>api.connect('ws://127.0.0.1:8787'));
     const latest=FakeSocket.instances.at(-1);
     act(()=>ws.onerror());assert.equal(api.status,'connecting'); // stale socket cannot change new status
@@ -317,8 +317,8 @@ test('Wheel preserves steering on settings rerender and re-grab cancels auto-cen
 });
 
 
-test('Both rate buttons retain old options and select the 3 ms default', () => {
-  assert.equal(defaultSettings.sendRateHz,333);
+test('Both rate buttons retain old options and select the 1 ms option', () => {
+  assert.equal(defaultSettings.sendRateHz,1000);
   for(const Component of [FlatPad,FlatWheel]) {
     const changes=[];
     const app=mount(Component,{settings:{...settings,sendRateHz:240},onSettingsChange:p=>changes.push(p)});
@@ -327,6 +327,10 @@ test('Both rate buttons retain old options and select the 3 ms default', () => {
       if(Component===FlatPad) act(()=>button.click());
       else pointer(button,'pointerdown');
       assert.equal(changes.at(-1).sendRateHz,333);
+      app.rerender({settings:{...settings,sendRateHz:333}});
+      const fast=app.button('Controller polling rate 333 Hz. Tap to change.');
+      if(Component===FlatPad) act(()=>fast.click()); else {pointer(button,'pointerup');pointer(fast,'pointerdown');}
+      assert.equal(changes.at(-1).sendRateHz,1000);
     } finally {app.unmount();}
   }
 });

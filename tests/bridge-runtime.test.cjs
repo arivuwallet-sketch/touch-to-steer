@@ -54,8 +54,10 @@ test('Bridge forwards presses during a pending game lookup, rejects stale state,
   const client=new WebSocket(`ws://127.0.0.1:${server.address().port}`, ["rig-v1", "rig-auth."+"a".repeat(43)]);
   try {
     await once(client,'open');
-    const ready=once(client,'message');client.send(JSON.stringify({type:'hello',output:'universal'}));
-    assert.equal(JSON.parse((await ready)[0]).controller.connected,true);
+    const ready=once(client,'message');client.send(JSON.stringify({type:'hello',output:'universal',rateHz:1000}));
+    const handshake=JSON.parse((await ready)[0]);
+    assert.equal(handshake.controller.connected,true);
+    assert.equal(handshake.rateHz,1000);
     assert.equal(targets.length,2);
     const foreground=intervals.find(t=>t.delay===250);
     const query=foreground.callback();assert.equal(typeof finishLookup,'function');

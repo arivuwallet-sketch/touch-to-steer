@@ -26,7 +26,7 @@ Set `RIG_PUBLIC=1`, `RIG_ACCESS_TOKEN` to 32–128 random URL-safe characters, a
 
 The existing LAN workflow remains available without public mode. Never publish an unauthenticated LAN bridge. The bridge limits frames to 16 KiB and total sockets to the configured player count plus eight. Pairing errors, controller slot errors and driver failures appear in Settings. This is a shared host key, not per-player accounts or individual revocation.
 
-The 3 ms software send target is unchanged. Internet routing, jitter, tunnel availability and driver/game frame time determine actual latency. These connections have not been certified on your Windows hardware.
+The 1 ms software send target is unchanged. Internet routing, jitter, tunnel availability and driver/game frame time determine actual latency. These connections have not been certified on your Windows hardware.
 
 Official references:
 - https://learn.microsoft.com/en-us/windows/win32/xinput/getting-started-with-xinput

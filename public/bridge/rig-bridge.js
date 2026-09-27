@@ -1485,7 +1485,7 @@ wss.on("connection", (ws) => {
           t: msg.t ?? Date.now(),
           seq: msg.seq ?? 0,
           output: session.mode,
-          rateHz: Math.max(60, Math.min(333, Number(msg.rateHz) || 333)),
+          rateHz: Math.max(60, Math.min(1000, Number(msg.rateHz) || 1000)),
           mouse: {
             supported: process.platform === "win32",
             injectorAvailable: remote.mouseAllowed && Boolean(startMouseInjector()),

@@ -25,3 +25,16 @@ test('Steering weight remains monotonic, symmetric, instant and reaches both loc
  }
  assert.ok(applySteeringTension(0.5,1)<applySteeringTension(0.5,0));
 });
+
+
+test('ForceFlex presets stay distinct through usable travel with ordered monotonic response',()=>{
+ for(const linearity of [1,1.4,2.5]) {
+  const series=[30,50,80,100].map(gf=>Array.from({length:101},(_,i)=>applyStickResponse(i/100,0,{...defaultSettings,joystickTensionGf:gf,linearity,sensitivity:1})[0]));
+  for(const values of series) {
+   assert.equal(values[0],0);assert.equal(values[100],1);
+   for(let i=1;i<=100;i++) assert.ok(values[i]>=values[i-1]);
+  }
+  for(const i of [25,50,75]) for(let g=1;g<4;g++) assert.ok(series[g-1][i]>series[g][i]);
+  assert.ok(series[0][50]-series[3][50]>0.25);
+ }
+});

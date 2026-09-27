@@ -480,7 +480,7 @@ test('Both sticks and triggers retain travel and release when pointer capture fa
   for(const [label,x,y] of [['Left stick','lx','ly'],['Right stick','rx','ry']]) {
    const stick=app.host.querySelector(`[aria-label="${label}"]`);
    pointer(stick,'pointerdown',1,{clientX:50,clientY:50});
-   pointer(window,'pointermove',1,{clientX:71.5,clientY:50});assert.equal(app.state()[x],1);
+   pointer(window,'pointermove',1,{clientX:100,clientY:50});assert.equal(app.state()[x],1);
    pointer(window,'pointerup',1);assert.ok(app.state()[x] === 0);assert.ok(app.state()[y] === 0);
   }
  } finally {app.unmount();HTMLElement.prototype.setPointerCapture=saved;}
@@ -493,6 +493,28 @@ test('Left/right arrows and B/X never apply active translation or scale',()=>{
    const button=app.button(label);
    assert.doesNotMatch(button.className,/active:(translate|scale)/);
    assert.match(button.className,/-translate-y-1\/2/);
+  }
+ } finally {app.unmount();}
+});
+
+
+test('ForceFlex presets change both held stick outputs and visuals immediately without saturating mid travel',()=>{
+ const app=mount(FlatPad,{settings:{...settings,joystickTensionGf:30}});
+ try {
+  for(const [label,axis] of [['Left stick','lx'],['Right stick','rx']]) {
+   const stick=app.host.querySelector(`[aria-label="${label}"]`);
+   const values=[],visuals=[];
+   pointer(stick,'pointerdown',1,{clientX:75,clientY:50});
+   for(const gf of [30,50,80,100]) {
+    app.rerender({settings:{...settings,joystickTensionGf:gf}});
+    values.push(app.state()[axis]);
+    visuals.push(stick.querySelector('[data-stick-thumb]').style.transform);
+   }
+   assert.ok(values[0]-values[3]>0.3,`${label}: ${values}`);
+   for(let i=1;i<4;i++) assert.ok(values[i]<values[i-1]);
+   assert.equal(new Set(visuals).size,4);
+   pointer(window,'pointermove',1,{clientX:100,clientY:50});assert.equal(app.state()[axis],1);
+   pointer(window,'pointerup');assert.ok(app.state()[axis]===0);
   }
  } finally {app.unmount();}
 });

@@ -4,7 +4,7 @@ Update the app and Windows bridge together.
 
 - RPM is decoded from supported game telemetry, never from throttle position or audio. Missing telemetry blanks the gauges after 500 ms. Asphalt currently has no RPM decoder in this bridge.
 - OutGauge includes actual RPM but no redline. Its numeric RPM remains live while the dial says SCALE UNAVAILABLE instead of assuming a 10,000 RPM engine.
-- ForceFlex applies radial response curves after the deadzone. Direction, circular travel, centre zero and maximum travel are preserved at every weight. The gf names are software presets, not measured physical force.
+- ForceFlex uses the full stick touch radius for input and renders the shaped output inside the rim. Preset changes reapply immediately to a held stick. At half travel with default deadzone/linearity/sensitivity, 30/50/80/100 gf produce approximately 55/43/28/17% output. All reach full output at the edge. ForceFlex applies radial response curves after the deadzone. Direction, circular travel, centre zero and maximum travel are preserved at every weight. The gf names are software presets, not measured physical force.
 - ForceAdapt uses the same touch-position curve on press and drag (top is full, bottom is zero). All six travel profiles reach zero and full output. Browser pressure is not used: non-pressure touch hardware can report a constant 0.5. Vibration cues do not create physical trigger resistance.
 - Steering tension in Settings is a static response curve. Zero preserves the previous curve; higher values soften response near the centre while retaining full lock. It does not add smoothing, delayed reports or countersteering. The existing 120 ms return and fallback release remain. Local wheel vibration respects the master vibration switch.
 

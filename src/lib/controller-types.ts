@@ -86,10 +86,10 @@ export function applyForceFlex(
 
   const magnitude = Math.max(0, Math.min(1, Math.abs(v)));
   const baseExponent =
-    tensionGf === 30 ? 0.78 :
-    tensionGf === 50 ? 0.94 :
-    tensionGf === 80 ? 1.08 :
-    1.2;
+    tensionGf === 30 ? 0.65 :
+    tensionGf === 50 ? 1 :
+    tensionGf === 80 ? 1.55 :
+    2.2;
 
   // Blend, rather than multiply, the general linearity control so the
   // ForceFlex detents remain distinct at every GF setting.

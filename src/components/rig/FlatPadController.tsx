@@ -121,6 +121,7 @@ function Stick({
   const thumbRef = useRef<HTMLDivElement>(null);
   const pointer = useRef<number | null>(null);
   const rect = useRef<DOMRect | null>(null);
+  const lastPoint = useRef<[number, number]>([0, 0]);
   const lastHapticMagnitude = useRef(0);
   const pointMagnitude = useRef(0);
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -132,7 +133,9 @@ function Stick({
     const r = rect.current;
     if (!r) return;
 
-    const radius = Math.max(1, Math.min(r.width, r.height) * 0.215);
+    lastPoint.current = [clientX, clientY];
+    // The entire touch surface is usable travel; the thumb stays inside its rim.
+    const radius = Math.max(1, Math.min(r.width, r.height) / 2);
     let x = (clientX - (r.left + r.width / 2)) / radius;
     let y = (clientY - (r.top + r.height / 2)) / radius;
     const m = Math.hypot(x, y);
@@ -142,12 +145,13 @@ function Stick({
       y /= m;
     }
 
-    onMove(...applyStickResponse(x, -y, settings));
+    const [outputX, outputY] = applyStickResponse(x, -y, settings);
+    onMove(outputX, outputY);
 
-    const travel = radius;
+    const travel = Math.min(r.width, r.height) * 0.215;
     const thumb = thumbRef.current;
     if (thumb) {
-      thumb.style.transform = `translate3d(calc(-50% + ${x * travel}px), calc(-50% + ${y * travel}px), 0)`;
+      thumb.style.transform = `translate3d(calc(-50% + ${outputX * travel}px), calc(-50% + ${-outputY * travel}px), 0)`;
     }
 
     // Haptics are strictly rate-limited and never block the value write above.
@@ -164,6 +168,10 @@ function Stick({
     }
     pointMagnitude.current = magnitude;
   };
+
+  useEffect(() => {
+    if (pointer.current !== null) apply(...lastPoint.current);
+  }, [settings.joystickTensionGf, settings.deadzone, settings.linearity, settings.sensitivity]);
 
   const update = (native: globalThis.PointerEvent) => {
     // Use only the newest sample of a coalesced batch: older samples are stale

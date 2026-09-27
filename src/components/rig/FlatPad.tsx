@@ -270,30 +270,112 @@ function ApexFaceButtons({ settings, press, turbo }: { settings: Settings; press
   );
 }
 
-// ---- ForceAdapt engine (Flydigi Apex 5 style adaptive triggers) ----
-// Software response profiles define the usable touch travel window
-// and vibration cues. Touchscreens do not provide motorized resistance.
+// ---- ForceAdapt engine ----
+// ForceAdapt is software trigger shaping: it changes usable travel, actuation
+// point, response curve and tactile feedback. A touchscreen cannot create
+// physical motorized resistance, so the "wall" is represented by a tactile
+// haptic pulse plus the animated trigger plate.
 type ForceProfile = {
-  stroke: [number, number]; // usable travel window of the physical stroke
-  wall: number; // actuation point — haptic wall is rendered here
-  curve: (p: number) => number;
-  digital: boolean; // hair-trigger / micro-switch behaviour
+  stroke: [number, number];
+  wall: number;
+  curve: (t: number) => number;
+  digital?: boolean;
+  pulseEvery?: number;
 };
 
 const FORCE_PROFILES: Record<TriggerMode, ForceProfile> = {
-  // full 0-100% travel, 1:1 force, no shaping
-  regular: { stroke: [0, 1], wall: 0.5, curve: (p) => p, digital: false },
-  // racing: short stroke, heavy bottom end so throttle feathers finely
-  race: { stroke: [0.04, 0.92], wall: 0.35, curve: (p) => Math.pow(p, 0.78), digital: false },
-  // sniper: long soft pull then a hard wall right before the shot breaks
-  sniper: { stroke: [0.1, 1], wall: 0.82, curve: (p) => Math.pow(p, 1.7), digital: false },
-  // recoil: soft slack, then full pressure past the wall with pulse train
-  recoil: { stroke: [0.06, 0.96], wall: 0.42, curve: (p) => (p < 0.3 ? p * 0.45 : Math.min(1, 0.135 + (p - 0.3) * (0.865 / 0.7))), digital: false },
-  // vibration: linear force with continuous texture feedback
-  vibration: { stroke: [0.02, 0.98], wall: 0.5, curve: (p) => Math.pow(p, 0.92), digital: false },
-  // lock: micro-switch mode — near-zero stroke, instant 100%
-  lock: { stroke: [0, 0.2], wall: 0.12, curve: (p) => p, digital: true },
+  regular: {
+    stroke: [0, 1],
+    wall: 0.5,
+    curve: (t) => t,
+  },
+  race: {
+    stroke: [0.02, 0.82],
+    wall: 0.34,
+    curve: (t) => Math.pow(t, 0.78),
+    pulseEvery: 0.17,
+  },
+  sniper: {
+    stroke: [0.04, 1],
+    wall: 0.82,
+    curve: (t) => {
+      const soft = Math.pow(t, 1.55);
+      return Math.min(1, soft * 0.92 + t * 0.08);
+    },
+    pulseEvery: 0.16,
+  },
+  recoil: {
+    stroke: [0.015, 0.96],
+    wall: 0.43,
+    curve: (t) => (t < 0.32 ? t * 0.48 : 0.1536 + (t - 0.32) * 1.245),
+    pulseEvery: 0.11,
+  },
+  vibration: {
+    stroke: [0.01, 0.98],
+    wall: 0.5,
+    curve: (t) => Math.pow(t, 0.9),
+    pulseEvery: 0.13,
+  },
+  lock: {
+    stroke: [0, 0.2],
+    wall: 0.09,
+    curve: (t) => (t >= 0.5 ? 1 : 0),
+    digital: true,
+    pulseEvery: 0.2,
+  },
 };
+
+const triggerClamp = (value: number) => Math.max(0, Math.min(1, value));
+
+function triggerTravelFromPointer(
+  event: PointerEvent<HTMLButtonElement>,
+  rect?: DOMRect | null,
+) {
+  const bounds = rect ?? event.currentTarget.getBoundingClientRect();
+  if (!bounds.height) return 0;
+
+  // Top is full pull, bottom is release.
+  return triggerClamp((bounds.bottom - event.clientY) / bounds.height);
+}
+
+function triggerPressureAssist(event: PointerEvent<HTMLButtonElement>) {
+  if (event.pointerType === "pen" && event.pressure > 0 && event.pressure < 1) {
+    return triggerClamp((event.pressure - 0.05) / 0.95);
+  }
+
+  if (
+    event.pointerType === "touch" &&
+    event.pressure > 0 &&
+    event.pressure < 1 &&
+    Math.abs(event.pressure - 0.5) > 0.08
+  ) {
+    return triggerClamp((event.pressure - 0.05) / 0.95);
+  }
+
+  return 0;
+}
+
+function mapForceAdaptTrigger(
+  rawTravel: number,
+  profile: ForceProfile,
+  pressure = 0,
+) {
+  let raw = triggerClamp(rawTravel);
+
+  if (pressure > 0) {
+    raw = triggerClamp(raw + (1 - raw) * pressure * 0.16);
+  }
+
+  const [lo, hi] = profile.stroke;
+  const t = triggerClamp((raw - lo) / Math.max(0.001, hi - lo));
+  const shaped = profile.digital && t >= 0.5 ? 1 : profile.curve(t);
+
+  return {
+    raw,
+    normalized: t,
+    value: triggerClamp(shaped),
+  };
+}
 
 function Trigger({
   label,
@@ -313,148 +395,213 @@ function Trigger({
   const valueRef = useRef(0);
   const plateRef = useRef<HTMLSpanElement>(null);
   const barRef = useRef<HTMLSpanElement>(null);
-  const [pulse3d, setPulse3d] = useState(false);
   const pointer = useRef<number | null>(null);
+  const rectRef = useRef<DOMRect | null>(null);
   const lastFeel = useRef(0);
   const lastBand = useRef(-1);
   const lastRecoil = useRef(0);
   const pastWall = useRef(false);
   const pulseTimer = useRef<number | null>(null);
 
+  const profile = FORCE_PROFILES[mode];
+
   useEffect(() => {
     return () => {
-      if (pulseTimer.current !== null) {
-        window.clearTimeout(pulseTimer.current);
-      }
+      if (pulseTimer.current !== null) window.clearTimeout(pulseTimer.current);
     };
   }, []);
 
-  const pulseFeedback = useCallback(
-    (pattern: number | number[]) => {
-      if (!settings.vibration) return;
-      const kind =
-        mode === "recoil"
-          ? "gunfire"
-          : mode === "vibration"
-            ? "engine"
-            : "heavy";
-      buzz(true, pattern, kind);
-      setPulse3d(true);
-      if (pulseTimer.current !== null) window.clearTimeout(pulseTimer.current);
-      pulseTimer.current = window.setTimeout(() => setPulse3d(false), 90);
-    },
-    [settings.vibration, mode],
-  );
-
-  const profile = FORCE_PROFILES[mode];
-
-  // Maps the raw stroke position through the active ForceAdapt profile.
-  const mapValue = (v: number) => {
-    const raw = Math.max(0, Math.min(1, v));
-    const [lo, hi] = profile.stroke;
-    const t = Math.max(0, Math.min(1, (raw - lo) / Math.max(0.001, hi - lo)));
-    if (profile.digital) return t > 0.5 ? 1 : 0;
-    return Math.max(0, Math.min(1, profile.curve(t)));
-  };
-
-
-  const writeTrigger = useCallback(
-    (next: number) => {
-      const clamped = Math.max(0, Math.min(1, next));
-      // Value goes to the bridge before any painting happens, so the trigger
-      // reaches the PC in the same input task with no render in between.
-      valueRef.current = clamped;
-      set({ [id]: clamped } as Partial<ControllerState>);
-      // The bridge derives DS4 digital trigger bits from this same report.
-      // A separate l2/r2=true packet would force partial travel back to 100%.
-
-      const plate = plateRef.current;
-      if (plate) {
-        plate.style.transform = `translate3d(0, ${clamped * 4}px, 0) rotateX(${clamped * 2.5}deg)`;
-      }
-      const bar = barRef.current;
-      if (bar) bar.style.width = `${Math.max(12, clamped * 86)}%`;
-    },
-    [id, press, set],
-  );
-
-  const move = (e: PointerEvent<HTMLButtonElement>) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    // Physical-style trigger travel: top = fully pulled, bottom = released.
-    const travel = Math.max(0, Math.min(1, (r.bottom - e.clientY) / r.height));
-    // Pointer pressure may be a constant 0.5 on non-force hardware.
-    // Use reproducible travel; do not mistake that fallback for finger force.
-    const next = mapValue(travel);
-    writeTrigger(next);
-    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-    const band = Math.min(5, Math.floor(next * 6));
-
-    // Resistance wall — a distinct hard bump at the actuation point.
-    const beyond = next >= profile.wall;
-    if (beyond !== pastWall.current) {
-      pastWall.current = beyond;
-      pulseFeedback(beyond ? [6, 4, 18] : [3, 6, 3]);
-      lastFeel.current = now;
-    } else if (band !== lastBand.current && now - lastFeel.current > 45) {
-      lastBand.current = band;
-      lastFeel.current = now;
-
-      if (mode === "race") {
-        pulseFeedback([2, 5 + band, 2]);
-      } else if (mode === "sniper") {
-        pulseFeedback(band >= 3 ? [4, 13] : 5);
-      } else if (mode === "recoil") {
-        pulseFeedback([3, 8 + band, 3]);
-      } else if (mode === "vibration") {
-        pulseFeedback([2, 5, 2, 5, 3]);
-      } else if (mode === "lock" && band === 0) {
-        pulseFeedback([4, 12, 4]);
-      } else {
-        pulseFeedback(Math.min(16, 4 + band * 2));
-      }
-    }
-
-    if (mode === "recoil" && next > 0.58) {
-      const nowRecoil = typeof performance !== "undefined" ? performance.now() : Date.now();
-      if (nowRecoil - lastRecoil.current > 110) {
-        lastRecoil.current = nowRecoil;
-        pulseFeedback([3, 10, 3]);
-      }
-    }
-
-  };
-
-
-  const pressToFull = (e: PointerEvent<HTMLButtonElement>) => {
-    if (pointer.current !== null) return;
-    e.preventDefault();
-    e.stopPropagation();
-    e.currentTarget.setPointerCapture(e.pointerId);
-    pointer.current = e.pointerId;
-    lastBand.current = -1;
-    pastWall.current = true;
-    pulseFeedback([4, 9, 3]);
-    writeTrigger(1);
-  };
-
-  const release = (e?: PointerEvent<HTMLButtonElement>) => {
-    if (pointer.current === null || (e && pointer.current !== e.pointerId)) return;
-    e?.preventDefault();
-    e?.stopPropagation();
+  useEffect(() => {
     pointer.current = null;
+    rectRef.current = null;
+    lastFeel.current = 0;
     lastBand.current = -1;
     lastRecoil.current = 0;
     pastWall.current = false;
-    writeTrigger(0);
-  };
+    valueRef.current = 0;
 
+    if (plateRef.current) {
+      plateRef.current.style.transform = "translate3d(0,0,0)";
+    }
+    if (barRef.current) barRef.current.style.width = "12%";
+  }, [mode]);
+
+  const pulseFeedback = useCallback(
+    (
+      pattern: number | number[],
+      kind: DualRumbleKind = "light",
+      strength = 0.5,
+    ) => {
+      if (!settings.vibration) return;
+
+      buzz(true, pattern, kind);
+
+      const ms = Math.max(
+        45,
+        Math.min(
+          120,
+          (Array.isArray(pattern) ? pattern.reduce((sum, value) => sum + value, 0) * 2.2 : pattern * 3.5),
+        ),
+      );
+
+      const plate = plateRef.current;
+      if (plate) {
+        plate.style.setProperty("--trigger-rattle-strength", String(strength));
+        plate.classList.remove("trigger-3d-rattle");
+        void plate.offsetWidth;
+        plate.classList.add("trigger-3d-rattle");
+        window.setTimeout(() => plate.classList.remove("trigger-3d-rattle"), ms);
+      }
+    },
+    [settings.vibration],
+  );
+
+  const writeTrigger = useCallback(
+    (next: number) => {
+      const clamped = triggerClamp(next);
+      valueRef.current = clamped;
+      set({ [id]: clamped } as Partial<ControllerState>);
+
+      const plate = plateRef.current;
+      if (plate) {
+        const travelPx = clamped * 8.5;
+        plate.style.transform =
+          "translate3d(0, " +
+          travelPx +
+          "px, 0) rotateX(" +
+          clamped * 4.5 +
+          "deg)";
+      }
+
+      const bar = barRef.current;
+      if (bar) bar.style.width = Math.max(12, clamped * 86) + "%";
+    },
+    [id, set],
+  );
+
+  const move = useCallback(
+    (e: PointerEvent<HTMLButtonElement>) => {
+      const rawTravel = triggerTravelFromPointer(e, rectRef.current);
+      const pressure = triggerPressureAssist(e);
+      const mapped = mapForceAdaptTrigger(rawTravel, profile, pressure);
+
+      writeTrigger(mapped.value);
+
+      const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+      const raw = mapped.raw;
+      const band = Math.min(5, Math.floor(mapped.value * 6));
+
+      // Hysteresis prevents chatter around the actuation wall.
+      const wallOn = profile.wall + 0.018;
+      const wallOff = Math.max(0, profile.wall - 0.028);
+      const beyond = pastWall.current ? raw >= wallOff : raw >= wallOn;
+
+      if (beyond !== pastWall.current) {
+        pastWall.current = beyond;
+        lastFeel.current = now;
+        pulseFeedback(
+          beyond ? [6, 4, 18] : [3, 5, 3],
+          beyond ? "heavy" : "light",
+          beyond ? 0.85 : 0.45,
+        );
+      } else if (band !== lastBand.current && now - lastFeel.current > 42) {
+        lastBand.current = band;
+        lastFeel.current = now;
+
+        if (mode === "recoil") {
+          pulseFeedback([2, 7 + band, 2], "gunfire", 0.72);
+        } else if (mode === "vibration") {
+          pulseFeedback([2, 5, 2, 5, 3], "engine", 0.62);
+        } else if (mode === "sniper") {
+          pulseFeedback(
+            band >= 4 ? [4, 10] : 4,
+            band >= 4 ? "heavy" : "light",
+            band >= 4 ? 0.78 : 0.38,
+          );
+        } else if (mode === "race") {
+          pulseFeedback([2, 4 + band, 2], "light", 0.45);
+        } else if (mode === "lock") {
+          pulseFeedback([4, 12, 4], "ui", 0.7);
+        } else {
+          pulseFeedback(Math.min(16, 4 + band * 2), "ui", 0.3);
+        }
+      }
+
+      if (mode === "recoil" && raw > profile.wall + 0.12) {
+        if (now - lastRecoil.current > 92) {
+          lastRecoil.current = now;
+          pulseFeedback([3, 10, 3], "gunfire", 0.82);
+        }
+      } else if (mode === "vibration" && raw > 0.08) {
+        if (now - lastRecoil.current > 140) {
+          lastRecoil.current = now;
+          pulseFeedback([2, 5, 2], "engine", 0.56);
+        }
+      }
+    },
+    [mode, profile, pulseFeedback, writeTrigger],
+  );
+
+  const pressToFull = useCallback(
+    (e: PointerEvent<HTMLButtonElement>) => {
+      if (pointer.current !== null) return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.currentTarget.setPointerCapture(e.pointerId);
+      pointer.current = e.pointerId;
+      rectRef.current = e.currentTarget.getBoundingClientRect();
+      lastBand.current = -1;
+      lastRecoil.current = 0;
+      pastWall.current = false;
+
+      const mapped = mapForceAdaptTrigger(
+        triggerTravelFromPointer(e, rectRef.current),
+        profile,
+        triggerPressureAssist(e),
+      );
+
+      // Keep tap-to-press behavior, but do not force every contact to 100%.
+      // A low-position touch becomes a light pull and a drag can continue it.
+      writeTrigger(
+        mapped.value > 0.12
+          ? mapped.value
+          : profile.digital
+            ? 1
+            : 0.18,
+      );
+
+      pulseFeedback(
+        profile.digital ? [4, 12, 4] : [4, 9, 3],
+        profile.digital ? "ui" : "light",
+        profile.digital ? 0.72 : 0.48,
+      );
+    },
+    [profile, pulseFeedback, writeTrigger],
+  );
+
+  const release = useCallback(
+    (e?: PointerEvent<HTMLButtonElement>) => {
+      if (pointer.current === null || (e && pointer.current !== e.pointerId)) return;
+
+      e?.preventDefault();
+      e?.stopPropagation();
+
+      pointer.current = null;
+      rectRef.current = null;
+      lastBand.current = -1;
+      lastRecoil.current = 0;
+      pastWall.current = false;
+      writeTrigger(0);
+    },
+    [writeTrigger],
+  );
 
   useInputReset(() => release());
 
   return (
     <button
       type="button"
-      aria-label={`${label} ForceAdapt trigger — ${mode}`}
+      aria-label={label + " ForceAdapt trigger — " + mode}
       onPointerDown={pressToFull}
       onPointerMove={(e) => pointer.current === e.pointerId && (e.preventDefault(), move(e))}
       onPointerUp={release}
@@ -466,7 +613,7 @@ function Trigger({
       <span className="pointer-events-none absolute inset-[3px] rounded-[0.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,.06),rgba(0,0,0,.16))]" />
       <span
         ref={plateRef}
-        className={`flat-pad-trigger-plate pointer-events-none absolute inset-[6px] overflow-hidden rounded-[0.72rem] border border-cyan-200/20 bg-[linear-gradient(180deg,#566572,#252f38_48%,#11161c)] shadow-[inset_0_2px_1px_rgba(255,255,255,.22),inset_0_-6px_10px_rgba(0,0,0,.58),0_5px_8px_rgba(0,0,0,.5)] will-change-transform ${pulse3d ? "trigger-3d-rattle" : ""}`}
+        className="flat-pad-trigger-plate pointer-events-none absolute inset-[6px] overflow-hidden rounded-[0.72rem] border border-cyan-200/20 bg-[linear-gradient(180deg,#566572,#252f38_48%,#11161c)] shadow-[inset_0_2px_1px_rgba(255,255,255,.22),inset_0_-6px_10px_rgba(0,0,0,.58),0_5px_8px_rgba(0,0,0,.5)] will-change-transform"
         style={{ transform: "translate3d(0,0,0)" }}
       >
         <span className="absolute inset-x-2 top-2 h-[3px] rounded-full bg-white/15" />
@@ -478,7 +625,7 @@ function Trigger({
         </span>
         <span
           className="pointer-events-none absolute bottom-[1px] h-2 w-[2px] rounded-full bg-amber-300/80 shadow-[0_0_6px_rgba(252,211,77,.7)]"
-          style={{ left: `${7 + profile.wall * 86}%` }}
+          style={{ left: (7 + profile.wall * 86) + "%" }}
           aria-hidden
         />
         <span
@@ -486,7 +633,6 @@ function Trigger({
           className="absolute bottom-1 left-1/2 h-1 -translate-x-1/2 rounded-full bg-cyan-300/70 shadow-[0_0_7px_rgba(34,211,238,.65)]"
           style={{ width: "12%" }}
         />
-
       </span>
       <span className="pointer-events-none absolute bottom-0.5 text-[5px] font-black uppercase tracking-[0.12em] text-slate-500">
         {mode === "vibration" ? "VIBRATE" : mode}
@@ -494,90 +640,8 @@ function Trigger({
     </button>
   );
 }
-function MiniScreen({
-  profile,
-  triggerMode,
-  motion,
-  turbo,
-  gameName,
-  profileName,
-}: {
-  profile: number;
-  triggerMode: TriggerMode;
-  motion: boolean;
-  turbo: boolean;
-  gameName?: string;
-  profileName?: string | undefined;
-}) {
-  const safeGameName = typeof gameName === "string" ? gameName : "Desktop";
-  const normalizedGameName = safeGameName.trim();
-  const displayGame = normalizedGameName
-    ? normalizedGameName.replace(/\s+/g, " ").slice(0, 18).toUpperCase()
-    : "DESKTOP";
 
-  return (
-    <div className="flat-pad-screen flex h-[clamp(2.75rem,7.8svh,3.5rem)] w-[clamp(5rem,7vw,7rem)] flex-col items-center justify-center rounded-lg border border-cyan-300/25 bg-[#071018] shadow-[inset_0_0_14px_rgba(34,211,238,.12),0_0_12px_rgba(34,211,238,.1)]">
-      <span className="max-w-full overflow-hidden text-center text-[4px] font-black leading-none tracking-[0.07em] text-cyan-400/70 whitespace-nowrap">
-        TOUCHTOSTEER • P{profile}
-      </span>
-      <span
-        className="mt-1 max-w-[94%] overflow-hidden text-center text-[8px] font-mono font-bold leading-none text-cyan-200 whitespace-nowrap"
-        title={safeGameName}
-      >
-        {displayGame}
-      </span>
-      <span className="mt-1 max-w-full overflow-hidden text-center text-[4.5px] font-black leading-none tracking-[0.07em] text-cyan-300/65 whitespace-nowrap">
-        {profileName ?? triggerMode.toUpperCase()} • {motion ? "GYRO" : turbo ? "TURBO" : "READY"}
-      </span>
-    </div>
-  );
-}
-
-function ExtraButton({
-  label,
-  id,
-  settings,
-  press,
-  className = "",
-}: {
-  label: string;
-  id: string;
-  settings: Settings;
-  press: Props["press"];
-  className?: string;
-}) {
-  return (
-    <SurfaceButton
-      label={label}
-      id={id}
-      settings={settings}
-      press={press}
-      className={`h-[clamp(2.25rem,6.5svh,2.75rem)] min-w-[clamp(4rem,7vw,4.5rem)] rounded-xl px-3 text-[9px] text-slate-300 ${className}`}
-    />
-  );
-}
-
-function GyroControl({
-  enabled,
-  denied,
-  onToggle,
-}: {
-  enabled: boolean;
-  denied: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className={`grid h-9 min-w-16 place-items-center rounded-lg border text-[7px] font-black uppercase tracking-[0.14em] ${enabled ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-200" : "border-white/10 bg-black/20 text-slate-400"}`}
-    >
-      {denied ? "GYRO DENIED" : enabled ? "GYRO ON" : "GYRO"}
-    </button>
-  );
-}
-
-export function FlatPad({ settings, set, press, onSettingsChange, gameName = "Desktop", profileName }: Props) {
+function FlatPad({ settings, set, press, onSettingsChange, gameName = "Desktop", profileName }: Props) {
   const [turbo, setTurbo] = useState(false);
   const [profile, setProfile] = useState(1);
   const [triggerMode, setTriggerMode] = useState<TriggerMode>("regular");

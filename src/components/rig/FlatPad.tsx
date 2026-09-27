@@ -781,3 +781,7 @@ export function FlatPad({ settings, set, press, onSettingsChange, gameName = "De
     </div>
   );
 }
+
+// Default export keeps the controller import resilient across Vite/TanStack HMR rebuilds.
+export default FlatPad;
+

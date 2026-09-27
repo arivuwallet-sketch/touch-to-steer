@@ -63,15 +63,42 @@ export const FORCEFLEX_DESCRIPTIONS: Record<JoystickTensionGf, string> = {
   100: "HEAVY • FPS / COMPETITIVE",
 };
 
-/** Software ForceFlex response curve for the virtual stick. */
-export function applyForceFlex(v: number, tensionGf: JoystickTensionGf) {
+/**
+ * Software ForceFlex response curve for the virtual stick.
+ *
+ * The old implementation stacked the ForceFlex exponent on top of the
+ * global linearity exponent. At higher GF values that compounded into an
+ * overly compressed stick (especially around 100 gf), making the analog
+ * range feel slow and "sticky". ForceFlex now owns one calibrated response
+ * curve and lightly blends the user's linearity control into that curve.
+ *
+ * 30 gf  = feather / faster centre response
+ * 50 gf  = neutral / balanced
+ * 80 gf  = firm / precision
+ * 100 gf = heavy / controlled, while still reaching full lock cleanly
+ */
+export function applyForceFlex(
+  v: number,
+  tensionGf: JoystickTensionGf,
+  linearity = 1,
+) {
   if (!Number.isFinite(v)) return 0;
+
   const magnitude = Math.max(0, Math.min(1, Math.abs(v)));
-  const exponent =
-    tensionGf === 30 ? 0.82 :
+  const baseExponent =
+    tensionGf === 30 ? 0.78 :
     tensionGf === 50 ? 0.94 :
-    tensionGf === 80 ? 1.12 :
-    1.26;
+    tensionGf === 80 ? 1.08 :
+    1.2;
+
+  // Blend, rather than multiply, the general linearity control so the
+  // ForceFlex detents remain distinct at every GF setting.
+  const line = Math.max(1, Math.min(2.5, Number.isFinite(linearity) ? linearity : 1));
+  const exponent = baseExponent + (line - 1) * 0.35;
+
+  // Guarantee exact endpoints for a predictable virtual Hall-stick travel.
+  if (magnitude <= 0) return 0;
+  if (magnitude >= 1) return Math.sign(v);
   return Math.sign(v) * Math.pow(magnitude, exponent);
 }
 
@@ -217,9 +244,29 @@ export function applyCurve(v: number, deadzone: number, linearity: number, sens:
 /** Radial shaping preserves stick direction and a circular full-travel boundary. */
 export function applyStickResponse(x: number, y: number, settings: Settings): [number, number] {
   if (!Number.isFinite(x) || !Number.isFinite(y)) return [0, 0];
+
   const radius = Math.hypot(x, y);
-  if (!radius) return [0, 0];
-  const shaped = applyForceFlex(applyCurve(Math.min(1, radius), settings.deadzone, settings.linearity, settings.sensitivity), settings.joystickTensionGf);
+  if (!radius || radius <= settings.deadzone) return [0, 0];
+
+  // Normalize once after deadzone removal, then apply the ForceFlex response
+  // exactly once. This keeps diagonal travel circular and prevents the
+  // linearity + ForceFlex exponents from compounding into a sluggish 100 gf.
+  const normalized =
+    Math.min(1, radius) - settings.deadzone <= 0
+      ? 0
+      : (Math.min(1, radius) - settings.deadzone) / Math.max(0.001, 1 - settings.deadzone);
+
+  const forceFlex = applyForceFlex(
+    normalized,
+    settings.joystickTensionGf,
+    settings.linearity,
+  );
+
+  const shaped = Math.min(
+    1,
+    Math.max(0, forceFlex * Math.max(0, settings.sensitivity)),
+  );
+
   return [x / radius * shaped, y / radius * shaped];
 }
 

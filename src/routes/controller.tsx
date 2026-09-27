@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Gamepad2, Gauge, Mouse, Settings as SettingsIcon } from "lucide-react";
 import { SettingsPanel } from "@/components/rig/SettingsPanel";
-import { FlatPad } from "@/components/rig/FlatPad";
+import FlatPad from "@/components/rig/FlatPad";
 import { FlatWheel } from "@/components/rig/FlatWheel";
 import { FlatMouse } from "@/components/rig/FlatMouse";
 import { RotateGate } from "@/components/rig/RotateGate";

@@ -74,6 +74,7 @@ function SurfaceButton({
   style,
   turbo = false,
   onClick,
+  stablePress = false,
 }: {
   label: ReactNode;
   id: string;
@@ -83,6 +84,8 @@ function SurfaceButton({
   style?: CSSProperties;
   turbo?: boolean;
   onClick?: () => void;
+  /** Keep absolutely centered buttons from jumping when pressed. */
+  stablePress?: boolean;
 }) {
   const held = useHoldControl((down) => {
     press(id, down);
@@ -95,7 +98,7 @@ function SurfaceButton({
       aria-label={typeof label === "string" ? label : id}
       {...held}
       onClick={onClick}
-      className={`grid touch-none select-none place-items-center rounded-xl border border-white/10 bg-[linear-gradient(145deg,#3a4551,#151b22)] font-black text-slate-100 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),inset_0_-5px_9px_rgba(0,0,0,.62),0_5px_0_#06090d,0_9px_14px_rgba(0,0,0,.5)] transition-transform active:translate-y-[3px] active:shadow-[inset_0_2px_6px_rgba(0,0,0,.65),0_2px_0_#06090d] ${className}`}
+      className={`grid touch-none select-none place-items-center rounded-xl border border-white/10 bg-[linear-gradient(145deg,#3a4551,#151b22)] font-black text-slate-100 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),inset_0_-5px_9px_rgba(0,0,0,.62),0_5px_0_#06090d,0_9px_14px_rgba(0,0,0,.5)] transition-transform ${stablePress ? "active:scale-[.97] active:shadow-[inset_0_2px_6px_rgba(0,0,0,.65),0_4px_0_#06090d]" : "active:translate-y-[3px] active:shadow-[inset_0_2px_6px_rgba(0,0,0,.65),0_2px_0_#06090d]"} ${className}`}
       style={style}
     >
       {label}
@@ -263,8 +266,8 @@ function ApexFaceButtons({ settings, press, turbo }: { settings: Settings; press
   return (
     <div className="flat-pad-face relative size-[clamp(7.9rem,25svh,11.4rem)]">
       <SurfaceButton label="Y" id="y" settings={settings} press={press} turbo={turbo} className="absolute left-1/2 top-0 size-[clamp(2.75rem,8svh,3.5rem)] -translate-x-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#ffd43b]" />
-      <SurfaceButton label="X" id="x" settings={settings} press={press} turbo={turbo} className="absolute left-0 top-1/2 size-[clamp(2.75rem,8svh,3.5rem)] -translate-y-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#58b9ff]" />
-      <SurfaceButton label="B" id="b" settings={settings} press={press} turbo={turbo} className="absolute right-0 top-1/2 size-[clamp(2.75rem,8svh,3.5rem)] -translate-y-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#ff5b57]" />
+      <SurfaceButton label="X" id="x" settings={settings} press={press} turbo={turbo} stablePress className="absolute left-0 top-1/2 size-[clamp(2.75rem,8svh,3.5rem)] -translate-y-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#58b9ff]" />
+      <SurfaceButton label="B" id="b" settings={settings} press={press} turbo={turbo} stablePress className="absolute right-0 top-1/2 size-[clamp(2.75rem,8svh,3.5rem)] -translate-y-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#ff5b57]" />
       <SurfaceButton label="A" id="a" settings={settings} press={press} turbo={turbo} className="absolute bottom-0 left-1/2 size-[clamp(2.75rem,8svh,3.5rem)] -translate-x-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#62df87]" />
     </div>
   );

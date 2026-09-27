@@ -32,7 +32,7 @@ open ios/Runner.xcworkspace   # sign with your Apple team, then Archive
 
 ## One-click cloud builds
 
-- `codemagic.yaml` — select android-debug for a test APK. For android-release, upload your existing keystore with reference nativeforge_upload. For ios-release, upload a matching App Store distribution certificate and provisioning profile.
+- `codemagic.yaml` — select android-debug for a test APK. For android-release, provide the existing upload keystore through encrypted Codemagic environment variables (`CM_KEYSTORE`, `CM_KEYSTORE_PASSWORD`, `CM_KEY_ALIAS`, `CM_KEY_PASSWORD`). For ios-release, upload a matching App Store distribution certificate and provisioning profile.
 - `.github/workflows/build.yml` — GitHub Actions builds a test APK and unsigned iOS app. Store distribution requires signed release artifacts.
 
 ## Where settings live

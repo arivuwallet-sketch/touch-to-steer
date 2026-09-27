@@ -26,9 +26,9 @@ workflows:
       flutter: 3.47.3
       java: 17
       ndk: 28.2.13676358
-      # Upload your existing Play upload key with reference nativeforge_upload.
-      android_signing:
-        - nativeforge_upload
+      # Android release signing is supplied through encrypted Codemagic environment
+      # variables: CM_KEYSTORE (base64), CM_KEYSTORE_PASSWORD, CM_KEY_ALIAS,
+      # CM_KEY_PASSWORD and optionally CM_KEYSTORE_PATH. Do not commit the keystore.
     scripts:
       - name: Prepare current Flutter Android project
         script: |

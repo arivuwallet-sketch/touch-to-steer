@@ -6,6 +6,7 @@ import { Link } from "@tanstack/react-router";
 import { CircleStop, Link2, X, SlidersHorizontal, RadioTower, ChevronRight } from "lucide-react";
 
 type Props = {
+  onEditLayout?: (mode: "pad" | "wheel") => void;
   settings: Settings;
   gameProfile?: ResolvedGameProfile;
   profileMappingsSupported?: boolean;
@@ -28,6 +29,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 export function SettingsPanel({
+  onEditLayout,
   settings,
   gameProfile,
   profileMappingsSupported,
@@ -137,6 +139,11 @@ export function SettingsPanel({
           {connectionError && <p role="alert" className="mt-2 text-xs text-amber-300">{connectionError}</p>}
         </div>
         <div className="spectral-settings-body">
+          <div className="mb-4 rounded-xl border border-cyan-300/25 p-3">
+            <h2 className="font-bold">Custom layout editor</h2>
+            <p className="my-2 text-xs text-muted-foreground">Move, resize, hide and swap controls. Layouts save separately for each mode on this device.</p>
+            <div className="flex gap-2"><Button onClick={() => onEditLayout?.("pad")}>Edit gamepad layout</Button><Button onClick={() => onEditLayout?.("wheel")}>Edit steering layout</Button></div>
+          </div>
           <div className="spectral-settings-block-label"><span>01</span><div><strong>OUTPUT + RESPONSE</strong><small>Virtual device and steering behavior</small></div><ChevronRight size={13} /></div>
           <Row label="PC controller output">
             <select

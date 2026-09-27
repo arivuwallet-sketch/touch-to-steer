@@ -1,3 +1,5 @@
+import { LayoutEditor } from "@/components/rig/LayoutEditor";
+import { useControlLayout } from "@/hooks/useControlLayout";
 import { updateGameOverride } from "@/lib/game-profiles";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -54,6 +56,11 @@ function Rig() {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [showSettings, setShowSettings] = useState(false);
   const [mode, setMode] = useState<"pad" | "wheel" | "mouse">("pad");
+  const [editingLayout, setEditingLayout] = useState(false);
+  const controlsRoot = useRef<HTMLDivElement>(null);
+  const layoutControls = useControlLayout(controlsRoot, mode, mode === "mouse" ? undefined : settings.controlLayouts?.[mode]);
+  const editingRef = useRef(false);
+  editingRef.current = editingLayout;
   const [mobileLayout, setMobileLayout] = useState(false);
   const stateRef = useRef<ControllerState>(emptyState());
   const touchStateRef = useRef<ControllerState>(emptyState());
@@ -188,6 +195,7 @@ function Rig() {
   }, [settings.vibration]);
 
   const set = useCallback((p: Partial<ControllerState>) => {
+    if (editingRef.current) return;
     const previous = stateRef.current;
     touchStateRef.current = { ...touchStateRef.current, ...p };
     const next = mergeControllerInputs(touchStateRef.current, keyboardStateRef.current);
@@ -245,6 +253,7 @@ function Rig() {
   }, [sendControllerEdge, sendControllerStateNow, triggerAnalogHaptic]);
 
   const press = useCallback((id: string, down: boolean) => {
+    if (editingRef.current) return;
     if (settings.vibration) {
       playDualRumble("ui", {
         strongMagnitude: 0,
@@ -303,7 +312,7 @@ function Rig() {
       <RotateGate mode={mode} />
 
       {/* ---------- rig fills the screen ---------- */}
-      <div className="absolute inset-0">
+      <div ref={controlsRoot} className="absolute inset-0">
         {mode === "pad" ? (
           <FlatPad settings={settings} set={set} press={press} onSettingsChange={patch} gameName={activeGame} profileName={gameProfile.name} />
         ) : mode === "wheel" ? (
@@ -356,8 +365,9 @@ function Rig() {
         </Button>
       </div>
 
-      {showSettings && (
+      {showSettings && !editingLayout && (
         <SettingsPanel
+          onEditLayout={(target) => { releaseAll(); setMode(target); setEditingLayout(true); }}
           settings={{ ...settings, wheelBindings: gameProfile.wheelBindings, padBindings: gameProfile.padBindings }}
           gameProfile={gameProfile}
           profileMappingsSupported={profileMappingsSupported}
@@ -369,6 +379,12 @@ function Rig() {
           onConnect={(key) => connect(settings.bridgeUrl, key)}
           onDisconnect={disconnect}
         />
+      )}
+      {editingLayout && mode !== "mouse" && layoutControls.mode === mode && (
+        <LayoutEditor key={mode} mode={mode} controls={layoutControls.items} saved={settings.controlLayouts?.[mode]}
+          aspect={(controlsRoot.current?.clientWidth || 16) / (controlsRoot.current?.clientHeight || 9)}
+          onClose={() => { releaseAll(); setEditingLayout(false); }}
+          onSave={(layout) => { releaseAll(); patch({controlLayouts:{...settings.controlLayouts,[mode]:layout}}); setEditingLayout(false); }} />
       )}
     </main>
   );

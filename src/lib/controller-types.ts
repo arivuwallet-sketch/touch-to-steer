@@ -1,3 +1,4 @@
+import type { ControlLayouts } from "./control-layout";
 import type { PadBindings, SavedGameProfile } from "./game-profiles";
 export type WheelOutput = "rt" | "lt" | "a" | "b" | "x" | "y" | "lb" | "rb" | "l3" | "r3" | "none";
 export const defaultWheelBindings = {
@@ -103,6 +104,7 @@ export function applyForceFlex(
 }
 
 export type Settings = {
+  controlLayouts: ControlLayouts;
   wheelBindings: WheelBindings;
   padBindings: PadBindings;
   autoGameProfiles: boolean;
@@ -153,6 +155,7 @@ export type Settings = {
 };
 
 export const defaultSettings: Settings = {
+  controlLayouts: {},
   bridgeUrl: "ws://192.168.1.10:8787",
   outputMode: "xinput",
   steerMode: "touch",

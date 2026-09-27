@@ -534,3 +534,33 @@ test('Game rumble animates both trigger plates and stop removes both effects',()
   assert.equal(app.host.querySelectorAll('.trigger-3d-rattle').length,0);
  } finally {app.unmount();}
 });
+
+test('Separate layout editor saves drag/size/visibility edits, swaps and cancels without game controls',()=>{
+ const {LayoutEditor}=loadTS('src/components/rig/LayoutEditor.tsx');
+ const controls=[{id:'a',label:'A',box:{x:10,y:20,w:15,h:15}},{id:'b',label:'B',box:{x:50,y:20,w:20,h:20}}];
+ let saved=null,cancelled=false;
+ const app=mount(LayoutEditor,{mode:'pad',controls,saved:undefined,aspect:16/9,onSave:l=>saved=l,onClose:()=>cancelled=true});
+ try {
+  pointer(app.button('Arrange A'),'pointerdown',1,{clientX:10,clientY:20});
+  const canvas=app.host.querySelector('[style*="aspect-ratio"]');
+  pointer(canvas,'pointermove',1,{clientX:30,clientY:30});pointer(canvas,'pointerup');
+  act(()=>app.button('Save layout').click());assert.equal(saved.a.x,30);assert.equal(saved.a.y,30);
+  act(()=>app.button('Undo').click());act(()=>app.button('Save layout').click());assert.equal(saved.a.x,10);
+  act(()=>app.button('Cancel').click());assert.equal(cancelled,true);assert.equal(app.reports.length,0);
+ } finally {app.unmount();}
+});
+
+test('Saved layout changes actual controls and reset restores native sizing',()=>{
+ const {useControlLayout}=loadTS('src/hooks/useControlLayout.ts');
+ const original=globalThis.getComputedStyle;globalThis.getComputedStyle=window.getComputedStyle.bind(window);
+ function Harness({layout}) {
+  const root=React.useRef(null);useControlLayout(root,'pad',layout);
+  return React.createElement('div',{ref:root},React.createElement('button',{'aria-label':'A',style:{width:'40px'}},'A'));
+ }
+ const app=mount(Harness,{layout:{'A:0':{x:20,y:30,w:25,h:15,hidden:true}}});
+ try {
+  const button=app.button('A');assert.equal(button.style.width,'25px');assert.equal(button.style.height,'15px');assert.equal(button.style.visibility,'hidden');
+  assert.match(button.style.transform,/translate\(20px,30px\)|translate\(20px, 30px\)/);
+  app.rerender({layout:{}});assert.equal(button.style.width,'40px');assert.equal(button.style.visibility,'');assert.equal(button.style.transform,'');
+ } finally {app.unmount();globalThis.getComputedStyle=original;}
+});

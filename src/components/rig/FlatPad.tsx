@@ -638,7 +638,7 @@ function Trigger({
   );
 }
 
-function FlatPad({ settings, set, press, onSettingsChange, gameName = "Desktop", profileName }: Props) {
+export function FlatPad({ settings, set, press, onSettingsChange, gameName = "Desktop", profileName }: Props) {
   const [turbo, setTurbo] = useState(false);
   const [profile, setProfile] = useState(1);
   const [triggerMode, setTriggerMode] = useState<TriggerMode>("regular");

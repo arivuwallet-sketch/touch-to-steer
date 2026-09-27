@@ -35,6 +35,7 @@ export function useBridge(
   profileOptions: ProfileOptions = {},
 ) {
   const [profileMappingsSupported, setProfileMappingsSupported] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [status, setStatus] = useState<BridgeStatus>("idle");
   const [latency, setLatency] = useState<number | null>(null);
   const [packets, setPackets] = useState(0);
@@ -150,12 +151,19 @@ export function useBridge(
   }, [clearLoop, clearMoveFlush, clearTelemetryTimer]);
 
   const connect = useCallback(
-    (url: string) => {
+    (url: string, pairingKey = "") => {
       disconnect();
+      setConnectionError(null);
 
       let ws: WebSocket;
       try {
-        ws = new WebSocket(url);
+        const key = pairingKey.trim();
+        if (key && (!url.startsWith("wss://") && !/^ws:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(url))) {
+          setConnectionError("Internet pairing requires a secure wss:// address.");
+          setStatus("error");
+          return;
+        }
+        ws = key ? new WebSocket(url, ["rig-v1", `rig-auth.${key}`]) : new WebSocket(url);
       } catch {
         setStatus("error");
         return;
@@ -260,6 +268,7 @@ export function useBridge(
               lastSentStateRef.current = "";
             } else {
               clearLoop();
+              setConnectionError(msg.controller?.error || "Controller unavailable on the host.");
               setStatus("error");
             }
             return;
@@ -385,7 +394,7 @@ export function useBridge(
         }
       };
 
-      ws.onerror = () => { if (wsRef.current === ws) setStatus("error"); };
+      ws.onerror = () => { if (wsRef.current === ws) { setConnectionError("Connection failed. Check the host address, pairing key, tunnel and host capacity."); setStatus("error"); } };
       ws.onclose = () => {
         if (wsRef.current === ws) {
           window.dispatchEvent(new Event(RELEASE_INPUTS));
@@ -568,6 +577,7 @@ export function useBridge(
 
   return {
     gameProfile,
+    connectionError,
     profileMappingsSupported,
     status,
     latency,

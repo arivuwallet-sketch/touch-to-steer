@@ -65,6 +65,7 @@ function Rig() {
     telemetryLive,
     activeGame,
     gameProfile,
+    connectionError,
     profileMappingsSupported,
     connect,
     disconnect,
@@ -364,7 +365,8 @@ function Rig() {
           onClose={() => setShowSettings(false)}
           status={status}
           latency={latency}
-          onConnect={() => connect(settings.bridgeUrl)}
+          connectionError={connectionError}
+          onConnect={(key) => connect(settings.bridgeUrl, key)}
           onDisconnect={disconnect}
         />
       )}

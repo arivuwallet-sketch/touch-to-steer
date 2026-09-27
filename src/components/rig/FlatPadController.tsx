@@ -98,7 +98,7 @@ function SurfaceButton({
       aria-label={typeof label === "string" ? label : id}
       {...held}
       onClick={onClick}
-      className={`grid touch-none select-none place-items-center rounded-xl border border-white/10 bg-[linear-gradient(145deg,#3a4551,#151b22)] font-black text-slate-100 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),inset_0_-5px_9px_rgba(0,0,0,.62),0_5px_0_#06090d,0_9px_14px_rgba(0,0,0,.5)] transition-transform ${stablePress ? "active:scale-[.97] active:shadow-[inset_0_2px_6px_rgba(0,0,0,.65),0_4px_0_#06090d]" : "active:translate-y-[3px] active:shadow-[inset_0_2px_6px_rgba(0,0,0,.65),0_2px_0_#06090d]"} ${className}`}
+      className={`grid touch-none select-none place-items-center rounded-xl border border-white/10 bg-[linear-gradient(145deg,#3a4551,#151b22)] font-black text-slate-100 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),inset_0_-5px_9px_rgba(0,0,0,.62),0_5px_0_#06090d,0_9px_14px_rgba(0,0,0,.5)] transition-shadow active:shadow-[inset_0_2px_6px_rgba(0,0,0,.65),0_2px_0_#06090d] ${className}`}
       style={style}
     >
       {label}
@@ -132,7 +132,7 @@ function Stick({
     const r = rect.current;
     if (!r) return;
 
-    const radius = Math.max(1, Math.min(r.width, r.height) / 2);
+    const radius = Math.max(1, Math.min(r.width, r.height) * 0.215);
     let x = (clientX - (r.left + r.width / 2)) / radius;
     let y = (clientY - (r.top + r.height / 2)) / radius;
     const m = Math.hypot(x, y);
@@ -144,7 +144,7 @@ function Stick({
 
     onMove(...applyStickResponse(x, -y, settings));
 
-    const travel = 22 + (settings.joystickTensionGf / 100) * 12;
+    const travel = radius;
     const thumb = thumbRef.current;
     if (thumb) {
       thumb.style.transform = `translate3d(calc(-50% + ${x * travel}px), calc(-50% + ${y * travel}px), 0)`;
@@ -165,8 +165,7 @@ function Stick({
     pointMagnitude.current = magnitude;
   };
 
-  const update = (e: PointerEvent<HTMLDivElement>) => {
-    const native = e.nativeEvent as globalThis.PointerEvent;
+  const update = (native: globalThis.PointerEvent) => {
     // Use only the newest sample of a coalesced batch: older samples are stale
     // input and re-sending them would show up as ghosting/rubber-banding.
     const events = native.getCoalescedEvents?.();
@@ -174,7 +173,7 @@ function Stick({
     apply(latest.clientX, latest.clientY);
   };
 
-  const release = (e?: PointerEvent<HTMLElement>) => {
+  const release = (e?: { pointerId: number }) => {
     if (pointer.current === null || (e && pointer.current !== e.pointerId)) return;
     pointer.current = null;
     pointMagnitude.current = 0;
@@ -183,6 +182,19 @@ function Stick({
     if (thumb) thumb.style.transform = "translate3d(-50%,-50%,0)";
     onMove(0, 0);
   };
+
+  useEffect(() => {
+    const move = (event: globalThis.PointerEvent) => { if (pointer.current === event.pointerId) update(event); };
+    const end = (event: globalThis.PointerEvent) => release(event);
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", end);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", end);
+      window.removeEventListener("pointercancel", end);
+    };
+  });
 
   useInputReset(() => {
     release();
@@ -205,13 +217,12 @@ function Stick({
         onPointerDown={(e) => {
           if (pointer.current !== null) return;
           e.preventDefault();
-          e.currentTarget.setPointerCapture(e.pointerId);
+          try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* window listeners retain input */ }
           pointer.current = e.pointerId;
           rect.current = e.currentTarget.getBoundingClientRect();
           buzz(settings.vibration, 6);
           apply(e.clientX, e.clientY);
         }}
-        onPointerMove={(e) => pointer.current === e.pointerId && update(e)}
         onPointerUp={release}
         onPointerCancel={release}
         onLostPointerCapture={release}
@@ -307,7 +318,7 @@ const FORCE_PROFILES: Record<TriggerMode, ForceProfile> = {
   recoil: {
     stroke: [0.015, 0.96],
     wall: 0.43,
-    curve: (t) => (t < 0.32 ? t * 0.48 : 0.1536 + (t - 0.32) * 1.245),
+    curve: (t) => (t < 0.32 ? t * 0.48 : 0.1536 + (t - 0.32) * (0.8464 / 0.68)),
   },
   vibration: {
     stroke: [0.01, 0.98],
@@ -325,31 +336,14 @@ const FORCE_PROFILES: Record<TriggerMode, ForceProfile> = {
 const triggerClamp = (value: number) => Math.max(0, Math.min(1, value));
 
 function triggerTravelFromPointer(
-  event: PointerEvent<HTMLButtonElement>,
-  rect?: DOMRect | null,
+  event: { clientY: number },
+  rect: DOMRect,
 ) {
-  const bounds = rect ?? event.currentTarget.getBoundingClientRect();
+  const bounds = rect;
   if (!bounds.height) return 0;
 
   // Top is full pull, bottom is release.
   return triggerClamp((bounds.bottom - event.clientY) / bounds.height);
-}
-
-function triggerPressureAssist(event: PointerEvent<HTMLButtonElement>) {
-  if (event.pointerType === "pen" && event.pressure > 0 && event.pressure < 1) {
-    return triggerClamp((event.pressure - 0.05) / 0.95);
-  }
-
-  if (
-    event.pointerType === "touch" &&
-    event.pressure > 0 &&
-    event.pressure < 1 &&
-    Math.abs(event.pressure - 0.5) > 0.08
-  ) {
-    return triggerClamp((event.pressure - 0.05) / 0.95);
-  }
-
-  return 0;
 }
 
 function mapForceAdaptTrigger(
@@ -370,7 +364,7 @@ function mapForceAdaptTrigger(
   return {
     raw,
     normalized: t,
-    value: triggerClamp(shaped),
+    value: t <= 0 ? 0 : t >= 1 ? 1 : triggerClamp(shaped),
   };
 }
 
@@ -416,12 +410,13 @@ function Trigger({
     lastRecoil.current = 0;
     pastWall.current = false;
     valueRef.current = 0;
+    set({ [id]: 0 } as Partial<ControllerState>);
 
     if (plateRef.current) {
       plateRef.current.style.transform = "translate3d(0,0,0)";
     }
     if (barRef.current) barRef.current.style.width = "12%";
-  }, [mode]);
+  }, [mode, id, set]);
 
   const pulseFeedback = useCallback(
     (
@@ -477,10 +472,10 @@ function Trigger({
   );
 
   const move = useCallback(
-    (e: PointerEvent<HTMLButtonElement>) => {
+    (e: { clientY: number }) => {
+      if (!rectRef.current) return;
       const rawTravel = triggerTravelFromPointer(e, rectRef.current);
-      const pressure = triggerPressureAssist(e);
-      const mapped = mapForceAdaptTrigger(rawTravel, profile, pressure);
+      const mapped = mapForceAdaptTrigger(rawTravel, profile);
 
       writeTrigger(mapped.value);
 
@@ -544,28 +539,14 @@ function Trigger({
       if (pointer.current !== null) return;
       e.preventDefault();
       e.stopPropagation();
-      e.currentTarget.setPointerCapture(e.pointerId);
+      try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* window listeners retain input */ }
       pointer.current = e.pointerId;
       rectRef.current = e.currentTarget.getBoundingClientRect();
       lastBand.current = -1;
       lastRecoil.current = 0;
       pastWall.current = false;
 
-      const mapped = mapForceAdaptTrigger(
-        triggerTravelFromPointer(e, rectRef.current),
-        profile,
-        triggerPressureAssist(e),
-      );
-
-      // Keep tap-to-press behavior, but do not force every contact to 100%.
-      // A low-position touch becomes a light pull and a drag can continue it.
-      writeTrigger(
-        mapped.value > 0.12
-          ? mapped.value
-          : profile.digital
-            ? 1
-            : 0.18,
-      );
+      move(e);
 
       pulseFeedback(
         profile.digital ? [4, 12, 4] : [4, 9, 3],
@@ -573,15 +554,13 @@ function Trigger({
         profile.digital ? 0.72 : 0.48,
       );
     },
-    [profile, pulseFeedback, writeTrigger],
+    [profile, pulseFeedback, move],
   );
 
   const release = useCallback(
-    (e?: PointerEvent<HTMLButtonElement>) => {
+    (e?: { pointerId: number }) => {
       if (pointer.current === null || (e && pointer.current !== e.pointerId)) return;
 
-      e?.preventDefault();
-      e?.stopPropagation();
 
       pointer.current = null;
       rectRef.current = null;
@@ -593,6 +572,18 @@ function Trigger({
     [writeTrigger],
   );
 
+  useEffect(() => {
+    const update = (event: globalThis.PointerEvent) => { if (pointer.current === event.pointerId) move(event); };
+    const end = (event: globalThis.PointerEvent) => release(event);
+    window.addEventListener("pointermove", update);
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", end);
+    return () => {
+      window.removeEventListener("pointermove", update);
+      window.removeEventListener("pointerup", end);
+      window.removeEventListener("pointercancel", end);
+    };
+  }, [move, release]);
   useInputReset(() => release());
 
   return (
@@ -600,7 +591,6 @@ function Trigger({
       type="button"
       aria-label={label + " ForceAdapt trigger — " + mode}
       onPointerDown={pressToFull}
-      onPointerMove={(e) => pointer.current === e.pointerId && (e.preventDefault(), move(e))}
       onPointerUp={release}
       onPointerCancel={release}
       onLostPointerCapture={release}
@@ -634,6 +624,89 @@ function Trigger({
       <span className="pointer-events-none absolute bottom-0.5 text-[5px] font-black uppercase tracking-[0.12em] text-slate-500">
         {mode === "vibration" ? "VIBRATE" : mode}
       </span>
+    </button>
+  );
+}
+
+function MiniScreen({
+  profile,
+  triggerMode,
+  motion,
+  turbo,
+  gameName,
+  profileName,
+}: {
+  profile: number;
+  triggerMode: TriggerMode;
+  motion: boolean;
+  turbo: boolean;
+  gameName?: string;
+  profileName?: string | undefined;
+}) {
+  const safeGameName = typeof gameName === "string" ? gameName : "Desktop";
+  const normalizedGameName = safeGameName.trim();
+  const displayGame = normalizedGameName
+    ? normalizedGameName.replace(/\s+/g, " ").slice(0, 18).toUpperCase()
+    : "DESKTOP";
+
+  return (
+    <div className="flat-pad-screen flex h-[clamp(2.75rem,7.8svh,3.5rem)] w-[clamp(5rem,7vw,7rem)] flex-col items-center justify-center rounded-lg border border-cyan-300/25 bg-[#071018] shadow-[inset_0_0_14px_rgba(34,211,238,.12),0_0_12px_rgba(34,211,238,.1)]">
+      <span className="max-w-full overflow-hidden text-center text-[4px] font-black leading-none tracking-[0.07em] text-cyan-400/70 whitespace-nowrap">
+        TOUCHTOSTEER • P{profile}
+      </span>
+      <span
+        className="mt-1 max-w-[94%] overflow-hidden text-center text-[8px] font-mono font-bold leading-none text-cyan-200 whitespace-nowrap"
+        title={safeGameName}
+      >
+        {displayGame}
+      </span>
+      <span className="mt-1 max-w-full overflow-hidden text-center text-[4.5px] font-black leading-none tracking-[0.07em] text-cyan-300/65 whitespace-nowrap">
+        {profileName ?? triggerMode.toUpperCase()} • {motion ? "GYRO" : turbo ? "TURBO" : "READY"}
+      </span>
+    </div>
+  );
+}
+
+function ExtraButton({
+  label,
+  id,
+  settings,
+  press,
+  className = "",
+}: {
+  label: string;
+  id: string;
+  settings: Settings;
+  press: Props["press"];
+  className?: string;
+}) {
+  return (
+    <SurfaceButton
+      label={label}
+      id={id}
+      settings={settings}
+      press={press}
+      className={`h-[clamp(2.25rem,6.5svh,2.75rem)] min-w-[clamp(4rem,7vw,4.5rem)] rounded-xl px-3 text-[9px] text-slate-300 ${className}`}
+    />
+  );
+}
+
+function GyroControl({
+  enabled,
+  denied,
+  onToggle,
+}: {
+  enabled: boolean;
+  denied: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`grid h-9 min-w-16 place-items-center rounded-lg border text-[7px] font-black uppercase tracking-[0.14em] ${enabled ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-200" : "border-white/10 bg-black/20 text-slate-400"}`}
+    >
+      {denied ? "GYRO DENIED" : enabled ? "GYRO ON" : "GYRO"}
     </button>
   );
 }

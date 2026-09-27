@@ -32,7 +32,7 @@ test('Bridge forwards presses during a pending game lookup, rejects stale state,
   class FakeClient {connect(){return null;}createX360Controller(){return makeTarget(XBTN);}createDS4Controller(){return makeTarget(DSBTN);}}
   const quiet={log(){},warn(){},error(){}};
   const fakeProcess=new EventEmitter();
-  Object.assign(fakeProcess,{env:{RIG_PORT:'0',TOUCHTOSTEER_ADAPTIVE_HAPTICS:'0'},platform:'win32',arch:'x64',version:process.version});
+  Object.assign(fakeProcess,{env:{RIG_PORT:'0',RIG_PUBLIC:'1',RIG_ACCESS_TOKEN:'a'.repeat(43),TOUCHTOSTEER_ADAPTIVE_HAPTICS:'0'},platform:'win32',arch:'x64',version:process.version});
   const context={
     require(spec){
       if(spec==='vigemclient')return FakeClient;
@@ -51,7 +51,7 @@ test('Bridge forwards presses during a pending game lookup, rejects stale state,
   };
   vm.runInNewContext(fs.readFileSync(bridgeFile,'utf8'),context,{filename:bridgeFile});
   if(!server.address())await once(server,'listening');
-  const client=new WebSocket(`ws://127.0.0.1:${server.address().port}`);
+  const client=new WebSocket(`ws://127.0.0.1:${server.address().port}`, ["rig-v1", "rig-auth."+"a".repeat(43)]);
   try {
     await once(client,'open');
     const ready=once(client,'message');client.send(JSON.stringify({type:'hello',output:'universal'}));
@@ -75,11 +75,27 @@ test('Bridge forwards presses during a pending game lookup, rejects stale state,
     assert.equal(targets[0].reports.at(-1).buttons.LEFT_SHOULDER,true);
     finishLookup('{"title":"Game","process":"game"}');await query;
     // A phone joining after detection gets the cached game in its handshake.
-    const late=new WebSocket(`ws://127.0.0.1:${server.address().port}`);
+    const late=new WebSocket(`ws://127.0.0.1:${server.address().port}`, ["rig-v1", "rig-auth."+"a".repeat(43)]);
     const game=new Promise(resolve=>late.on('message',raw=>{const m=JSON.parse(raw);if(m.type==='game')resolve(m);}));
     await once(late,'open');late.send(JSON.stringify({type:'hello',output:'xinput'}));
     assert.equal((await game).name,'Game');
     const lateClose=once(late,'close');late.close();await lateClose;
+    // Five additional independent HID sessions must survive beyond the old four-player cap.
+    const extras=[];
+    for(let i=0;i<5;i++) {
+      const phone=new WebSocket(`ws://127.0.0.1:${server.address().port}`, ["rig-v1", "rig-auth."+"a".repeat(43)]);
+      await once(phone,'open');
+      const response=once(phone,'message');phone.send(JSON.stringify({type:'hello',output:'ds4'}));
+      const info=JSON.parse((await response)[0]);
+      assert.equal(info.controller.connected,true);
+      assert.equal(info.controller.activePlayers,i+2);
+      extras.push(phone);
+    }
+    for(const phone of extras) {const closed=once(phone,'close');phone.close();await closed;}
+    const stranger=new WebSocket(`ws://127.0.0.1:${server.address().port}`);
+    const rejection=await new Promise(resolve=>{stranger.on('error',resolve);});
+    assert.match(rejection.message,/401/);
+    stranger.terminate();
     clock=2000;
     const watchdog=intervals.filter(t=>t.delay===250)[1];
     watchdog.callback();

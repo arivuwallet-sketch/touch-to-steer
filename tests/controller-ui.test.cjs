@@ -15,7 +15,7 @@ const React = require('react');
 const { createRoot } = require('react-dom/client');
 const { act } = React;
 const { loadTS } = require('./load-ts.cjs');
-const { FlatPad } = loadTS('src/components/rig/FlatPad.tsx');
+const { FlatPad } = loadTS('src/components/rig/FlatPadController.tsx');
 const { FlatWheel } = loadTS('src/components/rig/FlatWheel.tsx');
 const { useKeyboardController } = loadTS('src/hooks/useKeyboardController.ts');
 const { defaultSettings, emptyState } = loadTS('src/lib/controller-types.ts');
@@ -97,7 +97,7 @@ test('LT/RT preserve partial travel without a second full-scale digital alias', 
   try {
     for(const id of ['lt','rt']) {
       const button=app.button(`${id.toUpperCase()} ForceAdapt trigger — regular`);
-      pointer(button,'pointerdown');assert.equal(app.state()[id],1);
+      pointer(button,'pointerdown');assert.equal(app.state()[id],0.5);
       pointer(button,'pointermove',1,{clientY:75});
       assert.equal(app.state()[id],0.25);
       assert.equal(app.state().buttons[id==='lt'?'l2':'r2'],undefined);
@@ -461,6 +461,38 @@ test('All ForceAdapt profiles reach zero and full travel with monotonic output',
    pointer(button,'pointerup');
    assert.equal(app.state().rt,0,mode);
    act(()=>app.button('FORCEADAPT').click());
+  }
+ } finally {app.unmount();}
+});
+
+test('Both sticks and triggers retain travel and release when pointer capture fails',()=>{
+ const saved=HTMLElement.prototype.setPointerCapture;
+ HTMLElement.prototype.setPointerCapture=()=>{throw Error('capture unavailable');};
+ const app=mount(FlatPad);
+ try {
+  for(const id of ['lt','rt']) {
+   const button=app.button(`${id.toUpperCase()} ForceAdapt trigger — regular`);
+   pointer(button,'pointerdown',1,{clientY:100});assert.equal(app.state()[id],0);
+   pointer(window,'pointermove',1,{clientY:0});assert.equal(app.state()[id],1);
+   pointer(window,'pointerup',2);assert.equal(app.state()[id],1);
+   pointer(window,'pointerup',1);assert.equal(app.state()[id],0);
+  }
+  for(const [label,x,y] of [['Left stick','lx','ly'],['Right stick','rx','ry']]) {
+   const stick=app.host.querySelector(`[aria-label="${label}"]`);
+   pointer(stick,'pointerdown',1,{clientX:50,clientY:50});
+   pointer(window,'pointermove',1,{clientX:71.5,clientY:50});assert.equal(app.state()[x],1);
+   pointer(window,'pointerup',1);assert.ok(app.state()[x] === 0);assert.ok(app.state()[y] === 0);
+  }
+ } finally {app.unmount();HTMLElement.prototype.setPointerCapture=saved;}
+});
+
+test('Left/right arrows and B/X never apply active translation or scale',()=>{
+ const app=mount(FlatPad);
+ try {
+  for(const label of ['←','→','B','X']) {
+   const button=app.button(label);
+   assert.doesNotMatch(button.className,/active:(translate|scale)/);
+   assert.match(button.className,/-translate-y-1\/2/);
   }
  } finally {app.unmount();}
 });

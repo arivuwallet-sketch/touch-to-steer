@@ -13,7 +13,8 @@ type Props = {
   onClose: () => void;
   status: "idle" | "connecting" | "connected" | "error";
   latency: number | null;
-  onConnect: () => void;
+  onConnect: (pairingKey: string) => void;
+  connectionError?: string | null;
   onDisconnect: () => void;
 };
 
@@ -35,8 +36,10 @@ export function SettingsPanel({
   status,
   latency,
   onConnect,
+  connectionError,
   onDisconnect,
 }: Props) {
+  const [pairingKey, setPairingKey] = useState("");
   const connected = status === "connected";
   const [matcherDpi, setMatcherDpi] = useState(settings.mouseDpi);
 
@@ -107,7 +110,7 @@ export function SettingsPanel({
               </p>
             </div>
             <Button
-              onClick={connected ? onDisconnect : onConnect}
+              onClick={connected ? onDisconnect : () => onConnect(pairingKey)}
               variant={connected ? "outline" : "default"}
               size="sm"
               className="spectral-settings-connect"
@@ -120,12 +123,19 @@ export function SettingsPanel({
             aria-label="PC bridge address"
             value={settings.bridgeUrl}
             onChange={(e) => onChange({ bridgeUrl: e.target.value })}
-            maxLength={120}
+            maxLength={512}
             spellCheck={false}
             className="spectral-settings-input h-10 w-full rounded-md px-3 text-sm"
           />
         </div>
 
+        <div className="px-4 pb-3">
+          <input aria-label="Host pairing key" type="password" autoComplete="off" placeholder="Host pairing key (internet connections)"
+            maxLength={128} value={pairingKey} onChange={(e) => setPairingKey(e.target.value)}
+            className="spectral-settings-input h-10 w-full rounded-md px-3 text-sm" />
+          <p className="mt-2 text-xs text-muted-foreground">Internet: use the host’s secure wss:// address and pairing key. The key is kept only while this panel is open. <a href="/bridge/windows/GLOBAL-PLAY.md" target="_blank" rel="noreferrer" className="underline">Host setup</a></p>
+          {connectionError && <p role="alert" className="mt-2 text-xs text-amber-300">{connectionError}</p>}
+        </div>
         <div className="spectral-settings-body">
           <div className="spectral-settings-block-label"><span>01</span><div><strong>OUTPUT + RESPONSE</strong><small>Virtual device and steering behavior</small></div><ChevronRight size={13} /></div>
           <Row label="PC controller output">
@@ -148,7 +158,7 @@ export function SettingsPanel({
             <code className="mx-1 text-slate-300">joy.cpl</code>.
             For local co-op and split-screen, use <strong className="text-slate-200">XInput-only</strong>
             on each phone when the game expects Xbox controllers; the bridge assigns each phone
-            its own virtual player, up to 4 simultaneous players.
+            its own virtual player. XInput supports four slots; DS4/HID can request up to the host’s configured limit (16 by default), subject to driver and game support. Multiple PCs each have their own capacity.
           </div>
           {connected && !profileMappingsSupported && <p role="alert" className="mt-2 text-xs text-amber-300">Update the Windows bridge to apply automatic profiles in both modes. This bridge does not report profile support.</p>}
           <Row label="Automatic game profiles">

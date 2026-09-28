@@ -381,7 +381,7 @@ function Rig() {
         />
       )}
       {editingLayout && mode !== "mouse" && layoutControls.mode === mode && (
-        <LayoutEditor key={mode} mode={mode} controls={layoutControls.items} saved={settings.controlLayouts?.[mode]}
+        <LayoutEditor key={mode} source={controlsRoot.current} mode={mode} controls={layoutControls.items} saved={settings.controlLayouts?.[mode]}
           aspect={(controlsRoot.current?.clientWidth || 16) / (controlsRoot.current?.clientHeight || 9)}
           onClose={() => { releaseAll(); setEditingLayout(false); }}
           onSave={(layout) => { releaseAll(); patch({controlLayouts:{...settings.controlLayouts,[mode]:layout}}); setEditingLayout(false); }} />

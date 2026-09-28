@@ -1,6 +1,9 @@
+import { ControlPreview } from "./ControlPreview";
 import { useRef, useState } from "react";
 import {
   normalizeBox,
+  collectControls,
+  scaleControlBox,
   swapControls,
   type ControlBox,
   type ControlLayout,
@@ -8,13 +11,17 @@ import {
 } from "@/lib/control-layout";
 type Props = {
   mode: "pad" | "wheel";
+  source: HTMLDivElement | null;
   controls: LayoutControl[];
   saved: ControlLayout | undefined;
   aspect: number;
   onSave: (layout: ControlLayout) => void;
   onClose: () => void;
 };
-export function LayoutEditor({ mode, controls, saved, aspect, onSave, onClose }: Props) {
+export function LayoutEditor({ mode, source, controls, saved, aspect, onSave, onClose }: Props) {
+  const [appearances] = useState(
+    () => new Map(source ? collectControls(source).map((c) => [c.id, c.el]) : []),
+  );
   const defaults = Object.fromEntries(controls.map((c) => [c.id, c.box]));
   const [draft, setDraft] = useState<ControlLayout>(() => ({ ...defaults, ...saved }));
   const [selected, select] = useState(controls[0]?.id ?? "");
@@ -50,7 +57,16 @@ export function LayoutEditor({ mode, controls, saved, aspect, onSave, onClose }:
             Drag controls or their corner handles. No game input is sent while editing.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button
+            className="rounded border border-amber-300/60 px-3 py-2 text-amber-200"
+            onClick={() => {
+              checkpoint();
+              setDraft(defaults);
+            }}
+          >
+            Reset layout
+          </button>
           <button className="rounded border px-3 py-2" onClick={onClose}>
             Cancel
           </button>
@@ -66,7 +82,7 @@ export function LayoutEditor({ mode, controls, saved, aspect, onSave, onClose }:
         <div>
           <div
             ref={canvas}
-            className="relative w-full overflow-hidden rounded-xl border border-cyan-300/30 bg-slate-900"
+            className="relative w-full overflow-hidden rounded-xl border border-cyan-300/30 bg-[#05080d]"
             style={{ aspectRatio: aspect || 16 / 9, touchAction: "none" }}
             onPointerMove={(e) => {
               const d = drag.current,
@@ -95,12 +111,20 @@ export function LayoutEditor({ mode, controls, saved, aspect, onSave, onClose }:
             {controls.map((c) => {
               const b = draft[c.id] ?? c.box;
               return (
-                <button
+                <div
+                  role="button"
+                  tabIndex={0}
                   key={c.id}
                   aria-label={`Arrange ${c.label}`}
-                  className={`absolute flex touch-none items-center justify-center overflow-hidden rounded-lg border p-1 text-[clamp(8px,1vw,13px)] ${selected === c.id ? "border-cyan-200 bg-cyan-800" : "border-slate-400 bg-slate-800"} ${b.hidden ? "opacity-30" : ""}`}
+                  className={`absolute touch-none rounded-lg outline-offset-2 ${selected === c.id ? "z-10 outline-2 outline-cyan-200" : "hover:outline hover:outline-slate-400"} ${b.hidden ? "opacity-30" : ""}`}
+                  aria-pressed={selected === c.id}
+                  onFocus={() => select(c.id)}
                   style={{ left: `${b.x}%`, top: `${b.y}%`, width: `${b.w}%`, height: `${b.h}%` }}
                   onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      select(c.id);
+                    }
                     const delta = {
                       ArrowLeft: [-1, 0],
                       ArrowRight: [1, 0],
@@ -128,13 +152,19 @@ export function LayoutEditor({ mode, controls, saved, aspect, onSave, onClose }:
                     };
                   }}
                 >
-                  {c.label}
+                  {appearances.get(c.id) ? (
+                    <ControlPreview source={appearances.get(c.id)!} />
+                  ) : (
+                    <span className="absolute inset-0 grid place-items-center rounded border border-slate-500 bg-slate-800 text-xs">
+                      {c.label}
+                    </span>
+                  )}
                   <span
                     data-resize="true"
-                    className="absolute bottom-0 right-0 h-5 w-5 cursor-se-resize rounded-tl bg-cyan-300/60"
+                    className={`absolute -bottom-1 -right-1 h-5 w-5 cursor-se-resize rounded border border-cyan-100 bg-cyan-500 ${selected === c.id ? "" : "opacity-0"}`}
                     title="Resize"
                   />
-                </button>
+                </div>
               );
             })}
           </div>
@@ -161,6 +191,52 @@ export function LayoutEditor({ mode, controls, saved, aspect, onSave, onClose }:
           </label>
           {box && (
             <>
+              <label className="block rounded-lg border border-cyan-300/25 bg-slate-900 p-3">
+                <span className="flex justify-between">
+                  Size <output>{Math.round((box.w / defaults[selected]!.w) * 100)}%</output>
+                </span>
+                <input
+                  type="range"
+                  aria-label="Control size"
+                  className="mt-3 w-full accent-cyan-300"
+                  min={Math.ceil(
+                    ((Math.max(2 / box.w, 2 / box.h) * box.w) / defaults[selected]!.w) * 100,
+                  )}
+                  max={Math.floor(
+                    ((Math.min(100 / box.w, 100 / box.h) * box.w) / defaults[selected]!.w) * 100,
+                  )}
+                  step={1}
+                  value={(box.w / defaults[selected]!.w) * 100}
+                  onPointerDown={checkpoint}
+                  onKeyDown={(e) => {
+                    if (
+                      [
+                        "ArrowLeft",
+                        "ArrowRight",
+                        "ArrowUp",
+                        "ArrowDown",
+                        "Home",
+                        "End",
+                        "PageUp",
+                        "PageDown",
+                      ].includes(e.key)
+                    )
+                      checkpoint();
+                  }}
+                  onChange={(e) =>
+                    setDraft((d) => ({
+                      ...d,
+                      [selected]: scaleControlBox(
+                        d[selected]!,
+                        (defaults[selected]!.w * Number(e.target.value)) / 100,
+                      ),
+                    }))
+                  }
+                />
+                <span className="text-xs text-slate-400">
+                  Scales width and height together. 100% is the original width.
+                </span>
+              </label>
               {(["x", "y", "w", "h"] as const).map((key) => (
                 <label key={key} className="flex justify-between gap-2">
                   {{ x: "Left %", y: "Top %", w: "Width %", h: "Height %" }[key]}
@@ -191,7 +267,7 @@ export function LayoutEditor({ mode, controls, saved, aspect, onSave, onClose }:
                 Visible
               </label>
               <button
-                className="underline"
+                className="w-full rounded border border-cyan-300/40 px-3 py-2 text-cyan-100"
                 onClick={() => {
                   checkpoint();
                   setDraft((d) => ({ ...d, [selected]: defaults[selected]! }));

@@ -541,7 +541,7 @@ test('Separate layout editor saves drag/size/visibility edits, swaps and cancels
  let saved=null,cancelled=false;
  const app=mount(LayoutEditor,{mode:'pad',controls,saved:undefined,aspect:16/9,onSave:l=>saved=l,onClose:()=>cancelled=true});
  try {
-  pointer(app.button('Arrange A'),'pointerdown',1,{clientX:10,clientY:20});
+  pointer(app.host.querySelector('[role="button"][aria-label="Arrange A"]'),'pointerdown',1,{clientX:10,clientY:20});
   const canvas=app.host.querySelector('[style*="aspect-ratio"]');
   pointer(canvas,'pointermove',1,{clientX:30,clientY:30});pointer(canvas,'pointerup');
   act(()=>app.button('Save layout').click());assert.equal(saved.a.x,30);assert.equal(saved.a.y,30);
@@ -559,7 +559,7 @@ test('Saved layout changes actual controls and reset restores native sizing',()=
  }
  const app=mount(Harness,{layout:{'A:0':{x:20,y:30,w:25,h:15,hidden:true}}});
  try {
-  const button=app.button('A');assert.equal(button.style.width,'25px');assert.equal(button.style.height,'15px');assert.equal(button.style.visibility,'hidden');
+  const button=app.button('A');assert.equal(button.style.width,'40px');assert.equal(button.style.height,'');assert.match(button.style.transform,/scale\(0.25,0.15\)/);assert.equal(button.style.transformOrigin,'0 0');assert.equal(button.style.visibility,'hidden');
   assert.match(button.style.transform,/translate\(20px,30px\)|translate\(20px, 30px\)/);
   app.rerender({layout:{}});assert.equal(button.style.width,'40px');assert.equal(button.style.visibility,'');assert.equal(button.style.transform,'');
  } finally {app.unmount();globalThis.getComputedStyle=original;}

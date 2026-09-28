@@ -86,16 +86,18 @@ export function useControlLayout(
         const box = layout?.[id];
         if (!box) continue;
         const b = normalizeBox(box);
-        el.style.setProperty("width", `${(b.w * bounds.width) / 100}px`, "important");
-        el.style.setProperty("height", `${(b.h * bounds.height) / 100}px`, "important");
-        for (const [p, v] of [
-          ["min-width", "0"],
-          ["min-height", "0"],
-          ["max-width", "none"],
-          ["max-height", "none"],
-          ["flex-shrink", "0"],
-        ])
-          el.style.setProperty(p!, v!, "important");
+        // Scale the entire rendered control (icons, text and wheel internals),
+        // matching the editor preview without reflowing neighboring controls.
+        const natural = el.getBoundingClientRect();
+        const transform = getComputedStyle(el).transform;
+        const scaleX = (b.w * bounds.width) / 100 / (natural.width || 1);
+        const scaleY = (b.h * bounds.height) / 100 / (natural.height || 1);
+        el.style.setProperty("transform-origin", "0 0", "important");
+        el.style.setProperty(
+          "transform",
+          `${transform === "none" ? "" : transform} scale(${scaleX},${scaleY})`,
+          "important",
+        );
         el.style.visibility = b.hidden ? "hidden" : "visible";
       }
       const moves = elements.map(({ el, id }) => {

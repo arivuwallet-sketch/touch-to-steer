@@ -21,3 +21,32 @@ test('Control keys survive rate/ForceFlex/profile changes and wheel internals st
  root.querySelector('.flat-pad-screen').textContent='Game B';
  assert.deepEqual(collectControls(root).map(c=>c.id),before.map(c=>c.id));assert.equal(before.length,4);
 });
+
+test('Size slider scales uniformly around the center and stays inside the canvas', () => {
+ const {scaleControlBox}=loadTS('src/lib/control-layout.ts');
+ const original={x:40,y:40,w:10,h:20,hidden:true};
+ const scaled=scaleControlBox(original,20);
+ assert.deepEqual(scaled,{x:35,y:30,w:20,h:40,hidden:true});
+ const maximum=scaleControlBox(original,500);
+ assert.equal(maximum.h,100);assert.equal(maximum.w/maximum.h,0.5);
+ assert.ok(maximum.x>=0 && maximum.x+maximum.w<=100);
+ assert.ok(maximum.y>=0 && maximum.y+maximum.h<=100);
+ const minimum=scaleControlBox(original,0);assert.equal(minimum.w,2);assert.equal(minimum.h,4);
+ assert.deepEqual(scaleControlBox(original,NaN),original);
+});
+
+test('Actual-control previews retain visual content but strip interactive behavior and duplicate IDs',()=>{
+ const {cloneControlAppearance}=loadTS('src/components/rig/ControlPreview.tsx');
+ const dom=new JSDOM('<button id="original" style="background:rgb(10,20,30);border-radius:20px" onclick="window.previewInput=true"><span id="label">RT</span><svg viewBox="0 0 20 20"><path d="M0 0L20 20" /></svg></button>');
+ const previous=global.getComputedStyle;global.getComputedStyle=dom.window.getComputedStyle.bind(dom.window);
+ try {
+  const source=dom.window.document.querySelector('button');let sent=0;source.addEventListener('pointerdown',()=>sent++);
+  const clone=cloneControlAppearance(source);dom.window.document.body.append(clone);
+  clone.dispatchEvent(new dom.window.Event('pointerdown'));
+  assert.equal(sent,0);assert.equal(clone.getAttribute('onclick'),null);assert.equal(clone.id,'');assert.equal(clone.querySelector('[id]'),null);
+  assert.equal(clone.inert,true);assert.equal(clone.getAttribute('aria-hidden'),'true');
+  assert.equal(clone.style.backgroundColor,'rgb(10, 20, 30)');assert.equal(clone.style.borderRadius,'20px');
+  assert.equal(clone.textContent,'RT');assert.ok(clone.querySelector('svg path'));
+  assert.equal(source.id,'original');
+ }finally{global.getComputedStyle=previous;dom.window.close();}
+});

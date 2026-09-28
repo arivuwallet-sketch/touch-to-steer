@@ -48,3 +48,16 @@ export function collectControls(root: HTMLElement) {
       return { el, id: `${key}:${n}`, label };
     });
 }
+
+// Uniform scaling preserves the current shape and center, clamping to the canvas.
+export function scaleControlBox(box: ControlBox, targetWidth: number): ControlBox {
+  const b = normalizeBox(box);
+  const factor = clamp(
+    Number.isFinite(targetWidth) ? targetWidth / b.w : 1,
+    Math.max(2 / b.w, 2 / b.h),
+    Math.min(100 / b.w, 100 / b.h),
+  );
+  const w = b.w * factor,
+    h = b.h * factor;
+  return normalizeBox({ ...b, w, h, x: b.x + (b.w - w) / 2, y: b.y + (b.h - h) / 2 });
+}

@@ -78,7 +78,17 @@ export function useBridge(
   bindingsRef.current = gameProfile.wheelBindings;
   const padBindingsRef = useRef(gameProfile.padBindings);
   padBindingsRef.current = gameProfile.padBindings;
-  const stateSignature = useCallback(() => JSON.stringify([stateRef.current, bindingsRef.current, padBindingsRef.current]), [stateRef]);
+  // Controller snapshots and mapping objects are replaced on change. Avoid
+  // serializing the same large snapshot 1000 times/sec while input is idle.
+  const signatureCacheRef = useRef<{ state: ControllerState; wheel: WheelBindings; pad: unknown; value: string } | null>(null);
+  const stateSignature = useCallback(() => {
+    const state = stateRef.current, wheel = bindingsRef.current, pad = padBindingsRef.current;
+    const cached = signatureCacheRef.current;
+    if (cached && cached.state === state && cached.wheel === wheel && cached.pad === pad) return cached.value;
+    const value = JSON.stringify([state, wheel, pad]);
+    signatureCacheRef.current = { state, wheel, pad, value };
+    return value;
+  }, [stateRef]);
 
   const clearLoop = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);

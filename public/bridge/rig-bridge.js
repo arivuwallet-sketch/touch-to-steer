@@ -1266,6 +1266,7 @@ wss.on("connection", (ws) => {
     applyScheduled: false,
     lastAppliedSignature: "",
     lastAppliedSeq: 0,
+    lastDigitalSignature: "",
     currentRumble: null,
     hapticTimer: null,
     activeGame: null,
@@ -1550,13 +1551,26 @@ wss.on("connection", (ws) => {
       session.lastInputAt = performance.now();
       session.inputTimedOut = false;
 
-      if (msg.priority === "edge" || msg.priority === "hot") {
+      // Preserve transitions even when an analog control maps to a button.
+      const digitalSignature = JSON.stringify([
+        Object.keys(msg.buttons || {}).filter(key => msg.buttons[key]).sort(),
+        msg.gear || 0, msg.dial || 0,
+        ...["lt", "rt", "throttle", "brake", "clutch", "handbrake", "nitro"].map(key => {
+          const value = Number(msg[key]) || 0;
+          return value > 0.5 ? 2 : value > 0.02 ? 1 : 0;
+        }),
+        msg.wheelBindings, msg.padBindings,
+      ]);
+      const digitalChanged = digitalSignature !== session.lastDigitalSignature;
+      session.lastDigitalSignature = digitalSignature;
+      if (msg.priority === "edge" || digitalChanged || (msg.priority === "hot" && !session.applyScheduled)) {
+        // The first sample and every button transition remain immediate.
+        // A burst of analog positions arriving in the same I/O turn keeps
+        // only its newest position instead of replaying stale driver writes.
+        session.latestState = null;
+        scheduleApply();
         try {
-          // Edge buttons AND live touch/analog events bypass the background
-          // mailbox. Pedals, steering and sticks therefore reach ViGEm in the
-          // same browser event rather than waiting for the background safety pump.
-          // The mailbox remains intact for the continuous watchdog lane, so
-          // Claude's stale-state protection is preserved.
+          // Apply the leading sample or transition without a timer delay.
           applySessionState(session, msg);
         } catch (err) {
           console.warn(

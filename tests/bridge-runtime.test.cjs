@@ -75,6 +75,22 @@ test('Bridge forwards presses during a pending game lookup, rejects stale state,
     await release;await tick();await tick();
     assert.equal(targets[0].reports.at(-1).buttons.A,false);
     assert.equal(targets[0].reports.at(-1).buttons.LEFT_SHOULDER,true);
+    // Model one TCP delivery containing a burst of old analog samples.
+    // First sample is immediate; the rest must collapse to the newest state.
+    const hostSocket = [...server.clients][0];
+    const beforeBurst = targets[0].reports.length;
+    for (let seq = 4; seq <= 103; seq++) hostSocket.emit('message', Buffer.from(JSON.stringify({
+      type:'state',priority:'hot',seq,buttons:{lb:true},steer:(seq-3)/100,
+    })));
+    assert.equal(targets[0].reports.length-beforeBurst,1);
+    await tick();
+    assert.equal(targets[0].reports.length-beforeBurst,2);
+    assert.equal(targets[0].reports.at(-1).axes.leftX,1);
+    assert.equal(targets[1].reports.at(-1).axes.leftX,1);
+    // Threshold crossings (triggers mapped to buttons) cannot be coalesced away.
+    for (const [seq,rt] of [[104,1],[105,0]]) hostSocket.emit('message',Buffer.from(JSON.stringify({type:'state',priority:'hot',seq,rt})));
+    assert.equal(targets[0].reports.at(-2).axes.rightTrigger,1);
+    assert.equal(targets[0].reports.at(-1).axes.rightTrigger,0);
     finishLookup('{"title":"Game","process":"game"}');await query;
     // A phone joining after detection gets the cached game in its handshake.
     const late=new WebSocket(`ws://127.0.0.1:${server.address().port}`, ["rig-v1", "rig-auth."+"a".repeat(43)]);

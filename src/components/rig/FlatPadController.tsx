@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import { applyCurve, applyStickResponse, FORCEFLEX_DESCRIPTIONS, type ControllerState, type JoystickTensionGf, type Settings } from "@/lib/controller-types";
 import { padLabelsFor } from "@/lib/playstation";
+import { addFastPointerMove, stickTravel } from "@/lib/fast-pointer";
 import { playDualRumble, type DualRumbleKind } from "@/lib/haptics";
 
 import { useHoldControl } from "@/hooks/useHoldControl";
@@ -88,13 +89,17 @@ function SurfaceButton({
   /** Keep absolutely centered buttons from jumping when pressed. */
   stablePress?: boolean;
 }) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const held = useHoldControl((down) => {
+    // Report first, paint second: the packet leaves before any visual work.
     press(id, down);
+    buttonRef.current?.setAttribute("data-down", down ? "true" : "false");
     if (down) feelBuzz(settings.vibration, 0.35);
   }, turbo);
 
   return (
     <button
+      ref={buttonRef}
       type="button"
       aria-label={typeof label === "string" ? label : id}
       {...held}
@@ -146,9 +151,12 @@ function Stick({
       y /= m;
     }
 
-    const [outputX, outputY] = applyStickResponse(x, -y, settings);
+    // Full deflection just before the rim, like a real DualSense stick.
+    const [travelX, travelY] = stickTravel(x, y);
+    const [outputX, outputY] = applyStickResponse(travelX, -travelY, settings);
     onMove(outputX, outputY);
 
+    // The cap shows exactly what the game receives (ForceFlex tension included).
     const travel = Math.min(r.width, r.height) * 0.215;
     const thumb = thumbRef.current;
     if (thumb) {
@@ -195,11 +203,11 @@ function Stick({
   useEffect(() => {
     const move = (event: globalThis.PointerEvent) => { if (pointer.current === event.pointerId) update(event); };
     const end = (event: globalThis.PointerEvent) => release(event);
-    window.addEventListener("pointermove", move);
+    const removeMove = addFastPointerMove(move);
     window.addEventListener("pointerup", end);
     window.addEventListener("pointercancel", end);
     return () => {
-      window.removeEventListener("pointermove", move);
+      removeMove();
       window.removeEventListener("pointerup", end);
       window.removeEventListener("pointercancel", end);
     };
@@ -610,11 +618,11 @@ function Trigger({
   useEffect(() => {
     const update = (event: globalThis.PointerEvent) => { if (pointer.current === event.pointerId) move(event); };
     const end = (event: globalThis.PointerEvent) => release(event);
-    window.addEventListener("pointermove", update);
+    const removeMove = addFastPointerMove(update);
     window.addEventListener("pointerup", end);
     window.addEventListener("pointercancel", end);
     return () => {
-      window.removeEventListener("pointermove", update);
+      removeMove();
       window.removeEventListener("pointerup", end);
       window.removeEventListener("pointercancel", end);
     };

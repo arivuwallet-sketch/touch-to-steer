@@ -8444,3 +8444,13 @@ body {
     text-align: center;
   }
 }
+
+/* Instant pressed state for gamepad buttons: painted from the same input task
+   that sends the press, with no transition delay. */
+.flat-pad-face button[data-down="true"],
+button.flat-pad-nav-button[data-down="true"],
+.flat-pad-dpad button[data-down="true"] {
+  transition: none !important;
+  filter: brightness(1.12);
+  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.7), 0 1px 0 #06090d !important;
+}

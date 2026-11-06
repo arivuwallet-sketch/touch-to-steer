@@ -11,3 +11,4 @@
 - [x] Remove duplicate controller-state flooding so every button edge and analog change uses the immediate low-latency lane.
 - [x] Add an interactive landing-page proof gallery with real screenshots and descriptions for Gamepad, Mouse and Steering modes.
 - [x] PS5 / PS5 Pro output mode (DS4 target, PlayStation glyphs, Remote Play guide).
+- [x] Faster gamepad feel: raw touch samples for sticks/triggers, DualSense-style stick outer zone, instant press visuals.

@@ -155,8 +155,22 @@ export function SettingsPanel({
               <option value="universal">Universal · XInput + DirectInput</option>
               <option value="xinput">XInput / Xbox 360</option>
               <option value="ds4">DualShock 4 / HID</option>
+              <option value="ps5">PlayStation 5 / PS5 Pro</option>
             </select>
           </Row>
+          {settings.outputMode === "ps5" && (
+            <div className="mt-3 rounded-lg border border-sky-300/25 bg-sky-300/5 p-3 text-[11px] leading-relaxed text-muted-foreground">
+              <strong className="text-sky-200">PS5 / PS5 Pro mode</strong> — your phone appears on the PC as a Sony
+              “Wireless Controller” with ✕ ○ △ □, L1/R1, L2/R2 analog triggers, Options, Share and the PS button.
+              <ol className="mt-2 list-decimal space-y-1 pl-4">
+                <li>Start the TouchToSteer bridge on your Windows PC and connect this phone.</li>
+                <li>On the PC open <strong className="text-slate-200">PS Remote Play</strong> or <strong className="text-slate-200">chiaki-ng</strong> and sign in with the same PlayStation account as your PS5 Pro.</li>
+                <li>Turn on Remote Play on the console (Settings → System → Remote Play) and pair it.</li>
+                <li>The PC detects the phone as a PlayStation controller and passes every button, stick and trigger to the PS5 Pro.</li>
+              </ol>
+              <p className="mt-2">PC games with PlayStation support also show PlayStation button prompts. A PS5 can’t pair with a phone browser directly over Bluetooth, so the PC link is required.</p>
+            </div>
+          )}
           <div className="mt-3 rounded-lg border border-emerald-300/15 bg-emerald-300/5 p-3 text-[11px] leading-relaxed text-muted-foreground">
             <strong className="text-emerald-200">Universal compatibility</strong> keeps one
             synchronized Xbox 360/XInput target for modern games and one DualShock/HID target

@@ -1,3 +1,4 @@
+import { bridgeOutputFor, type OutputMode } from "@/lib/playstation";
 import { resolveGameProfile, type ProfileOptions } from "@/lib/game-profiles";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { defaultWheelBindings, type WheelBindings, type ControllerState } from "@/lib/controller-types";
@@ -29,7 +30,7 @@ const nowMs = () => (typeof performance !== "undefined" ? performance.now() : Da
 export function useBridge(
   stateRef: React.MutableRefObject<ControllerState>,
   rateHz: number,
-  outputMode: "xinput" | "ds4" | "universal" = "xinput",
+  outputMode: OutputMode = "xinput",
   vibrationEnabled = true,
   wheelBindings: WheelBindings = defaultWheelBindings,
   profileOptions: ProfileOptions = {},
@@ -209,7 +210,7 @@ export function useBridge(
               version: 3,
               transport: "websocket",
               rateHz: clampRate(rateHzRef.current),
-              output: outputMode,
+              output: bridgeOutputFor(outputMode),
             }),
           );
         } catch {
@@ -459,7 +460,7 @@ export function useBridge(
           version: 3,
           transport: "websocket",
           rateHz: clampRate(rateHz),
-          output: outputMode,
+          output: bridgeOutputFor(outputMode),
         }),
       );
     } catch {

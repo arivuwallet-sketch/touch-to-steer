@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import { applyCurve, applyStickResponse, FORCEFLEX_DESCRIPTIONS, type ControllerState, type JoystickTensionGf, type Settings } from "@/lib/controller-types";
+import { padLabelsFor } from "@/lib/playstation";
 import { playDualRumble, type DualRumbleKind } from "@/lib/haptics";
 
 import { useHoldControl } from "@/hooks/useHoldControl";
@@ -282,12 +283,13 @@ function ApexDPad({ settings, press, turbo }: { settings: Settings; press: Props
 }
 
 function ApexFaceButtons({ settings, press, turbo }: { settings: Settings; press: Props["press"]; turbo: boolean }) {
+  const glyph = padLabelsFor(settings.outputMode);
   return (
     <div className="flat-pad-face relative size-[clamp(7.9rem,25svh,11.4rem)]">
-      <SurfaceButton label="Y" id="y" settings={settings} press={press} turbo={turbo} className="absolute left-1/2 top-0 size-[clamp(2.75rem,8svh,3.5rem)] -translate-x-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#ffd43b]" />
-      <SurfaceButton label="X" id="x" settings={settings} press={press} turbo={turbo} stablePress className="absolute left-0 top-1/2 size-[clamp(2.75rem,8svh,3.5rem)] -translate-y-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#58b9ff]" />
-      <SurfaceButton label="B" id="b" settings={settings} press={press} turbo={turbo} stablePress className="absolute right-0 top-1/2 size-[clamp(2.75rem,8svh,3.5rem)] -translate-y-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#ff5b57]" />
-      <SurfaceButton label="A" id="a" settings={settings} press={press} turbo={turbo} className="absolute bottom-0 left-1/2 size-[clamp(2.75rem,8svh,3.5rem)] -translate-x-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#62df87]" />
+      <SurfaceButton label={glyph.y} id="y" settings={settings} press={press} turbo={turbo} className="absolute left-1/2 top-0 size-[clamp(2.75rem,8svh,3.5rem)] -translate-x-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#ffd43b]" />
+      <SurfaceButton label={glyph.x} id="x" settings={settings} press={press} turbo={turbo} stablePress className="absolute left-0 top-1/2 size-[clamp(2.75rem,8svh,3.5rem)] -translate-y-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#58b9ff]" />
+      <SurfaceButton label={glyph.b} id="b" settings={settings} press={press} turbo={turbo} stablePress className="absolute right-0 top-1/2 size-[clamp(2.75rem,8svh,3.5rem)] -translate-y-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#ff5b57]" />
+      <SurfaceButton label={glyph.a} id="a" settings={settings} press={press} turbo={turbo} className="absolute bottom-0 left-1/2 size-[clamp(2.75rem,8svh,3.5rem)] -translate-x-1/2 text-[clamp(1.25rem,4.5svh,1.5rem)] text-[#62df87]" />
     </div>
   );
 }
@@ -837,12 +839,12 @@ export function FlatPad({ settings, set, press, onSettingsChange, gameName = "De
 
       <div className="flat-pad-top absolute inset-x-0 top-3 flex items-start justify-between px-[max(1rem,env(safe-area-inset-left))]">
         <div className="flex items-center gap-3">
-          <Trigger label="LT" id="lt" settings={settings} set={set} press={press} mode={triggerMode} />
-          <ExtraButton label="LB" id="lb" settings={settings} press={press} />
+          <Trigger label={padLabelsFor(settings.outputMode).lt} id="lt" settings={settings} set={set} press={press} mode={triggerMode} />
+          <ExtraButton label={padLabelsFor(settings.outputMode).lb} id="lb" settings={settings} press={press} />
         </div>
         <div className="flex items-center gap-3">
-          <ExtraButton label="RB" id="rb" settings={settings} press={press} />
-          <Trigger label="RT" id="rt" settings={settings} set={set} press={press} mode={triggerMode} />
+          <ExtraButton label={padLabelsFor(settings.outputMode).rb} id="rb" settings={settings} press={press} />
+          <Trigger label={padLabelsFor(settings.outputMode).rt} id="rt" settings={settings} set={set} press={press} mode={triggerMode} />
         </div>
       </div>
 
@@ -856,12 +858,12 @@ export function FlatPad({ settings, set, press, onSettingsChange, gameName = "De
       <div className="flat-pad-center absolute left-1/2 top-[27%] flex -translate-x-1/2 flex-col items-center gap-2">
         <div className="flat-pad-center-box relative w-[clamp(14rem,27vw,20rem)] rounded-[2rem] bg-[linear-gradient(145deg,#39434f,#171d24)] px-5 py-4 shadow-[inset_0_2px_2px_rgba(255,255,255,.09),0_12px_24px_rgba(0,0,0,.48)]">
           <div className="flex items-center justify-center gap-3">
-            <SurfaceButton label="VIEW" id="back" settings={settings} press={press} className="flat-pad-nav-button h-[clamp(1.9rem,4.8svh,2.2rem)] min-w-[clamp(3.4rem,5vw,4rem)] rounded-lg px-2 text-[8px] text-slate-300" />
+            <SurfaceButton label={padLabelsFor(settings.outputMode).back} id="back" settings={settings} press={press} className="flat-pad-nav-button h-[clamp(1.9rem,4.8svh,2.2rem)] min-w-[clamp(3.4rem,5vw,4rem)] rounded-lg px-2 text-[8px] text-slate-300" />
             <MiniScreen profile={profile} triggerMode={triggerMode} motion={gyroEnabled} turbo={turbo} gameName={gameName} profileName={profileName} />
-            <SurfaceButton label="MENU" id="start" settings={settings} press={press} className="flat-pad-nav-button h-[clamp(1.9rem,4.8svh,2.2rem)] min-w-[clamp(3.4rem,5vw,4rem)] rounded-lg px-2 text-[8px] text-slate-300" />
+            <SurfaceButton label={padLabelsFor(settings.outputMode).start} id="start" settings={settings} press={press} className="flat-pad-nav-button h-[clamp(1.9rem,4.8svh,2.2rem)] min-w-[clamp(3.4rem,5vw,4rem)] rounded-lg px-2 text-[8px] text-slate-300" />
           </div>
           <div className="mt-2 flex items-center justify-center gap-2">
-            <SurfaceButton label="HOME" id="home" settings={settings} press={press} className="h-9 min-w-20 rounded-md text-[7px]" />
+            <SurfaceButton label={padLabelsFor(settings.outputMode).home} id="home" settings={settings} press={press} className="h-9 min-w-20 rounded-md text-[7px]" />
           </div>
           <div className="mt-2 grid grid-cols-3 gap-2">
             <button type="button" onClick={() => setTurbo((v) => !v)} className={`h-[clamp(1.8rem,4.8svh,2rem)] min-w-0 w-full rounded-lg border px-2 text-[7px] font-black uppercase tracking-[0.14em] ${turbo ? "border-orange-300/50 bg-orange-300/10 text-orange-200" : "border-white/10 bg-black/20 text-slate-400"}`}>TURBO</button>

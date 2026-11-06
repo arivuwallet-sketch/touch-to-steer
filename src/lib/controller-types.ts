@@ -112,7 +112,7 @@ export type Settings = {
   gameProfiles: Record<string, SavedGameProfile>;
   bridgeUrl: string;
   /** Virtual PC controller output. Universal creates synchronized XInput + DirectInput/HID-compatible targets for broad legacy/modern coverage. */
-  outputMode: "xinput" | "ds4" | "universal";
+  outputMode: "xinput" | "ds4" | "universal" | "ps5";
   steerMode: "tilt" | "touch";
   /** aim/stick sensitivity */
   sensitivity: number;

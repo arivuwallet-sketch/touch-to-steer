@@ -1459,7 +1459,7 @@ wss.on("connection", (ws) => {
       ).toLowerCase();
 
       const requested =
-        requestedRaw === "ds4"
+        requestedRaw === "ds4" || requestedRaw === "ps5" || requestedRaw === "dualsense"
           ? "ds4"
           : requestedRaw === "xinput"
             ? "xinput"

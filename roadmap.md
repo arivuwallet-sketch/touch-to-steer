@@ -10,3 +10,4 @@
 - [x] Repair wheel-mode driving controls: pedal taps engage fully, analog feathering remains available, and PC trigger/button mappings are applied immediately.
 - [x] Remove duplicate controller-state flooding so every button edge and analog change uses the immediate low-latency lane.
 - [x] Add an interactive landing-page proof gallery with real screenshots and descriptions for Gamepad, Mouse and Steering modes.
+- [x] PS5 / PS5 Pro output mode (DS4 target, PlayStation glyphs, Remote Play guide).

@@ -89,13 +89,17 @@ function SurfaceButton({
   /** Keep absolutely centered buttons from jumping when pressed. */
   stablePress?: boolean;
 }) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const held = useHoldControl((down) => {
+    // Report first, paint second: the packet leaves before any visual work.
     press(id, down);
+    buttonRef.current?.setAttribute("data-down", down ? "true" : "false");
     if (down) feelBuzz(settings.vibration, 0.35);
   }, turbo);
 
   return (
     <button
+      ref={buttonRef}
       type="button"
       aria-label={typeof label === "string" ? label : id}
       {...held}

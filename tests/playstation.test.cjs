@@ -15,3 +15,16 @@ test('PlayStation outputs show PlayStation button glyphs', () => {
   assert.equal(padLabelsFor('ps5').lt, 'L2');
   assert.equal(padLabelsFor('xinput').a, 'A');
 });
+
+const { stickTravel, shouldSkipMove } = loadTS('src/lib/fast-pointer.ts');
+
+test('sticks reach full deflection at 94% of physical travel', () => {
+  assert.deepEqual(stickTravel(0.94, 0), [1, 0]);
+  assert.ok(Math.abs(stickTravel(0.47, 0)[0] - 0.5) < 1e-9);
+  assert.deepEqual(stickTravel(0, 0), [0, 0]);
+});
+
+test('a pointermove right after a raw update is skipped as a duplicate', () => {
+  assert.equal(shouldSkipMove(110, 100), true);
+  assert.equal(shouldSkipMove(150, 100), false);
+});

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import { applyCurve, applyStickResponse, FORCEFLEX_DESCRIPTIONS, type ControllerState, type JoystickTensionGf, type Settings } from "@/lib/controller-types";
 import { padLabelsFor } from "@/lib/playstation";
+import { addFastPointerMove, stickTravel } from "@/lib/fast-pointer";
 import { playDualRumble, type DualRumbleKind } from "@/lib/haptics";
 
 import { useHoldControl } from "@/hooks/useHoldControl";
@@ -99,7 +100,7 @@ function SurfaceButton({
       aria-label={typeof label === "string" ? label : id}
       {...held}
       onClick={onClick}
-      className={`grid touch-none select-none place-items-center rounded-xl border border-white/10 bg-[linear-gradient(145deg,#3a4551,#151b22)] font-black text-slate-100 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),inset_0_-5px_9px_rgba(0,0,0,.62),0_5px_0_#06090d,0_9px_14px_rgba(0,0,0,.5)] transition-shadow active:shadow-[inset_0_2px_6px_rgba(0,0,0,.65),0_2px_0_#06090d] ${className}`}
+      className={`grid touch-none select-none place-items-center rounded-xl border border-white/10 bg-[linear-gradient(145deg,#3a4551,#151b22)] font-black text-slate-100 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),inset_0_-5px_9px_rgba(0,0,0,.62),0_5px_0_#06090d,0_9px_14px_rgba(0,0,0,.5)] transition-none active:brightness-110 active:shadow-[inset_0_3px_8px_rgba(0,0,0,.7),0_1px_0_#06090d] data-[down=true]:brightness-110 data-[down=true]:shadow-[inset_0_3px_8px_rgba(0,0,0,.7),0_1px_0_#06090d] ${className}`}
       style={style}
     >
       {label}
@@ -146,13 +147,17 @@ function Stick({
       y /= m;
     }
 
-    const [outputX, outputY] = applyStickResponse(x, -y, settings);
+    // Full deflection just before the rim, like a real DualSense stick.
+    const [travelX, travelY] = stickTravel(x, y);
+    const [outputX, outputY] = applyStickResponse(travelX, -travelY, settings);
     onMove(outputX, outputY);
 
+    // The cap follows the finger 1:1 (physical feel); the response curve only
+    // shapes what the game receives, so the stick never looks "stuck" at centre.
     const travel = Math.min(r.width, r.height) * 0.215;
     const thumb = thumbRef.current;
     if (thumb) {
-      thumb.style.transform = `translate3d(calc(-50% + ${outputX * travel}px), calc(-50% + ${-outputY * travel}px), 0)`;
+      thumb.style.transform = `translate3d(calc(-50% + ${x * travel}px), calc(-50% + ${y * travel}px), 0)`;
     }
 
     // Haptics are strictly rate-limited and never block the value write above.
@@ -195,11 +200,11 @@ function Stick({
   useEffect(() => {
     const move = (event: globalThis.PointerEvent) => { if (pointer.current === event.pointerId) update(event); };
     const end = (event: globalThis.PointerEvent) => release(event);
-    window.addEventListener("pointermove", move);
+    const removeMove = addFastPointerMove(move);
     window.addEventListener("pointerup", end);
     window.addEventListener("pointercancel", end);
     return () => {
-      window.removeEventListener("pointermove", move);
+      removeMove();
       window.removeEventListener("pointerup", end);
       window.removeEventListener("pointercancel", end);
     };
@@ -610,11 +615,11 @@ function Trigger({
   useEffect(() => {
     const update = (event: globalThis.PointerEvent) => { if (pointer.current === event.pointerId) move(event); };
     const end = (event: globalThis.PointerEvent) => release(event);
-    window.addEventListener("pointermove", update);
+    const removeMove = addFastPointerMove(update);
     window.addEventListener("pointerup", end);
     window.addEventListener("pointercancel", end);
     return () => {
-      window.removeEventListener("pointermove", update);
+      removeMove();
       window.removeEventListener("pointerup", end);
       window.removeEventListener("pointercancel", end);
     };

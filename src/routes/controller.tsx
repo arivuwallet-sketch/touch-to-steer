@@ -195,6 +195,7 @@ function Rig() {
   }, [settings.vibration]);
 
   const set = useCallback((p: Partial<ControllerState>, opts?: { haptic?: boolean }) => {
+
     if (editingRef.current) return;
     const previous = stateRef.current;
     touchStateRef.current = { ...touchStateRef.current, ...p };
@@ -257,6 +258,14 @@ function Rig() {
 
   const press = useCallback((id: string, down: boolean) => {
     if (editingRef.current) return;
+    if (settings.vibration) {
+      playDualRumble("ui", {
+        strongMagnitude: 0,
+        weakMagnitude: down ? 0.22 : 0.12,
+        duration: down ? 45 : 30,
+      });
+    }
+
     const previous = Boolean(stateRef.current.buttons?.[id]);
     touchStateRef.current = {
       ...touchStateRef.current,

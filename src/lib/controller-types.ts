@@ -133,6 +133,7 @@ export type Settings = {
    * DualSense. Only the lift animates; pressing and moving are never delayed. 0 = instant (legacy).
    */
   analogReturnMs: number;
+
   invertTilt: boolean;
   invertLookY: boolean;
   /** visual wheel lock, matching a G29 at 900 degrees lock-to-lock */
@@ -175,6 +176,7 @@ export const defaultSettings: Settings = {
   ffbHaptics: true,
   sendRateHz: 1000,
   analogReturnMs: DEFAULT_ANALOG_RETURN_MS,
+
   wheelBindings: { ...defaultWheelBindings },
   padBindings: {},
   autoGameProfiles: true,

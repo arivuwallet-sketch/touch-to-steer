@@ -232,6 +232,7 @@ function Stick({
   // "spring": the finger lifted cleanly, so the stick springs home like a real one (instant
   // when the return time is 0). "hard": cancel / lost capture / reset must stop NOW.
   const release = (e?: { pointerId: number }, how: "spring" | "hard" = "hard") => {
+
     if (pointer.current === null || (e && pointer.current !== e.pointerId)) return;
     pointer.current = null;
     pointMagnitude.current = 0;
@@ -242,6 +243,7 @@ function Stick({
       returnRunner.current?.cancel();
       centre();
     }
+
   };
 
   useEffect(() => {
@@ -255,6 +257,7 @@ function Stick({
       removeMove();
       window.removeEventListener("pointerup", lift);
       window.removeEventListener("pointercancel", abort);
+
     };
   });
 
@@ -265,6 +268,7 @@ function Stick({
       returnRunner.current?.cancel();
       centre();
     }
+
     if (clickTimer.current !== null) {
       clearTimeout(clickTimer.current);
       clickTimer.current = null;
@@ -295,6 +299,7 @@ function Stick({
         onPointerUp={(e) => release(e, "spring")}
         onPointerCancel={(e) => release(e)}
         onLostPointerCapture={(e) => release(e)}
+
         onDoubleClick={() => {
           onClick3(true);
           if (clickTimer.current !== null) clearTimeout(clickTimer.current);
@@ -467,17 +472,20 @@ function Trigger({
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
 
+
   const profile = FORCE_PROFILES[mode];
 
   useEffect(() => {
     return () => {
       if (pulseTimer.current !== null) window.clearTimeout(pulseTimer.current);
       returnRunner.current?.cancel();
+
     };
   }, []);
 
   useEffect(() => {
     returnRunner.current?.cancel();
+
     pointer.current = null;
     rectRef.current = null;
     lastFeel.current = 0;
@@ -552,6 +560,7 @@ function Trigger({
       const clamped = triggerClamp(next);
       valueRef.current = clamped;
       set({ [id]: clamped } as Partial<ControllerState>, silent ? { haptic: false } : undefined);
+
 
       const plate = plateRef.current;
       if (plate) {
@@ -656,6 +665,7 @@ function Trigger({
       e.stopPropagation();
       // A new press takes over instantly from any spring-back still in flight.
       returnRunner.current?.cancel();
+
       try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* window listeners retain input */ }
       pointer.current = e.pointerId;
       rectRef.current = e.currentTarget.getBoundingClientRect();
@@ -693,6 +703,7 @@ function Trigger({
       }
     },
     [trigRunner, writeTrigger],
+
   );
 
   useEffect(() => {
@@ -717,6 +728,7 @@ function Trigger({
     }
   });
 
+
   return (
     <button
       type="button"
@@ -725,6 +737,7 @@ function Trigger({
       onPointerUp={(e) => release(e, "spring")}
       onPointerCancel={(e) => release(e)}
       onLostPointerCapture={(e) => release(e)}
+
       className="flat-pad-trigger group relative grid h-[clamp(2.75rem,7.8svh,3.5rem)] w-[clamp(4.5rem,8vw,6rem)] touch-none select-none place-items-center overflow-hidden rounded-[1rem] border border-white/10 bg-[linear-gradient(180deg,#394754,#11171e)] text-[10px] font-black tracking-[0.25em] text-cyan-200 shadow-[inset_0_2px_2px_rgba(255,255,255,.1),inset_0_-7px_14px_rgba(0,0,0,.72),0_7px_0_#05080b,0_11px_18px_rgba(0,0,0,.58)]"
       style={{ perspective: "700px" }}
     >
@@ -948,6 +961,7 @@ export function FlatPad({ settings, set, press, onSettingsChange, gameName = "De
 
       <div className="flat-pad-left absolute bottom-[17%] left-[7%] flex items-center gap-[clamp(1rem,3vw,2.5rem)]">
         <Stick side="left" settings={settings} onMove={(x, y, silent) => set({ lx: x, ly: -y }, silent ? { haptic: false } : undefined)} onClick3={(d) => press("l3", d)} />
+
         <ApexDPad settings={settings} press={press} turbo={turbo} />
       </div>
 
@@ -973,6 +987,7 @@ export function FlatPad({ settings, set, press, onSettingsChange, gameName = "De
       <div className="flat-pad-right absolute bottom-[17%] right-[7%] flex items-center gap-[clamp(1rem,3vw,2.5rem)]">
         <ApexFaceButtons settings={settings} press={press} turbo={turbo} />
         <Stick side="right" settings={settings} onMove={(x, y, silent) => set({ rx: x, ry: settings.invertLookY ? y : -y }, silent ? { haptic: false } : undefined)} onClick3={(d) => press("r3", d)} />
+
       </div>
 
       <div className="flat-pad-bottom absolute bottom-[4%] left-1/2 flex -translate-x-1/2 gap-2">
@@ -992,4 +1007,5 @@ export function FlatPad({ settings, set, press, onSettingsChange, gameName = "De
 // Default export keeps the controller import resilient across Vite/TanStack HMR rebuilds.
 const MemoFlatPad = memo(FlatPad);
 export default MemoFlatPad;
+
 

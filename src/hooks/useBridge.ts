@@ -79,13 +79,19 @@ export function useBridge(
   const padBindingsRef = useRef(gameProfile.padBindings);
   padBindingsRef.current = gameProfile.padBindings;
   // Controller snapshots and mapping objects are replaced on change, so the
-  // encoder caches by identity: a snapshot is serialised once, shared by the
+  // encoder caches by identity: a snapshot is serialized once, shared by the
   // packet and the change signature, and bindings only when they change.
   const [encoder] = useState(createStateEncoder);
-  const stateSignature = useCallback(
-    () => encoder.signature(stateRef.current, bindingsRef.current, padBindingsRef.current),
-    [encoder, stateRef],
-  );
+  const signatureCacheRef = useRef<{ state: ControllerState; wheel: WheelBindings; pad: unknown; value: string } | null>(null);
+  const stateSignature = useCallback(() => {
+    const state = stateRef.current, wheel = bindingsRef.current, pad = padBindingsRef.current;
+    const cached = signatureCacheRef.current;
+    if (cached && cached.state === state && cached.wheel === wheel && cached.pad === pad) return cached.value;
+    const value = encoder.signature(state, wheel, pad);
+    signatureCacheRef.current = { state, wheel, pad, value };
+    return value;
+  }, [encoder, stateRef]);
+
 
   const clearLoop = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);

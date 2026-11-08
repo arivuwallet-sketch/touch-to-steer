@@ -20,6 +20,8 @@
  * becomes one consolidated driver report rather than several intermediate ones.
  */
 
+const {remotePolicy, authorizeUpgrade, playerLimit, capacityError} = require("./remote-access.cjs");
+const remote = remotePolicy(process.env);
 const PORT = Number(process.env.RIG_PORT || 8787);
 const FORZA_PORTS = String(process.env.RIG_FORZA_PORTS || "5300,5301,9876")
   .split(",")
@@ -348,7 +350,7 @@ function installBundledDriverAndRestart() {
 
 let client = null;
 const DEFAULT_OUTPUT = OUTPUT === "ds4" ? "ds4" : OUTPUT === "xinput" ? "xinput" : "universal";
-const MAX_CONTROLLER_SESSIONS = 4;
+const MAX_CONTROLLER_SESSIONS = playerLimit(process.env.RIG_MAX_PLAYERS);
 const ackState = new WeakMap();
 const socketState = new WeakMap();
 const controllerSessions = new Set();
@@ -983,7 +985,15 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, Number(v) || 0));
 const { XBTN, DSBTN, applySessionState } = require("./controller-report.cjs");
 const wss = new WebSocketServer({
   port: PORT,
+  host: remote.host,
+  maxPayload: 16 * 1024,
   perMessageDeflate: false,
+  handleProtocols: protocols => protocols.has("rig-v1") ? "rig-v1" : false,
+  verifyClient: (info, done) => {
+    if (!authorizeUpgrade(info.req.headers, remote.token)) return done(false, 401, "Pairing key required");
+    if (wss.clients.size >= MAX_CONTROLLER_SESSIONS + 8) return done(false, 503, "Host connection limit reached");
+    done(true);
+  },
 });
 
 let latestTelemetry = null;
@@ -1234,7 +1244,7 @@ bindTelemetrySocket(DIRT_PORT, "DiRT Rally", parseDirtRally);
 bindTelemetrySocket(PCARS_PORT, "Project CARS 2 / AMS2", parseProjectCars);
 bindMany(OUTGAUGE_PORTS, "OutGauge", parseOutGauge);
 
-console.log(`Rig bridge listening on ws://0.0.0.0:${PORT}`);
+console.log(`Rig bridge listening on ws://${remote.host}:${PORT}; remote pairing ${remote.token ? "required" : "disabled (LAN only)"}`);
 console.log(
   `Default virtual controller target: ${DEFAULT_OUTPUT === "universal" ? "Universal (Xbox 360/XInput + HID/DirectInput)" : DEFAULT_OUTPUT === "ds4" ? "DualShock 4/HID" : "Xbox 360/XInput"}`,
 );
@@ -1256,6 +1266,7 @@ wss.on("connection", (ws) => {
     applyScheduled: false,
     lastAppliedSignature: "",
     lastAppliedSeq: 0,
+    lastDigitalSignature: "",
     currentRumble: null,
     hapticTimer: null,
     activeGame: null,
@@ -1318,7 +1329,10 @@ wss.on("connection", (ws) => {
     session.lastAppliedSeq = 0;
     controllerSessions.delete(session);
   }
+  let sessionError = null;
   function createSessionTargets(requestedMode) {
+    sessionError = capacityError(controllerSessions, session, requestedMode, MAX_CONTROLLER_SESSIONS);
+    if (sessionError) return false;
     if (session.targets.length && session.mode === requestedMode) {
       return true;
     }
@@ -1418,7 +1432,7 @@ wss.on("connection", (ws) => {
       const index = Number(xinput.target.userIndex);
       return Number.isInteger(index) &&
         index >= 0 &&
-        index < MAX_CONTROLLER_SESSIONS
+        index < 4
         ? index + 1
         : null;
     } catch {
@@ -1445,7 +1459,7 @@ wss.on("connection", (ws) => {
       ).toLowerCase();
 
       const requested =
-        requestedRaw === "ds4"
+        requestedRaw === "ds4" || requestedRaw === "ps5" || requestedRaw === "dualsense"
           ? "ds4"
           : requestedRaw === "xinput"
             ? "xinput"
@@ -1472,10 +1486,10 @@ wss.on("connection", (ws) => {
           t: msg.t ?? Date.now(),
           seq: msg.seq ?? 0,
           output: session.mode,
-          rateHz: Math.max(60, Math.min(333, Number(msg.rateHz) || 333)),
+          rateHz: Math.max(60, Math.min(1000, Number(msg.rateHz) || 1000)),
           mouse: {
             supported: process.platform === "win32",
-            injectorAvailable: Boolean(startMouseInjector()),
+            injectorAvailable: remote.mouseAllowed && Boolean(startMouseInjector()),
           },
           controller: {
             supported: process.platform === "win32",
@@ -1486,10 +1500,12 @@ wss.on("connection", (ws) => {
             directInputFallback: Boolean(ds4Target),
             player: playerIndex(),
             maxPlayers: MAX_CONTROLLER_SESSIONS,
+            maxXInputPlayers: 4,
+            remote: remote.publicMode,
             activePlayers: controllerSessions.size,
             error: connected
               ? null
-              : controllerSessions.size >= MAX_CONTROLLER_SESSIONS
+              : sessionError ? sessionError : controllerSessions.size >= MAX_CONTROLLER_SESSIONS
                 ? `Maximum of ${MAX_CONTROLLER_SESSIONS} simultaneous controller players reached.`
                 : "ViGEmBus virtual controller could not be created.",
           },
@@ -1515,7 +1531,7 @@ wss.on("connection", (ws) => {
     }
 
     if (msg.type === "mouse") {
-      const ok = sendMouseNative(msg);
+      const ok = remote.mouseAllowed && sendMouseNative(msg);
       if (msg.action !== "move" && ws.readyState === 1) {
         try {
           ws.send(JSON.stringify({
@@ -1535,13 +1551,26 @@ wss.on("connection", (ws) => {
       session.lastInputAt = performance.now();
       session.inputTimedOut = false;
 
-      if (msg.priority === "edge" || msg.priority === "hot") {
+      // Preserve transitions even when an analog control maps to a button.
+      const digitalSignature = JSON.stringify([
+        Object.keys(msg.buttons || {}).filter(key => msg.buttons[key]).sort(),
+        msg.gear || 0, msg.dial || 0,
+        ...["lt", "rt", "throttle", "brake", "clutch", "handbrake", "nitro"].map(key => {
+          const value = Number(msg[key]) || 0;
+          return value > 0.5 ? 2 : value > 0.02 ? 1 : 0;
+        }),
+        msg.wheelBindings, msg.padBindings,
+      ]);
+      const digitalChanged = digitalSignature !== session.lastDigitalSignature;
+      session.lastDigitalSignature = digitalSignature;
+      if (msg.priority === "edge" || digitalChanged || (msg.priority === "hot" && !session.applyScheduled)) {
+        // The first sample and every button transition remain immediate.
+        // A burst of analog positions arriving in the same I/O turn keeps
+        // only its newest position instead of replaying stale driver writes.
+        session.latestState = null;
+        scheduleApply();
         try {
-          // Edge buttons AND live touch/analog events bypass the background
-          // mailbox. Pedals, steering and sticks therefore reach ViGEm in the
-          // same browser event rather than waiting for the background safety pump.
-          // The mailbox remains intact for the continuous watchdog lane, so
-          // Claude's stale-state protection is preserved.
+          // Apply the leading sample or transition without a timer delay.
           applySessionState(session, msg);
         } catch (err) {
           console.warn(

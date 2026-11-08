@@ -1,4 +1,6 @@
+import type { ControlLayouts } from "./control-layout";
 import type { PadBindings, SavedGameProfile } from "./game-profiles";
+import { DEFAULT_ANALOG_RETURN_MS } from "./analog-feel";
 export type WheelOutput = "rt" | "lt" | "a" | "b" | "x" | "y" | "lb" | "rb" | "l3" | "r3" | "none";
 export const defaultWheelBindings = {
   throttle: "rt", brake: "lt", handbrake: "a", nitro: "lb", clutch: "x",
@@ -86,10 +88,10 @@ export function applyForceFlex(
 
   const magnitude = Math.max(0, Math.min(1, Math.abs(v)));
   const baseExponent =
-    tensionGf === 30 ? 0.78 :
-    tensionGf === 50 ? 0.94 :
-    tensionGf === 80 ? 1.08 :
-    1.2;
+    tensionGf === 30 ? 0.65 :
+    tensionGf === 50 ? 1 :
+    tensionGf === 80 ? 1.55 :
+    2.2;
 
   // Blend, rather than multiply, the general linearity control so the
   // ForceFlex detents remain distinct at every GF setting.
@@ -103,6 +105,7 @@ export function applyForceFlex(
 }
 
 export type Settings = {
+  controlLayouts: ControlLayouts;
   wheelBindings: WheelBindings;
   padBindings: PadBindings;
   autoGameProfiles: boolean;
@@ -110,7 +113,7 @@ export type Settings = {
   gameProfiles: Record<string, SavedGameProfile>;
   bridgeUrl: string;
   /** Virtual PC controller output. Universal creates synchronized XInput + DirectInput/HID-compatible targets for broad legacy/modern coverage. */
-  outputMode: "xinput" | "ds4" | "universal";
+  outputMode: "xinput" | "ds4" | "universal" | "ps5";
   steerMode: "tilt" | "touch";
   /** aim/stick sensitivity */
   sensitivity: number;
@@ -123,8 +126,13 @@ export type Settings = {
   vibration: boolean;
   /** Phone-side haptic approximation of wheel force feedback. */
   ffbHaptics: boolean;
-  /** Controller transport target. The bridge currently supports 60–333 Hz (333 selects a 3 ms target). */
-  sendRateHz: 60 | 120 | 144 | 180 | 240 | 333;
+  /** Controller transport target. The bridge currently supports 60–1000 Hz (1000 selects a 1 ms target). */
+  sendRateHz: 60 | 120 | 144 | 180 | 240 | 333 | 1000;
+  /**
+   * Spring-back time (ms) when a finger leaves a stick or trigger, like the physical return of a
+   * DualSense. Only the lift animates; pressing and moving are never delayed. 0 = instant (legacy).
+   */
+  analogReturnMs: number;
   invertTilt: boolean;
   invertLookY: boolean;
   /** visual wheel lock, matching a G29 at 900 degrees lock-to-lock */
@@ -153,6 +161,7 @@ export type Settings = {
 };
 
 export const defaultSettings: Settings = {
+  controlLayouts: {},
   bridgeUrl: "ws://192.168.1.10:8787",
   outputMode: "xinput",
   steerMode: "touch",
@@ -164,7 +173,8 @@ export const defaultSettings: Settings = {
   autoCentre: true,
   vibration: true,
   ffbHaptics: true,
-  sendRateHz: 333,
+  sendRateHz: 1000,
+  analogReturnMs: DEFAULT_ANALOG_RETURN_MS,
   wheelBindings: { ...defaultWheelBindings },
   padBindings: {},
   autoGameProfiles: true,

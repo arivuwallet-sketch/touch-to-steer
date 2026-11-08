@@ -173,7 +173,9 @@ jobs:
           Copy-Item "public/bridge/windows/README.md" "release/README.md"
           Copy-Item "public/bridge/windows/INPUT-CHECK.md" "release/INPUT-CHECK.md"
           Copy-Item "public/bridge/windows/Test-Controller.ps1" "release/Test-Controller.ps1"
-          Compress-Archive -Path "release/TouchToSteer-Bridge.exe", "release/README.md", "release/INPUT-CHECK.md", "release/Test-Controller.ps1" -DestinationPath "public/bridge/dist/TouchToSteer-Bridge-Windows.zip" -Force
+          Copy-Item "public/bridge/windows/Start-Global.ps1" "release/Start-Global.ps1"
+          Copy-Item "public/bridge/windows/GLOBAL-PLAY.md" "release/GLOBAL-PLAY.md"
+          Compress-Archive -Path "release/TouchToSteer-Bridge.exe", "release/README.md", "release/INPUT-CHECK.md", "release/Test-Controller.ps1", "release/Start-Global.ps1", "release/GLOBAL-PLAY.md" -DestinationPath "public/bridge/dist/TouchToSteer-Bridge-Windows.zip" -Force
 
       - name: Build TouchToSteer Windows desktop package
         shell: pwsh

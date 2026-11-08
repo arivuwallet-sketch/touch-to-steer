@@ -1,9 +1,11 @@
+import { LayoutEditor } from "@/components/rig/LayoutEditor";
+import { useControlLayout } from "@/hooks/useControlLayout";
 import { updateGameOverride } from "@/lib/game-profiles";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Gamepad2, Gauge, Mouse, Settings as SettingsIcon } from "lucide-react";
 import { SettingsPanel } from "@/components/rig/SettingsPanel";
-import { FlatPad } from "@/components/rig/FlatPad";
+import FlatPad from "@/components/rig/FlatPadController";
 import { FlatWheel } from "@/components/rig/FlatWheel";
 import { FlatMouse } from "@/components/rig/FlatMouse";
 import { RotateGate } from "@/components/rig/RotateGate";
@@ -18,6 +20,11 @@ import {
 } from "@/lib/controller-types";
 
 export const Route = createFileRoute("/controller")({
+  // The controller surface depends on browser-only APIs (localStorage, WebSocket,
+  // touch/pointer events, device orientation and haptics). Rendering it on the
+  // TanStack Start server can throw before hydration and surface the generic
+  // "This page didn't load" boundary. Keep the route client-rendered.
+  ssr: false,
   head: () => ({
     meta: [
       { title: "TouchToSteer Virtual Controller" },
@@ -49,6 +56,11 @@ function Rig() {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [showSettings, setShowSettings] = useState(false);
   const [mode, setMode] = useState<"pad" | "wheel" | "mouse">("pad");
+  const [editingLayout, setEditingLayout] = useState(false);
+  const controlsRoot = useRef<HTMLDivElement>(null);
+  const layoutControls = useControlLayout(controlsRoot, mode, mode === "mouse" ? undefined : settings.controlLayouts?.[mode]);
+  const editingRef = useRef(false);
+  editingRef.current = editingLayout;
   const [mobileLayout, setMobileLayout] = useState(false);
   const stateRef = useRef<ControllerState>(emptyState());
   const touchStateRef = useRef<ControllerState>(emptyState());
@@ -60,6 +72,7 @@ function Rig() {
     telemetryLive,
     activeGame,
     gameProfile,
+    connectionError,
     profileMappingsSupported,
     connect,
     disconnect,
@@ -70,7 +83,7 @@ function Rig() {
 
   useEffect(() => {
     const migrationKey = "mobile-rig-universal-migration-v3";
-    const timingMigrationKey = "mobile-rig-3ms-v1";
+    const timingMigrationKey = "mobile-rig-1000hz-v1";
     const centreMigrationKey = "mobile-rig-autocentre-v1";
     const migrated = localStorage.getItem(migrationKey) === "1";
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -89,7 +102,7 @@ function Rig() {
         const saved = { ...defaultSettings, ...parsed } as Settings;
         // Apply the new timing target once without altering other saved controls.
         if (localStorage.getItem(timingMigrationKey) !== "1") {
-          saved.sendRateHz = 333;
+          saved.sendRateHz = 1000;
           localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
           localStorage.setItem(timingMigrationKey, "1");
         }
@@ -181,22 +194,12 @@ function Rig() {
     });
   }, [settings.vibration]);
 
-  const set = useCallback((p: Partial<ControllerState>) => {
+  const set = useCallback((p: Partial<ControllerState>, opts?: { haptic?: boolean }) => {
+    if (editingRef.current) return;
     const previous = stateRef.current;
     touchStateRef.current = { ...touchStateRef.current, ...p };
     const next = mergeControllerInputs(touchStateRef.current, keyboardStateRef.current);
     stateRef.current = next;
-
-    // Global dual-rumble lane: every meaningful controller state event gets
-    // haptic feedback independent of XInput / DS4 / Universal output mode.
-    const numericChanges = Object.entries(p)
-      .map(([key, value]) => {
-        const before = Number((previous as Record<string, unknown>)[key] ?? 0);
-        const after = Number(value ?? 0);
-        return Number.isFinite(before) && Number.isFinite(after) ? Math.abs(after - before) : 0;
-      });
-    const changeMagnitude = Math.max(...numericChanges, 0);
-    triggerAnalogHaptic(changeMagnitude);
 
     // Send analog changes immediately from the input event instead of waiting
     // for the background watchdog. The watchdog remains as a safety/refresh lane.
@@ -236,16 +239,24 @@ function Rig() {
     });
 
     if (digitalEdge) sendControllerEdge();
+
+    // Global dual-rumble lane: every meaningful controller state event gets
+    // haptic feedback independent of XInput / DS4 / Universal output mode.
+    // It runs AFTER the packets above so feedback bookkeeping can never delay
+    // them, and is skipped for machine-made motion (spring-back samples).
+    if (opts?.haptic === false) return;
+    const numericChanges = Object.entries(p)
+      .map(([key, value]) => {
+        const before = Number((previous as Record<string, unknown>)[key] ?? 0);
+        const after = Number(value ?? 0);
+        return Number.isFinite(before) && Number.isFinite(after) ? Math.abs(after - before) : 0;
+      });
+    const changeMagnitude = Math.max(...numericChanges, 0);
+    triggerAnalogHaptic(changeMagnitude);
   }, [sendControllerEdge, sendControllerStateNow, triggerAnalogHaptic]);
 
   const press = useCallback((id: string, down: boolean) => {
-    if (settings.vibration) {
-      playDualRumble("ui", {
-        strongMagnitude: 0,
-        weakMagnitude: down ? 0.22 : 0.12,
-        duration: down ? 45 : 30,
-      });
-    }
+    if (editingRef.current) return;
     const previous = Boolean(stateRef.current.buttons?.[id]);
     touchStateRef.current = {
       ...touchStateRef.current,
@@ -256,6 +267,15 @@ function Rig() {
     // Send every real digital edge immediately instead of waiting for the
     // background transport sampler. This preserves sub-frame taps in joy.cpl.
     if (previous !== Boolean(stateRef.current.buttons[id])) sendControllerEdge();
+
+    // Feedback only after the press is on the wire.
+    if (settings.vibration) {
+      playDualRumble("ui", {
+        strongMagnitude: 0,
+        weakMagnitude: down ? 0.22 : 0.12,
+        duration: down ? 45 : 30,
+      });
+    }
   }, [sendControllerEdge, settings.vibration]);
 
   const releaseAll = useCallback(() => {
@@ -297,7 +317,7 @@ function Rig() {
       <RotateGate mode={mode} />
 
       {/* ---------- rig fills the screen ---------- */}
-      <div className="absolute inset-0">
+      <div ref={controlsRoot} className="absolute inset-0">
         {mode === "pad" ? (
           <FlatPad settings={settings} set={set} press={press} onSettingsChange={patch} gameName={activeGame} profileName={gameProfile.name} />
         ) : mode === "wheel" ? (
@@ -350,8 +370,9 @@ function Rig() {
         </Button>
       </div>
 
-      {showSettings && (
+      {showSettings && !editingLayout && (
         <SettingsPanel
+          onEditLayout={(target) => { releaseAll(); setMode(target); setEditingLayout(true); }}
           settings={{ ...settings, wheelBindings: gameProfile.wheelBindings, padBindings: gameProfile.padBindings }}
           gameProfile={gameProfile}
           profileMappingsSupported={profileMappingsSupported}
@@ -359,9 +380,16 @@ function Rig() {
           onClose={() => setShowSettings(false)}
           status={status}
           latency={latency}
-          onConnect={() => connect(settings.bridgeUrl)}
+          connectionError={connectionError}
+          onConnect={(key) => connect(settings.bridgeUrl, key)}
           onDisconnect={disconnect}
         />
+      )}
+      {editingLayout && mode !== "mouse" && layoutControls.mode === mode && (
+        <LayoutEditor key={mode} source={controlsRoot.current} mode={mode} controls={layoutControls.items} saved={settings.controlLayouts?.[mode]}
+          aspect={(controlsRoot.current?.clientWidth || 16) / (controlsRoot.current?.clientHeight || 9)}
+          onClose={() => { releaseAll(); setEditingLayout(false); }}
+          onSave={(layout) => { releaseAll(); patch({controlLayouts:{...settings.controlLayouts,[mode]:layout}}); setEditingLayout(false); }} />
       )}
     </main>
   );

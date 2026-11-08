@@ -11,7 +11,14 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ControllerRouteImport } from './routes/controller'
+import { Route as DownloadsRouteImport } from './routes/downloads'
+import { Route as GameSetupRouteImport } from './routes/game-setup'
+import { Route as LegalRouteImport } from './routes/legal'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SetupRouteImport } from './routes/setup'
+import { Route as SupportRouteImport } from './routes/support'
+import { Route as TroubleshootingRouteImport } from './routes/troubleshooting'
+import { Route as TutorialsRouteImport } from './routes/tutorials'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -23,40 +30,134 @@ const ControllerRoute = ControllerRouteImport.update({
   path: '/controller',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DownloadsRoute = DownloadsRouteImport.update({
+  id: '/downloads',
+  path: '/downloads',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GameSetupRoute = GameSetupRouteImport.update({
+  id: '/game-setup',
+  path: '/game-setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalRoute = LegalRouteImport.update({
+  id: '/legal',
+  path: '/legal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
   path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SupportRoute = SupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TroubleshootingRoute = TroubleshootingRouteImport.update({
+  id: '/troubleshooting',
+  path: '/troubleshooting',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TutorialsRoute = TutorialsRouteImport.update({
+  id: '/tutorials',
+  path: '/tutorials',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/controller': typeof ControllerRoute
+  '/downloads': typeof DownloadsRoute
+  '/game-setup': typeof GameSetupRoute
+  '/legal': typeof LegalRoute
+  '/privacy': typeof PrivacyRoute
   '/setup': typeof SetupRoute
+  '/support': typeof SupportRoute
+  '/troubleshooting': typeof TroubleshootingRoute
+  '/tutorials': typeof TutorialsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/controller': typeof ControllerRoute
+  '/downloads': typeof DownloadsRoute
+  '/game-setup': typeof GameSetupRoute
+  '/legal': typeof LegalRoute
+  '/privacy': typeof PrivacyRoute
   '/setup': typeof SetupRoute
+  '/support': typeof SupportRoute
+  '/troubleshooting': typeof TroubleshootingRoute
+  '/tutorials': typeof TutorialsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/controller': typeof ControllerRoute
+  '/downloads': typeof DownloadsRoute
+  '/game-setup': typeof GameSetupRoute
+  '/legal': typeof LegalRoute
+  '/privacy': typeof PrivacyRoute
   '/setup': typeof SetupRoute
+  '/support': typeof SupportRoute
+  '/troubleshooting': typeof TroubleshootingRoute
+  '/tutorials': typeof TutorialsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/controller' | '/setup'
+  fullPaths:
+    | '/'
+    | '/controller'
+    | '/downloads'
+    | '/game-setup'
+    | '/legal'
+    | '/privacy'
+    | '/setup'
+    | '/support'
+    | '/troubleshooting'
+    | '/tutorials'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/controller' | '/setup'
-  id: '__root__' | '/' | '/controller' | '/setup'
+  to:
+    | '/'
+    | '/controller'
+    | '/downloads'
+    | '/game-setup'
+    | '/legal'
+    | '/privacy'
+    | '/setup'
+    | '/support'
+    | '/troubleshooting'
+    | '/tutorials'
+  id:
+    | '__root__'
+    | '/'
+    | '/controller'
+    | '/downloads'
+    | '/game-setup'
+    | '/legal'
+    | '/privacy'
+    | '/setup'
+    | '/support'
+    | '/troubleshooting'
+    | '/tutorials'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ControllerRoute: typeof ControllerRoute
+  DownloadsRoute: typeof DownloadsRoute
+  GameSetupRoute: typeof GameSetupRoute
+  LegalRoute: typeof LegalRoute
+  PrivacyRoute: typeof PrivacyRoute
   SetupRoute: typeof SetupRoute
+  SupportRoute: typeof SupportRoute
+  TroubleshootingRoute: typeof TroubleshootingRoute
+  TutorialsRoute: typeof TutorialsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -75,11 +176,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ControllerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/downloads': {
+      id: '/downloads'
+      path: '/downloads'
+      fullPath: '/downloads'
+      preLoaderRoute: typeof DownloadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/game-setup': {
+      id: '/game-setup'
+      path: '/game-setup'
+      fullPath: '/game-setup'
+      preLoaderRoute: typeof GameSetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal': {
+      id: '/legal'
+      path: '/legal'
+      fullPath: '/legal'
+      preLoaderRoute: typeof LegalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/setup': {
       id: '/setup'
       path: '/setup'
       fullPath: '/setup'
       preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/support': {
+      id: '/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof SupportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/troubleshooting': {
+      id: '/troubleshooting'
+      path: '/troubleshooting'
+      fullPath: '/troubleshooting'
+      preLoaderRoute: typeof TroubleshootingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tutorials': {
+      id: '/tutorials'
+      path: '/tutorials'
+      fullPath: '/tutorials'
+      preLoaderRoute: typeof TutorialsRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -88,7 +238,14 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ControllerRoute: ControllerRoute,
+  DownloadsRoute: DownloadsRoute,
+  GameSetupRoute: GameSetupRoute,
+  LegalRoute: LegalRoute,
+  PrivacyRoute: PrivacyRoute,
   SetupRoute: SetupRoute,
+  SupportRoute: SupportRoute,
+  TroubleshootingRoute: TroubleshootingRoute,
+  TutorialsRoute: TutorialsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

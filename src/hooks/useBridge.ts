@@ -1,8 +1,10 @@
+import { bridgeOutputFor, type OutputMode } from "@/lib/playstation";
 import { resolveGameProfile, type ProfileOptions } from "@/lib/game-profiles";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { defaultWheelBindings, type WheelBindings, type ControllerState } from "@/lib/controller-types";
 import { RELEASE_INPUTS } from "./useInputReset";
-import { playDualRumble } from "@/lib/haptics";
+import { playDualRumble, stopHaptics, setHapticsEnabled } from "@/lib/haptics";
+import { createStateEncoder } from "@/lib/state-codec";
 
 export type BridgeStatus = "idle" | "connecting" | "connected" | "error";
 
@@ -16,12 +18,12 @@ export type BridgeTelemetry = {
   ffb?: number | undefined;
 };
 
-const clampRate = (hz: number) => Math.max(60, Math.min(333, Math.round(hz)));
+const clampRate = (hz: number) => Math.max(60, Math.min(1000, Math.round(Number.isFinite(hz) ? hz : 1000)));
 const nowMs = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
 
 /**
  * Low-latency state transport:
- * - target rate is selectable up to 333 Hz (3 ms scheduling target; browser timing is best-effort)
+ * - target rate is selectable up to 1000 Hz (1 ms scheduling target; browser timing is best-effort)
  * - self-scheduling avoids interval drift
  * - only the newest controller state is sent
  * - browser/transport buffering is bounded so stale input is not accumulated
@@ -29,15 +31,27 @@ const nowMs = () => (typeof performance !== "undefined" ? performance.now() : Da
 export function useBridge(
   stateRef: React.MutableRefObject<ControllerState>,
   rateHz: number,
-  outputMode: "xinput" | "ds4" | "universal" = "xinput",
+  outputMode: OutputMode = "xinput",
   vibrationEnabled = true,
   wheelBindings: WheelBindings = defaultWheelBindings,
   profileOptions: ProfileOptions = {},
 ) {
+  useEffect(() => {
+    setHapticsEnabled(vibrationEnabled);
+    const stop = () => stopHaptics();
+    const visibility = () => { if (document.visibilityState !== "visible") stop(); };
+    window.addEventListener("blur", stop);
+    document.addEventListener("visibilitychange", visibility);
+    return () => {
+      stopHaptics();
+      window.removeEventListener("blur", stop);
+      document.removeEventListener("visibilitychange", visibility);
+    };
+  }, [vibrationEnabled]);
   const [profileMappingsSupported, setProfileMappingsSupported] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [status, setStatus] = useState<BridgeStatus>("idle");
   const [latency, setLatency] = useState<number | null>(null);
-  const [packets, setPackets] = useState(0);
   const [telemetry, setTelemetry] = useState<BridgeTelemetry>({});
   const [telemetryLive, setTelemetryLive] = useState(false);
   const [activeGame, setActiveGame] = useState<string>("Desktop");
@@ -49,7 +63,6 @@ export function useBridge(
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pumpChannelRef = useRef<MessageChannel | null>(null);
   const packetCounterRef = useRef(0);
-  const lastStatsPaintRef = useRef(0);
   const lastLatencyPaintRef = useRef(0);
   const lastSentStateRef = useRef("");
   const lastHeartbeatRef = useRef(0);
@@ -65,7 +78,14 @@ export function useBridge(
   bindingsRef.current = gameProfile.wheelBindings;
   const padBindingsRef = useRef(gameProfile.padBindings);
   padBindingsRef.current = gameProfile.padBindings;
-  const stateSignature = useCallback(() => JSON.stringify([stateRef.current, bindingsRef.current, padBindingsRef.current]), [stateRef]);
+  // Controller snapshots and mapping objects are replaced on change, so the
+  // encoder caches by identity: a snapshot is serialised once, shared by the
+  // packet and the change signature, and bindings only when they change.
+  const [encoder] = useState(createStateEncoder);
+  const stateSignature = useCallback(
+    () => encoder.signature(stateRef.current, bindingsRef.current, padBindingsRef.current),
+    [encoder, stateRef],
+  );
 
   const clearLoop = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -127,6 +147,7 @@ export function useBridge(
   }, []);
 
   const disconnect = useCallback(() => {
+    stopHaptics();
     if (typeof window !== "undefined") window.dispatchEvent(new Event(RELEASE_INPUTS));
     clearLoop();
     clearMoveFlush();
@@ -150,12 +171,19 @@ export function useBridge(
   }, [clearLoop, clearMoveFlush, clearTelemetryTimer]);
 
   const connect = useCallback(
-    (url: string) => {
+    (url: string, pairingKey = "") => {
       disconnect();
+      setConnectionError(null);
 
       let ws: WebSocket;
       try {
-        ws = new WebSocket(url);
+        const key = pairingKey.trim();
+        if (key && (!url.startsWith("wss://") && !/^ws:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(url))) {
+          setConnectionError("Internet pairing requires a secure wss:// address.");
+          setStatus("error");
+          return;
+        }
+        ws = key ? new WebSocket(url, ["rig-v1", `rig-auth.${key}`]) : new WebSocket(url);
       } catch {
         setStatus("error");
         return;
@@ -178,7 +206,7 @@ export function useBridge(
               version: 3,
               transport: "websocket",
               rateHz: clampRate(rateHzRef.current),
-              output: outputMode,
+              output: bridgeOutputFor(outputMode),
             }),
           );
         } catch {
@@ -208,20 +236,12 @@ export function useBridge(
           // change detector and 4 Hz recovery heartbeat.
           if ((changed || heartbeatDue) && ws.bufferedAmount < 2_048) {
             try {
-              ws.send(JSON.stringify({
-                type: "state",
-                t: Date.now(),
-                seq: ++packetCounterRef.current,
-                ...stateRef.current,
-          wheelBindings: bindingsRef.current,
-          padBindings: padBindingsRef.current,
-              }));
+              ws.send(encoder.packet(
+                undefined, Date.now(), ++packetCounterRef.current,
+                stateRef.current, bindingsRef.current, padBindingsRef.current,
+              ));
               lastSentStateRef.current = signature;
               lastHeartbeatRef.current = currentTime;
-              if (currentTime - lastStatsPaintRef.current >= 250) {
-                lastStatsPaintRef.current = currentTime;
-                setPackets(packetCounterRef.current);
-              }
             } catch {
               /* ignore a send racing socket close */
             }
@@ -235,7 +255,7 @@ export function useBridge(
             // A message task breaks nested timer clamping (normally 4 ms).
             // No busy loop: every sample still waits for its scheduled timer.
             const channel = pumpChannelRef.current;
-            if (rate === 333 && channel) channel.port2.postMessage(null);
+            if (rate > 250 && channel) channel.port2.postMessage(null);
             else pump();
           }, Math.max(0, nextDue - nowMs()));
         };
@@ -260,6 +280,7 @@ export function useBridge(
               lastSentStateRef.current = "";
             } else {
               clearLoop();
+              setConnectionError(msg.controller?.error || "Controller unavailable on the host.");
               setStatus("error");
             }
             return;
@@ -308,6 +329,7 @@ export function useBridge(
                         ? "engine"
                         : "light";
 
+            if (!Number.isFinite(strong) || !Number.isFinite(weak)) return;
             playDualRumble(kind, {
               strongMagnitude: strong,
               weakMagnitude: weak,
@@ -362,7 +384,8 @@ export function useBridge(
           }
 
           if (msg.type === "ffb" && typeof msg.value === "number") {
-            const force = Math.max(-1, Math.min(1, msg.value));
+            const force = Number.isFinite(msg.value) ? Math.max(-1, Math.min(1, msg.value)) : 0;
+            if (Math.abs(force) <= 0.04) stopHaptics();
             setTelemetry((prev) => ({
               ...prev,
               ffb: force,
@@ -385,9 +408,10 @@ export function useBridge(
         }
       };
 
-      ws.onerror = () => { if (wsRef.current === ws) setStatus("error"); };
+      ws.onerror = () => { if (wsRef.current === ws) { setConnectionError("Connection failed. Check the host address, pairing key, tunnel and host capacity."); setStatus("error"); } };
       ws.onclose = () => {
         if (wsRef.current === ws) {
+          stopHaptics();
           window.dispatchEvent(new Event(RELEASE_INPUTS));
           wsRef.current = null;
           setActiveGame("Disconnected");
@@ -398,7 +422,7 @@ export function useBridge(
         }
       };
     },
-    [clearLoop, clearTelemetryTimer, disconnect, outputMode, rateHz, stateRef, stateSignature, vibrationEnabled],
+    [clearLoop, clearTelemetryTimer, disconnect, encoder, outputMode, rateHz, stateRef, stateSignature, vibrationEnabled],
   );
 
   useEffect(
@@ -424,7 +448,7 @@ export function useBridge(
           version: 3,
           transport: "websocket",
           rateHz: clampRate(rateHz),
-          output: outputMode,
+          output: bridgeOutputFor(outputMode),
         }),
       );
     } catch {
@@ -442,24 +466,17 @@ export function useBridge(
     if (ws.bufferedAmount >= 2_048) return false;
 
     try {
-      ws.send(
-        JSON.stringify({
-          type: "state",
-          priority: "hot",
-          t: Date.now(),
-          seq: ++packetCounterRef.current,
-          ...stateRef.current,
-          wheelBindings: bindingsRef.current,
-          padBindings: padBindingsRef.current,
-        }),
-      );
+      ws.send(encoder.packet(
+        "hot", Date.now(), ++packetCounterRef.current,
+        stateRef.current, bindingsRef.current, padBindingsRef.current,
+      ));
       lastSentStateRef.current = stateSignature();
       lastHeartbeatRef.current = nowMs();
       return true;
     } catch {
       return false;
     }
-  }, [stateRef, stateSignature]);
+  }, [encoder, stateRef, stateSignature]);
 
   const sendControllerEdge = useCallback(() => {
     const ws = wsRef.current;
@@ -471,24 +488,17 @@ export function useBridge(
     // controller snapshot immediately; the bridge applies edge snapshots
     // synchronously while continuous state traffic remains coalesced.
     try {
-      ws.send(
-        JSON.stringify({
-          type: "state",
-          priority: "edge",
-          t: Date.now(),
-          seq: ++packetCounterRef.current,
-          ...stateRef.current,
-          wheelBindings: bindingsRef.current,
-          padBindings: padBindingsRef.current,
-        }),
-      );
+      ws.send(encoder.packet(
+        "edge", Date.now(), ++packetCounterRef.current,
+        stateRef.current, bindingsRef.current, padBindingsRef.current,
+      ));
       lastSentStateRef.current = stateSignature();
       lastHeartbeatRef.current = nowMs();
       return true;
     } catch {
       return false;
     }
-  }, [stateRef, stateSignature]);
+  }, [encoder, stateRef, stateSignature]);
 
   const sendMouse = useCallback(
     (message: {
@@ -568,10 +578,10 @@ export function useBridge(
 
   return {
     gameProfile,
+    connectionError,
     profileMappingsSupported,
     status,
     latency,
-    packets,
     telemetry,
     telemetryLive,
     activeGame,

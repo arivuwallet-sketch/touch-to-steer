@@ -1,6 +1,6 @@
 # Automatic game profiles
 
-Requires this version of both the web/mobile app and Windows bridge. Settings warns when a connected bridge is too old to support profile mappings. The existing controller layout, touch input handling, 3 ms scheduling target and 120 ms wheel return are retained.
+Requires this version of both the web/mobile app and Windows bridge. Settings warns when a connected bridge is too old to support profile mappings. The existing controller layout, touch input handling, 1 ms scheduling target and 120 ms wheel return are retained.
 
 The bridge reports the actual foreground window/process. The app selects one profile for **both** wheel and gamepad outputs. On a profile change it releases held controls before applying new assignments. Opening a browser tab named after a game does not select that game's profile. Title changes inside a recognized executable do not cancel gestures. Unknown game executables use standard mappings; any adjustments saved in Settings are stored for that executable and restored when it returns. UWP host applications use an exact known game title or a title-specific custom key.
 

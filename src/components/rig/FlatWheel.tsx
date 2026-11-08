@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type PointerEvent, type RefObject } from "react";
+import { memo, useCallback, useEffect, useRef, useState, type PointerEvent, type RefObject } from "react";
 import { applySteeringTension, applyCurve, type ControllerState, type Settings } from "@/lib/controller-types";
 import { playDualRumble, type DualRumbleKind } from "@/lib/haptics";
 import type { BridgeTelemetry } from "@/hooks/useBridge";
@@ -486,7 +486,7 @@ function G29Wheel({
   );
 }
 
-export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSettingsChange, gameName = "Desktop" }: Props) {
+function FlatWheelImpl({ settings, set, press, telemetry, telemetryLive, onSettingsChange, gameName = "Desktop" }: Props) {
   const wheelHitRef = useRef<HTMLDivElement>(null);
   const wheelVisualRef = useRef<HTMLDivElement>(null);
   const touchPointer = useRef<number | null>(null);
@@ -827,9 +827,9 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
   }, [cancelCentre, maxLockDeg, setWheelRaw]);
 
   const cycleSendRate = () => {
-    const values: Settings["sendRateHz"][] = [60, 120, 144, 180, 240, 333];
+    const values: Settings["sendRateHz"][] = [60, 120, 144, 180, 240, 333, 1000];
     const index = values.indexOf(settings.sendRateHz);
-    const next = values[(index >= 0 ? index + 1 : 0) % values.length] ?? 333;
+    const next = values[(index >= 0 ? index + 1 : 0) % values.length] ?? 1000;
     buzz(settings.vibration, 8);
     onSettingsChange({ sendRateHz: next });
   };
@@ -983,3 +983,7 @@ export function FlatWheel({ settings, set, press, telemetry, telemetryLive, onSe
     </div>
   );
 }
+
+// The controller route re-renders for connection status and latency readouts; memoising keeps
+// that off the touch surface. The wheel still re-renders when telemetry or settings change.
+export const FlatWheel = memo(FlatWheelImpl);

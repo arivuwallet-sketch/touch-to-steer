@@ -15,13 +15,15 @@ const React = require('react');
 const { createRoot } = require('react-dom/client');
 const { act } = React;
 const { loadTS } = require('./load-ts.cjs');
-const { FlatPad } = loadTS('src/components/rig/FlatPad.tsx');
+const { FlatPad } = loadTS('src/components/rig/FlatPadController.tsx');
 const { FlatWheel } = loadTS('src/components/rig/FlatWheel.tsx');
 const { useKeyboardController } = loadTS('src/hooks/useKeyboardController.ts');
 const { defaultSettings, emptyState } = loadTS('src/lib/controller-types.ts');
 const { keyboardState, mergeControllerInputs } = loadTS('src/lib/keyboard-controller.ts');
 const { RELEASE_INPUTS } = loadTS('src/hooks/useInputReset.ts');
-const settings={...defaultSettings,vibration:false,ffbHaptics:false};
+// analogReturnMs:0 selects the instant-release mode these tests pin down (same-task zero on lift).
+// The animated spring-back is covered by tests/analog-feel.test.cjs and the browser harness.
+const settings={...defaultSettings,vibration:false,ffbHaptics:false,analogReturnMs:0};
 function pointer(element,type,id=1,coords={}) {
   const event=new MouseEvent(type,{bubbles:true,cancelable:true,clientX:50,clientY:50,...coords});
   Object.defineProperties(event,{pointerId:{value:id},pointerType:{value:'touch'},pressure:{value:0}});
@@ -97,7 +99,7 @@ test('LT/RT preserve partial travel without a second full-scale digital alias', 
   try {
     for(const id of ['lt','rt']) {
       const button=app.button(`${id.toUpperCase()} ForceAdapt trigger — regular`);
-      pointer(button,'pointerdown');assert.equal(app.state()[id],1);
+      pointer(button,'pointerdown');assert.equal(app.state()[id],0.5);
       pointer(button,'pointermove',1,{clientY:75});
       assert.equal(app.state()[id],0.25);
       assert.equal(app.state().buttons[id==='lt'?'l2':'r2'],undefined);
@@ -199,7 +201,7 @@ test('All keyboard bindings and mixed touch/keyboard ownership preserve held inp
   assert.equal(wheel.buttons.horn,true);assert.equal(wheel.buttons.reset,true);
 });
 
-for (const rate of [240,333]) test(`Transport at ${rate} Hz sends every press/release immediately, bounds backlog, and checks readiness`, t => {
+for (const rate of [240,333,1000]) test(`Transport at ${rate} Hz sends every press/release immediately, bounds backlog, and checks readiness`, t => {
   const originalChannel=globalThis.MessageChannel;
   let posts=0,closed=0;
   globalThis.MessageChannel=class {
@@ -248,7 +250,7 @@ for (const rate of [240,333]) test(`Transport at ${rate} Hz sends every press/re
     ws.bufferedAmount=0;
     act(()=>t.mock.timers.tick(5));
     assert.equal(ws.sent.at(-1).lx,0.9);
-    assert.equal(posts>0,rate===333);
+    assert.equal(posts>0,rate>250);
     act(()=>api.connect('ws://127.0.0.1:8787'));
     const latest=FakeSocket.instances.at(-1);
     act(()=>ws.onerror());assert.equal(api.status,'connecting'); // stale socket cannot change new status
@@ -317,8 +319,8 @@ test('Wheel preserves steering on settings rerender and re-grab cancels auto-cen
 });
 
 
-test('Both rate buttons retain old options and select the 3 ms default', () => {
-  assert.equal(defaultSettings.sendRateHz,333);
+test('Both rate buttons retain old options and select the 1 ms option', () => {
+  assert.equal(defaultSettings.sendRateHz,1000);
   for(const Component of [FlatPad,FlatWheel]) {
     const changes=[];
     const app=mount(Component,{settings:{...settings,sendRateHz:240},onSettingsChange:p=>changes.push(p)});
@@ -327,6 +329,10 @@ test('Both rate buttons retain old options and select the 3 ms default', () => {
       if(Component===FlatPad) act(()=>button.click());
       else pointer(button,'pointerdown');
       assert.equal(changes.at(-1).sendRateHz,333);
+      app.rerender({settings:{...settings,sendRateHz:333}});
+      const fast=app.button('Controller polling rate 333 Hz. Tap to change.');
+      if(Component===FlatPad) act(()=>fast.click()); else {pointer(button,'pointerup');pointer(fast,'pointerdown');}
+      assert.equal(changes.at(-1).sendRateHz,1000);
     } finally {app.unmount();}
   }
 });
@@ -463,4 +469,100 @@ test('All ForceAdapt profiles reach zero and full travel with monotonic output',
    act(()=>app.button('FORCEADAPT').click());
   }
  } finally {app.unmount();}
+});
+
+test('Both sticks and triggers retain travel and release when pointer capture fails',()=>{
+ const saved=HTMLElement.prototype.setPointerCapture;
+ HTMLElement.prototype.setPointerCapture=()=>{throw Error('capture unavailable');};
+ const app=mount(FlatPad);
+ try {
+  for(const id of ['lt','rt']) {
+   const button=app.button(`${id.toUpperCase()} ForceAdapt trigger — regular`);
+   pointer(button,'pointerdown',1,{clientY:100});assert.equal(app.state()[id],0);
+   pointer(window,'pointermove',1,{clientY:0});assert.equal(app.state()[id],1);
+   pointer(window,'pointerup',2);assert.equal(app.state()[id],1);
+   pointer(window,'pointerup',1);assert.equal(app.state()[id],0);
+  }
+  for(const [label,x,y] of [['Left stick','lx','ly'],['Right stick','rx','ry']]) {
+   const stick=app.host.querySelector(`[aria-label="${label}"]`);
+   pointer(stick,'pointerdown',1,{clientX:50,clientY:50});
+   pointer(window,'pointermove',1,{clientX:100,clientY:50});assert.equal(app.state()[x],1);
+   pointer(window,'pointerup',1);assert.ok(app.state()[x] === 0);assert.ok(app.state()[y] === 0);
+  }
+ } finally {app.unmount();HTMLElement.prototype.setPointerCapture=saved;}
+});
+
+test('Left/right arrows and B/X never apply active translation or scale',()=>{
+ const app=mount(FlatPad);
+ try {
+  for(const label of ['←','→','B','X']) {
+   const button=app.button(label);
+   assert.doesNotMatch(button.className,/active:(translate|scale)/);
+   assert.match(button.className,/-translate-y-1\/2/);
+  }
+ } finally {app.unmount();}
+});
+
+
+test('ForceFlex presets change both held stick outputs and visuals immediately without saturating mid travel',()=>{
+ const app=mount(FlatPad,{settings:{...settings,joystickTensionGf:30}});
+ try {
+  for(const [label,axis] of [['Left stick','lx'],['Right stick','rx']]) {
+   const stick=app.host.querySelector(`[aria-label="${label}"]`);
+   const values=[],visuals=[];
+   pointer(stick,'pointerdown',1,{clientX:75,clientY:50});
+   for(const gf of [30,50,80,100]) {
+    app.rerender({settings:{...settings,joystickTensionGf:gf}});
+    values.push(app.state()[axis]);
+    visuals.push(stick.querySelector('[data-stick-thumb]').style.transform);
+   }
+   assert.ok(values[0]-values[3]>0.3,`${label}: ${values}`);
+   for(let i=1;i<4;i++) assert.ok(values[i]<values[i-1]);
+   assert.equal(new Set(visuals).size,4);
+   pointer(window,'pointermove',1,{clientX:100,clientY:50});assert.equal(app.state()[axis],1);
+   pointer(window,'pointerup');assert.ok(app.state()[axis]===0);
+  }
+ } finally {app.unmount();}
+});
+
+test('Game rumble animates both trigger plates and stop removes both effects',()=>{
+ const app=mount(FlatPad,{settings:{...settings,vibration:true}});
+ try {
+  const event=new Event('touch-to-steer:game-haptic');
+  Object.defineProperty(event,'detail',{value:{strongMagnitude:.8,weakMagnitude:.2,duration:100}});
+  act(()=>window.dispatchEvent(event));
+  assert.equal(app.host.querySelectorAll('.trigger-3d-rattle').length,2);
+  act(()=>window.dispatchEvent(new Event('touch-to-steer:haptics-stop')));
+  assert.equal(app.host.querySelectorAll('.trigger-3d-rattle').length,0);
+ } finally {app.unmount();}
+});
+
+test('Separate layout editor saves drag/size/visibility edits, swaps and cancels without game controls',()=>{
+ const {LayoutEditor}=loadTS('src/components/rig/LayoutEditor.tsx');
+ const controls=[{id:'a',label:'A',box:{x:10,y:20,w:15,h:15}},{id:'b',label:'B',box:{x:50,y:20,w:20,h:20}}];
+ let saved=null,cancelled=false;
+ const app=mount(LayoutEditor,{mode:'pad',controls,saved:undefined,aspect:16/9,onSave:l=>saved=l,onClose:()=>cancelled=true});
+ try {
+  pointer(app.host.querySelector('[role="button"][aria-label="Arrange A"]'),'pointerdown',1,{clientX:10,clientY:20});
+  const canvas=app.host.querySelector('[style*="aspect-ratio"]');
+  pointer(canvas,'pointermove',1,{clientX:30,clientY:30});pointer(canvas,'pointerup');
+  act(()=>app.button('Save layout').click());assert.equal(saved.a.x,30);assert.equal(saved.a.y,30);
+  act(()=>app.button('Undo').click());act(()=>app.button('Save layout').click());assert.equal(saved.a.x,10);
+  act(()=>app.button('Cancel').click());assert.equal(cancelled,true);assert.equal(app.reports.length,0);
+ } finally {app.unmount();}
+});
+
+test('Saved layout changes actual controls and reset restores native sizing',()=>{
+ const {useControlLayout}=loadTS('src/hooks/useControlLayout.ts');
+ const original=globalThis.getComputedStyle;globalThis.getComputedStyle=window.getComputedStyle.bind(window);
+ function Harness({layout}) {
+  const root=React.useRef(null);useControlLayout(root,'pad',layout);
+  return React.createElement('div',{ref:root},React.createElement('button',{'aria-label':'A',style:{width:'40px'}},'A'));
+ }
+ const app=mount(Harness,{layout:{'A:0':{x:20,y:30,w:25,h:15,hidden:true}}});
+ try {
+  const button=app.button('A');assert.equal(button.style.width,'25px');assert.equal(button.style.height,'15px');assert.equal(button.style.visibility,'hidden');
+  assert.match(button.style.transform,/translate\(20px,30px\)|translate\(20px, 30px\)/);
+  app.rerender({layout:{}});assert.equal(button.style.width,'40px');assert.equal(button.style.visibility,'');assert.equal(button.style.transform,'');
+ } finally {app.unmount();globalThis.getComputedStyle=original;}
 });

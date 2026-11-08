@@ -1,3 +1,4 @@
+import { DocumentationLinks } from '@/components/docs/DocumentationLinks';
 import { PAD_CONTROLS, type ResolvedGameProfile, type PadControl } from "@/lib/game-profiles";
 import { useState } from "react";
 import { defaultWheelBindings, type WheelBindings, type WheelOutput, type Settings } from "@/lib/controller-types";
@@ -6,6 +7,7 @@ import { Link } from "@tanstack/react-router";
 import { CircleStop, Link2, X, SlidersHorizontal, RadioTower, ChevronRight } from "lucide-react";
 
 type Props = {
+  onEditLayout?: (mode: "pad" | "wheel") => void;
   settings: Settings;
   gameProfile?: ResolvedGameProfile;
   profileMappingsSupported?: boolean;
@@ -13,7 +15,8 @@ type Props = {
   onClose: () => void;
   status: "idle" | "connecting" | "connected" | "error";
   latency: number | null;
-  onConnect: () => void;
+  onConnect: (pairingKey: string) => void;
+  connectionError?: string | null;
   onDisconnect: () => void;
 };
 
@@ -27,6 +30,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 export function SettingsPanel({
+  onEditLayout,
   settings,
   gameProfile,
   profileMappingsSupported,
@@ -35,8 +39,10 @@ export function SettingsPanel({
   status,
   latency,
   onConnect,
+  connectionError,
   onDisconnect,
 }: Props) {
+  const [pairingKey, setPairingKey] = useState("");
   const connected = status === "connected";
   const [matcherDpi, setMatcherDpi] = useState(settings.mouseDpi);
 
@@ -107,7 +113,7 @@ export function SettingsPanel({
               </p>
             </div>
             <Button
-              onClick={connected ? onDisconnect : onConnect}
+              onClick={connected ? onDisconnect : () => onConnect(pairingKey)}
               variant={connected ? "outline" : "default"}
               size="sm"
               className="spectral-settings-connect"
@@ -120,13 +126,25 @@ export function SettingsPanel({
             aria-label="PC bridge address"
             value={settings.bridgeUrl}
             onChange={(e) => onChange({ bridgeUrl: e.target.value })}
-            maxLength={120}
+            maxLength={512}
             spellCheck={false}
             className="spectral-settings-input h-10 w-full rounded-md px-3 text-sm"
           />
         </div>
 
+        <div className="px-4 pb-3">
+          <input aria-label="Host pairing key" type="password" autoComplete="off" placeholder="Host pairing key (internet connections)"
+            maxLength={128} value={pairingKey} onChange={(e) => setPairingKey(e.target.value)}
+            className="spectral-settings-input h-10 w-full rounded-md px-3 text-sm" />
+          <p className="mt-2 text-xs text-muted-foreground">Internet: use the host’s secure wss:// address and pairing key. The key is kept only while this panel is open. <a href="/bridge/windows/GLOBAL-PLAY.md" target="_blank" rel="noreferrer" className="underline">Host setup</a></p>
+          {connectionError && <p role="alert" className="mt-2 text-xs text-amber-300">{connectionError}</p>}
+        </div>
         <div className="spectral-settings-body">
+          <div className="mb-4 rounded-xl border border-cyan-300/25 p-3">
+            <h2 className="font-bold">Custom layout editor</h2>
+            <p className="my-2 text-xs text-muted-foreground">Move, resize, hide and swap controls. Layouts save separately for each mode on this device.</p>
+            <div className="flex gap-2"><Button onClick={() => onEditLayout?.("pad")}>Edit gamepad layout</Button><Button onClick={() => onEditLayout?.("wheel")}>Edit steering layout</Button></div>
+          </div>
           <div className="spectral-settings-block-label"><span>01</span><div><strong>OUTPUT + RESPONSE</strong><small>Virtual device and steering behavior</small></div><ChevronRight size={13} /></div>
           <Row label="PC controller output">
             <select
@@ -137,8 +155,22 @@ export function SettingsPanel({
               <option value="universal">Universal · XInput + DirectInput</option>
               <option value="xinput">XInput / Xbox 360</option>
               <option value="ds4">DualShock 4 / HID</option>
+              <option value="ps5">PlayStation 5 / PS5 Pro</option>
             </select>
           </Row>
+          {settings.outputMode === "ps5" && (
+            <div className="mt-3 rounded-lg border border-sky-300/25 bg-sky-300/5 p-3 text-[11px] leading-relaxed text-muted-foreground">
+              <strong className="text-sky-200">PS5 / PS5 Pro mode</strong> — your phone appears on the PC as a Sony
+              “Wireless Controller” with ✕ ○ △ □, L1/R1, L2/R2 analog triggers, Options, Share and the PS button.
+              <ol className="mt-2 list-decimal space-y-1 pl-4">
+                <li>Start the TouchToSteer bridge on your Windows PC and connect this phone.</li>
+                <li>On the PC open <strong className="text-slate-200">PS Remote Play</strong> or <strong className="text-slate-200">chiaki-ng</strong> and sign in with the same PlayStation account as your PS5 Pro.</li>
+                <li>Turn on Remote Play on the console (Settings → System → Remote Play) and pair it.</li>
+                <li>The PC detects the phone as a PlayStation controller and passes every button, stick and trigger to the PS5 Pro.</li>
+              </ol>
+              <p className="mt-2">PC games with PlayStation support also show PlayStation button prompts. A PS5 can’t pair with a phone browser directly over Bluetooth, so the PC link is required.</p>
+            </div>
+          )}
           <div className="mt-3 rounded-lg border border-emerald-300/15 bg-emerald-300/5 p-3 text-[11px] leading-relaxed text-muted-foreground">
             <strong className="text-emerald-200">Universal compatibility</strong> keeps one
             synchronized Xbox 360/XInput target for modern games and one DualShock/HID target
@@ -148,7 +180,7 @@ export function SettingsPanel({
             <code className="mx-1 text-slate-300">joy.cpl</code>.
             For local co-op and split-screen, use <strong className="text-slate-200">XInput-only</strong>
             on each phone when the game expects Xbox controllers; the bridge assigns each phone
-            its own virtual player, up to 4 simultaneous players.
+            its own virtual player. XInput supports four slots; DS4/HID can request up to the host’s configured limit (16 by default), subject to driver and game support. Multiple PCs each have their own capacity.
           </div>
           {connected && !profileMappingsSupported && <p role="alert" className="mt-2 text-xs text-amber-300">Update the Windows bridge to apply automatic profiles in both modes. This bridge does not report profile support.</p>}
           <Row label="Automatic game profiles">
@@ -267,6 +299,23 @@ export function SettingsPanel({
             <strong className="text-violet-200">FORCEFLEX response</strong> changes the virtual Hall-stick response curve using the selected 30/50/80/100 gf profile.
             The touchscreen cannot physically change spring force, so this is the software equivalent of lighter or heavier stick resistance.
           </div>
+          <Row label="Stick / trigger return">
+            <select
+              aria-label="Stick and trigger return time"
+              value={settings.analogReturnMs}
+              onChange={(e) => onChange({ analogReturnMs: Number(e.target.value) })}
+              className="rounded-lg border border-input bg-background px-2 py-1.5 text-xs"
+            >
+              <option value={0}>Instant · legacy</option>
+              <option value={25}>25 ms · Snappy</option>
+              <option value={45}>45 ms · Natural (DualSense-like)</option>
+              <option value={80}>80 ms · Soft</option>
+            </select>
+          </Row>
+          <p className="text-xs text-muted-foreground">
+            Only lifting a finger is animated: the stick or trigger springs home instead of snapping, so the game sees a continuous fall.
+            Pressing and moving are never smoothed or delayed. Cancelled touches, tab switches and disconnects always release immediately.
+          </p>
           <Row label="Invert aim Y">
             <input
               type="checkbox"
@@ -324,6 +373,7 @@ export function SettingsPanel({
               <option value={180}>180 Hz</option>
               <option value={240}>240 Hz</option>
               <option value={333}>333 Hz · 3 ms target</option>
+              <option value={1000}>1000 Hz · 1 ms target</option>
             </select>
           </Row>
           <Row label="Invert tilt">
@@ -558,11 +608,12 @@ export function SettingsPanel({
         </div>
 
         <div className="spectral-settings-note mt-4 rounded-lg p-3 text-[11px] leading-relaxed">
-          <strong className="text-slate-200">Controller polling</strong> is selectable from 60 to 333 Hz.
-          333 Hz selects a 3 ms scheduling target; input changes transmit immediately. Browser scheduling can take longer. Actual end-to-end latency depends on the phone, browser,
+          <strong className="text-slate-200">Controller polling</strong> is selectable from 60 to 1000 Hz.
+          1000 Hz selects a 1 ms scheduling target; input changes transmit immediately. Browser scheduling can take longer. Actual end-to-end latency depends on the phone, browser,
           Wi-Fi/LAN path, PC load, and game input polling.
         </div>
 
+        <DocumentationLinks newTab />
         <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
           Settings are saved on this phone. Need the PC side? Open{" "}
           <Link to="/setup" className="font-semibold text-primary underline">

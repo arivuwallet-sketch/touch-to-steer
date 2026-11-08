@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import type { PointerEvent, WheelEvent } from "react";
 import { Crosshair, Gauge, RotateCcw, ScrollText, Zap } from "lucide-react";
 import type { Settings } from "@/lib/controller-types";
@@ -175,7 +175,7 @@ function phoneFeedback() {
   }
 }
 
-export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
+function FlatMouseImpl({ settings, onSettingsChange, sendMouse }: Props) {
   const shellRef = useRef<HTMLDivElement | null>(null);
   const activePointers = useRef(new Map<number, { x: number; y: number; button?: MouseButton }>());
   const pressedButtons = useRef(new Set<MouseButton>());
@@ -669,3 +669,6 @@ export function FlatMouse({ settings, onSettingsChange, sendMouse }: Props) {
     </div>
   );
 }
+
+// Memoised so connection-status / latency re-renders of the route never touch the mouse surface.
+export const FlatMouse = memo(FlatMouseImpl);

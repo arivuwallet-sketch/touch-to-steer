@@ -14,6 +14,7 @@ type DualRumbleOptions = {
 };
 
 type HapticActuatorLike = {
+  reset?: () => Promise<unknown> | unknown;
   playEffect?: (
     type: "dual-rumble",
     params: {
@@ -29,7 +30,10 @@ type GamepadWithVibration = Gamepad & {
   vibrationActuator?: HapticActuatorLike;
 };
 
-let lastHapticAt = 0;
+let lastHapticAt = -Infinity;
+let hapticsEnabled = true;
+const effectTimers = new Set<ReturnType<typeof setTimeout>>();
+let phoneDelay: ReturnType<typeof setTimeout> | null = null;
 
 const PROFILES: Record<DualRumbleKind, Required<DualRumbleOptions>> = {
   ui: {
@@ -91,24 +95,26 @@ function getGamepadsWithActuators(): GamepadWithVibration[] {
 
 function phoneFallback(
   kind: DualRumbleKind,
-  _strongMagnitude: number,
-  _weakMagnitude: number,
+  strongMagnitude: number,
+  weakMagnitude: number,
   duration: number,
 ) {
   if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
 
   // Phones expose one vibration motor to the browser, not two independently
   // addressable motors. Preserve the requested texture with short patterns.
-  const pulse =
-    kind === "heartbeat"
-      ? [duration, 45, duration]
-      : kind === "gunfire"
-        ? [duration]
-        : kind === "engine"
-          ? [Math.max(45, Math.round(duration * 0.62)), 26, Math.max(35, Math.round(duration * 0.36))]
-          : kind === "heavy"
-            ? [Math.max(120, duration)]
-            : [Math.max(8, Math.min(500, duration))];
+  const intensity = Math.max(strongMagnitude, weakMagnitude);
+  if (intensity <= 0) return;
+  // Browser vibration has no amplitude control: approximate strength with duty cycle.
+  const pulse: number[] = [];
+  let remaining = duration;
+  const period = kind === "engine" ? 35 : kind === "gunfire" ? 24 : 50;
+  while (remaining > 0) {
+    const segment = Math.min(period, remaining);
+    const on = Math.max(1, Math.round(segment * intensity));
+    pulse.push(on, Math.max(0, segment - on));
+    remaining -= segment;
+  }
 
   try {
     navigator.vibrate(pulse);
@@ -122,18 +128,18 @@ function performDualRumble(
   options: DualRumbleOptions = {},
 ) {
   const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-  const bypassRateLimit = kind === "heartbeat" || kind === "gunfire";
-  if (!bypassRateLimit && now - lastHapticAt < 20) return;
+  if (!hapticsEnabled) return;
   lastHapticAt = now;
 
   const profile = PROFILES[kind];
   const strongMagnitude = clamp01(options.strongMagnitude ?? profile.strongMagnitude);
   const weakMagnitude = clamp01(options.weakMagnitude ?? profile.weakMagnitude);
+  if (strongMagnitude === 0 && weakMagnitude === 0) { stopHaptics(); return; }
   const duration = Math.max(
     1,
-    Math.min(500, Math.round(options.duration ?? profile.duration)),
+    Math.min(500, Math.round(Number.isFinite(options.duration) ? options.duration! : profile.duration)),
   );
-  const startDelay = Math.max(0, Math.min(500, Math.round(options.startDelay ?? 0)));
+  const startDelay = Math.max(0, Math.min(500, Math.round(Number.isFinite(options.startDelay) ? options.startDelay! : 0)));
 
   const gamepads = getGamepadsWithActuators();
 
@@ -157,18 +163,24 @@ function performDualRumble(
   // Always provide phone feedback as well. This is important for the
   // TouchToSteer use case because the phone is the haptic surface even when
   // the browser has no GamepadHapticActuator exposed.
-  phoneFallback(kind, strongMagnitude, weakMagnitude, duration);
+  if (phoneDelay !== null) clearTimeout(phoneDelay);
+  phoneDelay = null;
+  if (startDelay) phoneDelay = setTimeout(() => {
+    phoneDelay = null;
+    if (hapticsEnabled) phoneFallback(kind, strongMagnitude, weakMagnitude, duration);
+  }, startDelay);
+  else phoneFallback(kind, strongMagnitude, weakMagnitude, duration);
 }
 
 export function playHeartbeat() {
   playDualRumble("heartbeat");
-  window.setTimeout(() => playDualRumble("heartbeat"), 145);
+  scheduleEffect(() => playDualRumble("heartbeat"), 145);
 }
 
 export function playGunfireBurst(cycles = 1, interval = 68) {
   const count = Math.max(1, Math.min(24, Math.round(cycles)));
   for (let i = 0; i < count; i += 1) {
-    window.setTimeout(() => playDualRumble("gunfire"), i * Math.max(30, interval));
+    scheduleEffect(() => playDualRumble("gunfire"), i * Math.max(30, interval));
   }
 }
 
@@ -181,7 +193,8 @@ export function playEngineIdle(duration = 180) {
 let pendingHaptic: { kind: DualRumbleKind; options: DualRumbleOptions } | null = null;
 let hapticTask: ReturnType<typeof setTimeout> | null = null;
 export function playDualRumble(kind: DualRumbleKind = "ui", options: DualRumbleOptions = {}) {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || !hapticsEnabled) return;
+  if (options.strongMagnitude === 0 && options.weakMagnitude === 0) { stopHaptics(); return; }
   pendingHaptic = { kind, options };
   if (hapticTask !== null) return;
   hapticTask = setTimeout(() => {
@@ -189,5 +202,40 @@ export function playDualRumble(kind: DualRumbleKind = "ui", options: DualRumbleO
     const request = pendingHaptic;
     pendingHaptic = null;
     if (request) performDualRumble(request.kind, request.options);
+  }, Math.max(0, 20 - ((typeof performance !== "undefined" ? performance.now() : Date.now()) - lastHapticAt)));
+}
+
+
+function scheduleEffect(callback: () => void, delay: number) {
+  if (!hapticsEnabled || typeof window === "undefined") return;
+  const timer = setTimeout(() => { effectTimers.delete(timer); callback(); }, delay);
+  effectTimers.add(timer);
+}
+
+/** Cancel queued work and stop both hardware paths, independently of rate limiting. */
+export function stopHaptics() {
+  if (hapticTask !== null) clearTimeout(hapticTask);
+  if (phoneDelay !== null) clearTimeout(phoneDelay);
+  hapticTask = null; phoneDelay = null; pendingHaptic = null;
+  for (const timer of effectTimers) clearTimeout(timer);
+  effectTimers.clear();
+  lastHapticAt = -Infinity;
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event("touch-to-steer:haptics-stop"));
+  // Do not scan gamepads on the controller input task, even when stopping.
+  setTimeout(() => {
+    try { navigator.vibrate?.(0); } catch { /* unavailable */ }
+    for (const pad of getGamepadsWithActuators()) {
+      try {
+        const actuator = pad.vibrationActuator!;
+        const result = actuator.reset ? actuator.reset() : actuator.playEffect?.("dual-rumble", {duration:0,strongMagnitude:0,weakMagnitude:0});
+        void Promise.resolve(result).catch(() => undefined);
+      } catch { /* unsupported */ }
+    }
   }, 0);
+}
+
+export function setHapticsEnabled(enabled: boolean) {
+  hapticsEnabled = enabled;
+  if (!enabled) stopHaptics();
 }
